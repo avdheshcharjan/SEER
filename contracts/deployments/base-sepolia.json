@@ -1,0 +1,10 @@
+{
+  "network": "Base Sepolia",
+  "chainId": "84532",
+  "deployer": "0x817ADecF13045578BDbA571eA204b6B0a1C90Ab8",
+  "mockUSDC": "0x32dfDC3bB23d294a1b32E0EDDEddB12088112161",
+  "factory": "0xAa84401Ef34C0334D4B85259955DE1fa99495B96",
+  "demoMarket": "0xC1f3f3528AD71348AC4683CAde6e5988019735D8",
+  "deployedAt": "1755702144",
+  "deployedAtReadable": "August 20, 2024"
+}
