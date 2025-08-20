@@ -3,16 +3,31 @@ export interface PredictionMarket {
   question: string;
   description: string;
   category: 'crypto' | 'tech' | 'celebrity' | 'sports' | 'politics';
-  endDate: string;
-  currentPrice: number;
-  priceChange: number;
-  marketCap: string;
-  volume: string;
-  yesOdds: number;
-  noOdds: number;
-  tags: string[];
+  endTime?: string; // ISO string format
+  endDate?: string; // Legacy support for display
+  currentPrice?: number;
+  priceChange?: number;
+  marketCap?: string;
+  volume?: string;
+  totalVolume?: number;
+  yesPrice?: number; // 0-1 probability
+  noPrice?: number; // 0-1 probability
+  yesOdds?: number; // Legacy support for display
+  noOdds?: number; // Legacy support for display
+  yesShares?: number;
+  noShares?: number;
+  tags?: string[];
   imageUrl?: string;
-  timeframe: 'seconds' | 'hourly' | 'daily' | 'weekly' | 'monthly';
+  timeframe?: 'seconds' | 'hourly' | 'daily' | 'weekly' | 'monthly';
+  createdBy?: string; // Address of creator
+  createdAt?: string; // ISO string
+  resolved?: boolean;
+  outcome?: boolean | null; // true for YES, false for NO, null for unresolved
+  // New fields for user-created markets
+  ticker?: string; // ETH, BTC, BASE, etc.
+  targetPrice?: number; // Target price for prediction
+  direction?: 'above' | 'below'; // Direction of prediction
+  isCreatedByUser?: boolean; // Flag for user-created markets
 }
 
 export interface UserPrediction {
@@ -34,15 +49,28 @@ export const predictionMarkets: PredictionMarket[] = [
     question: "Will ETH reach $4,000 by end of 2024?",
     description: "Ethereum has been showing strong momentum. With upcoming upgrades and institutional adoption, will it reach the $4,000 milestone?",
     category: "crypto",
+    endTime: "2024-12-31T23:59:59Z",
     endDate: "31/12/2024",
     currentPrice: 4304.75,
     priceChange: 0.1,
     marketCap: "$519.9B",
     volume: "$1.3M Volume",
+    totalVolume: 1300000,
+    yesPrice: 0.65,
+    noPrice: 0.35,
     yesOdds: 65,
     noOdds: 35,
+    yesShares: 65000,
+    noShares: 35000,
     tags: ["#ethereum", "#price", "#bullish"],
-    timeframe: "seconds"
+    timeframe: "seconds",
+    createdBy: "0x1234567890123456789012345678901234567890",
+    createdAt: "2024-01-01T00:00:00Z",
+    resolved: false,
+    outcome: null,
+    ticker: "ETH",
+    targetPrice: 4000,
+    direction: "above"
   },
   {
     id: "crypto-2",

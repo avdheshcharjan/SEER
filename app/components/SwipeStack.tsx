@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, useMotionValue, useTransform, PanInfo } from 'framer-motion';
 import { PredictionMarket } from '@/lib/prediction-markets';
-import { PredictionCard } from './PredictionCard';
+import { SmartPredictionCard } from './cards/SmartPredictionCard';
 
 interface SwipeStackProps {
     markets: PredictionMarket[];
@@ -16,9 +16,9 @@ const SWIPE_THRESHOLD = 100;
 export function SwipeStack({ markets, onSwipe, className = '' }: SwipeStackProps) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isAnimating, setIsAnimating] = useState(false);
-    const [timeLeft, setTimeLeft] = useState(60);
     const [isTimerActive, setIsTimerActive] = useState(true);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const timeLeftRef = useRef<number>(60);
 
     const x = useMotionValue(0);
     const y = useMotionValue(0);
@@ -32,22 +32,20 @@ export function SwipeStack({ markets, onSwipe, className = '' }: SwipeStackProps
         }
     );
 
-    // Timer effect
+    // Timer effect - uses ref to avoid re-renders
     useEffect(() => {
         if (isTimerActive && !isAnimating && currentIndex < markets.length) {
+            timeLeftRef.current = 60; // Reset timer for new card
             timerRef.current = setInterval(() => {
-                setTimeLeft((prev) => {
-                    if (prev <= 1) {
-                        // Time's up - auto skip
-                        const currentMarket = markets[currentIndex];
-                        if (currentMarket) {
-                            onSwipe(currentMarket.id, 'up');
-                            setCurrentIndex(prevIndex => prevIndex + 1);
-                        }
-                        return 60; // Reset for next card
+                timeLeftRef.current -= 1;
+                if (timeLeftRef.current <= 0) {
+                    // Time's up - auto skip
+                    const currentMarket = markets[currentIndex];
+                    if (currentMarket) {
+                        onSwipe(currentMarket.id, 'up');
+                        setCurrentIndex(prevIndex => prevIndex + 1);
                     }
-                    return prev - 1;
-                });
+                }
             }, 1000);
         }
 
@@ -58,10 +56,10 @@ export function SwipeStack({ markets, onSwipe, className = '' }: SwipeStackProps
         };
     }, [currentIndex, isTimerActive, isAnimating, markets, onSwipe]);
 
-    // Reset timer when card changes
+    // Reset timer active state when card changes
     useEffect(() => {
-        setTimeLeft(60);
         setIsTimerActive(true);
+        timeLeftRef.current = 60;
     }, [currentIndex]);
 
     // Cleanup timer on unmount
@@ -168,9 +166,9 @@ export function SwipeStack({ markets, onSwipe, className = '' }: SwipeStackProps
                                 dragElastic={0.2}
                                 onDragEnd={handleDragEnd}
                                 whileDrag={{ scale: 1.05 }}
-                                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                transition={{ duration: 0.3, ease: "easeOut" }}
                             >
-                                <PredictionCard market={market} timeLeft={timeLeft} />
+                                <SmartPredictionCard market={market} isActive={true} />
                             </motion.div>
                         );
                     }
@@ -186,9 +184,9 @@ export function SwipeStack({ markets, onSwipe, className = '' }: SwipeStackProps
                             }}
                             initial={{ scale, y: yOffset }}
                             animate={{ scale, y: yOffset }}
-                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                            transition={{ duration: 0.3, ease: "easeOut" }}
                         >
-                            <PredictionCard market={market} className="opacity-60" timeLeft={60} />
+                            <SmartPredictionCard market={market} className="opacity-60" isActive={false} />
                         </motion.div>
                     );
                 })}

@@ -24,10 +24,11 @@ import { Home } from "./components/Home";
 import { PredictionMarket } from "./components/PredictionMarket";
 import { Profile } from "./components/Profile";
 import { Leaderboard } from "./components/Leaderboard";
+import { CreateMarket } from "./components/CreateMarket";
 
 import { Plus, Check } from 'lucide-react';
 
-type ViewType = 'home' | 'predict' | 'profile' | 'leaderboard';
+type ViewType = 'home' | 'predict' | 'profile' | 'leaderboard' | 'create';
 
 export default function App() {
   const { setFrameReady, isFrameReady, context } = useMiniKit();
@@ -78,15 +79,18 @@ export default function App() {
       case 'predict':
         return <PredictionMarket onBack={() => setCurrentView('home')} />;
       case 'profile':
-        return <Profile onBack={() => setCurrentView('home')} />;
+        return <Profile onBack={() => setCurrentView('home')} onCreateMarket={() => setCurrentView('create')} />;
       case 'leaderboard':
         return <Leaderboard onBack={() => setCurrentView('home')} />;
+      case 'create':
+        return <CreateMarket onBack={() => setCurrentView('home')} />;
       default:
         return (
           <Home
             onStartPredicting={() => setCurrentView('predict')}
             onViewProfile={() => setCurrentView('profile')}
             onViewLeaderboard={() => setCurrentView('leaderboard')}
+            onCreateMarket={() => setCurrentView('create')}
           />
         );
     }

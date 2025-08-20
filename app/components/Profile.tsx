@@ -4,16 +4,17 @@ import { motion } from 'framer-motion';
 import { useAccount } from 'wagmi';
 import { useAppStore, useUserStats } from '@/lib/store';
 import { getMarketById } from '@/lib/prediction-markets';
-import { TrendingUp, TrendingDown, Clock, ExternalLink, Trophy, Target, DollarSign, Settings } from 'lucide-react';
+import { TrendingUp, TrendingDown, Clock, ExternalLink, Trophy, Target, DollarSign, Settings, Plus, Share } from 'lucide-react';
 
 interface ProfileProps {
   onBack?: () => void;
+  onCreateMarket?: () => void;
 }
 
-export function Profile({ onBack }: ProfileProps) {
+export function Profile({ onBack, onCreateMarket }: ProfileProps) {
   const { address } = useAccount();
   const userStats = useUserStats();
-  const { userPredictions, setDefaultBetAmount } = useAppStore();
+  const { userPredictions, createdMarkets, setDefaultBetAmount } = useAppStore();
 
   if (!address || !userStats) {
     return (
@@ -180,6 +181,102 @@ export function Profile({ onBack }: ProfileProps) {
           </div>
         </div>
       </div>
+
+      {/* Created Markets Section */}
+      {createdMarkets.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-white flex items-center">
+              <Plus className="w-5 h-5 mr-2" />
+              Markets Created ({createdMarkets.length})
+            </h3>
+            {onCreateMarket && (
+              <button
+                onClick={onCreateMarket}
+                className="text-xs text-base-400 hover:text-base-300 transition-colors"
+              >
+                Create New
+              </button>
+            )}
+          </div>
+          
+          <div className="space-y-3 max-h-64 overflow-y-auto">
+            {createdMarkets
+              .sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime())
+              .map((market) => (
+                <motion.div
+                  key={market.id}
+                  className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 backdrop-blur-sm rounded-xl p-3 border border-purple-500/20"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1">
+                      <h4 className="text-white font-medium text-sm mb-1 line-clamp-2">
+                        {market.question}
+                      </h4>
+                      <div className="flex items-center space-x-2 text-xs text-slate-400">
+                        <span>Created {formatDate(market.createdAt || '')}</span>
+                        <span>•</span>
+                        <span className={market.resolved ? 'text-slate-500' : 'text-green-400'}>
+                          {market.resolved ? 'Resolved' : 'Active'}
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const shareUrl = `${window.location.origin}/market/${market.id}`;
+                        navigator.clipboard.writeText(shareUrl);
+                      }}
+                      className="p-1 hover:bg-slate-700/50 rounded transition-colors"
+                      title="Copy share link"
+                    >
+                      <Share className="w-3 h-3 text-slate-400" />
+                    </button>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-2 text-center">
+                      <div className="text-green-400 font-bold text-xs">
+                        {Math.round((market.yesPrice || 0.5) * 100)}%
+                      </div>
+                      <div className="text-green-300 text-xs">YES</div>
+                    </div>
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-2 text-center">
+                      <div className="text-red-400 font-bold text-xs">
+                        {Math.round((market.noPrice || 0.5) * 100)}%
+                      </div>
+                      <div className="text-red-300 text-xs">NO</div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {/* Create Market CTA */}
+      {createdMarkets.length === 0 && onCreateMarket && (
+        <div className="mb-6">
+          <div className="bg-gradient-to-br from-purple-500/10 to-blue-500/10 backdrop-blur-sm rounded-xl p-4 border border-purple-500/20 text-center">
+            <div className="text-3xl mb-2">🎯</div>
+            <h3 className="text-lg font-semibold text-white mb-1">Create Your First Market</h3>
+            <p className="text-slate-400 text-sm mb-4">Turn your predictions into markets others can bet on</p>
+            <motion.button
+              onClick={onCreateMarket}
+              className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <div className="flex items-center space-x-1">
+                <Plus className="w-4 h-4" />
+                <span>Create Market</span>
+              </div>
+            </motion.button>
+          </div>
+        </div>
+      )}
 
       {/* Prediction History */}
       <div className="mb-6">

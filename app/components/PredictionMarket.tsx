@@ -23,16 +23,20 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
         addPrediction,
         addSwipeHistory,
         user,
-        setUser
+        setUser,
+        createdMarkets
     } = useAppStore();
 
     useEffect(() => {
-        // Initialize markets when component mounts
-        if (allMarkets.length === 0) {
-            const markets = getRandomMarkets(50); // Get more markets to have variety across categories
-            setAllMarkets(markets);
-            setCurrentMarkets(markets.slice(0, 20)); // Show first 20 initially
-        }
+        // Combine static markets with user-created markets
+        const staticMarkets = getRandomMarkets(50);
+        const allAvailableMarkets = [...staticMarkets, ...createdMarkets];
+        
+        // Shuffle to mix created markets throughout the stack
+        const shuffledMarkets = allAvailableMarkets.sort(() => 0.5 - Math.random());
+        
+        setAllMarkets(shuffledMarkets);
+        setCurrentMarkets(shuffledMarkets.slice(0, 20)); // Show first 20 initially
 
         // Initialize user if connected but no user data
         if (address && !user) {
@@ -48,7 +52,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                 defaultBetAmount: 1, // Default $1 USDC
             });
         }
-    }, [address, allMarkets.length, user, setCurrentMarkets, setUser]);
+    }, [address, user, setCurrentMarkets, setUser, createdMarkets]);
 
     // Filter markets based on selected category
     useEffect(() => {
@@ -70,7 +74,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
         // Add to swipe history
         addSwipeHistory(marketId);
 
-        // Handle skip
+        // Handle skip - no blockchain transaction needed
         if (direction === 'up') {
             toast('Market skipped! 📊', {
                 icon: '⏭️',

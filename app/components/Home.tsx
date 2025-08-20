@@ -1,15 +1,16 @@
 "use client";
 
 import { motion } from 'framer-motion';
-import { TrendingUp, Users, Zap, Trophy } from 'lucide-react';
+import { TrendingUp, Users, Zap, Trophy, Plus } from 'lucide-react';
 
 interface HomeProps {
     onStartPredicting: () => void;
     onViewProfile: () => void;
     onViewLeaderboard: () => void;
+    onCreateMarket: () => void;
 }
 
-export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard }: HomeProps) {
+export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard, onCreateMarket }: HomeProps) {
 
     const features = [
         {
@@ -66,20 +67,37 @@ export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard }: Ho
 
             {/* Action Buttons */}
             <div className="space-y-4 mb-8">
-                <motion.button
-                    onClick={onStartPredicting}
-                    className="w-full bg-gradient-to-r from-base-500 to-base-600 hover:from-base-600 hover:to-base-700 text-white font-bold py-4 px-6 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-base-500/25"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3, duration: 0.3 }}
-                >
-                    <div className="flex items-center justify-center space-x-2">
-                        <TrendingUp className="w-5 h-5" />
-                        <span>Start Predicting</span>
-                    </div>
-                </motion.button>
+                <div className="grid grid-cols-2 gap-3">
+                    <motion.button
+                        onClick={onStartPredicting}
+                        className="bg-gradient-to-r from-base-500 to-base-600 hover:from-base-600 hover:to-base-700 text-white font-bold py-4 px-4 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-base-500/25"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.3, duration: 0.3 }}
+                    >
+                        <div className="flex items-center justify-center space-x-2">
+                            <TrendingUp className="w-5 h-5" />
+                            <span>Start Predicting</span>
+                        </div>
+                    </motion.button>
+
+                    <motion.button
+                        onClick={onCreateMarket}
+                        className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-bold py-4 px-4 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-purple-500/25"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.3, duration: 0.3 }}
+                    >
+                        <div className="flex items-center justify-center space-x-2">
+                            <Plus className="w-5 h-5" />
+                            <span>Create Market</span>
+                        </div>
+                    </motion.button>
+                </div>
 
                 <div className="grid grid-cols-2 gap-4">
                     <motion.button

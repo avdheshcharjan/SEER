@@ -23,13 +23,14 @@ interface AppState {
     currentMarkets: PredictionMarket[];
     currentMarketIndex: number;
     swipeHistory: string[]; // IDs of swiped markets
+    createdMarkets: PredictionMarket[]; // Markets created by the user
 
     // Prediction state
     userPredictions: UserPrediction[];
 
     // UI state
     isLoading: boolean;
-    currentView: 'home' | 'predict' | 'profile' | 'leaderboard';
+    currentView: 'home' | 'predict' | 'profile' | 'leaderboard' | 'create';
 
     // Actions
     setUser: (user: User | null) => void;
@@ -38,9 +39,10 @@ interface AppState {
     nextMarket: () => void;
     addSwipeHistory: (marketId: string) => void;
     addPrediction: (prediction: UserPrediction) => void;
+    addCreatedMarket: (market: PredictionMarket) => void;
     updateUser: (updates: Partial<User>) => void;
     setDefaultBetAmount: (amount: number) => void;
-    setCurrentView: (view: 'home' | 'predict' | 'profile' | 'leaderboard') => void;
+    setCurrentView: (view: 'home' | 'predict' | 'profile' | 'leaderboard' | 'create') => void;
     setLoading: (loading: boolean) => void;
     reset: () => void;
 }
@@ -51,6 +53,7 @@ const initialState = {
     currentMarkets: [],
     currentMarketIndex: 0,
     swipeHistory: [],
+    createdMarkets: [],
     userPredictions: [],
     isLoading: false,
     currentView: 'home' as const,
@@ -95,6 +98,10 @@ export const useAppStore = create<AppState>()(
                 };
             }),
 
+            addCreatedMarket: (market) => set((state) => ({
+                createdMarkets: [...state.createdMarkets, market]
+            })),
+
             updateUser: (updates) => set((state) => ({
                 user: state.user ? { ...state.user, ...updates } : null
             })),
@@ -115,6 +122,7 @@ export const useAppStore = create<AppState>()(
                 user: state.user,
                 userPredictions: state.userPredictions,
                 swipeHistory: state.swipeHistory,
+                createdMarkets: state.createdMarkets,
             }),
         }
     )

@@ -19,6 +19,93 @@ body {
   overflow-x: hidden;
 }
 
+/* Timer gradient transitions - smooth continuous interpolation, no React re-renders */
+.timer-gradient-active {
+  /* Default crypto card: original orange to red transition as timer counts down */
+  background-image: linear-gradient(135deg, 
+    rgba(
+      calc(249 * var(--timer-progress) + 239 * (1 - var(--timer-progress))), 
+      calc(115 * var(--timer-progress) + 68 * (1 - var(--timer-progress))), 
+      calc(22 * var(--timer-progress) + 68 * (1 - var(--timer-progress))), 
+      calc(0.2 * var(--timer-progress) + 0.4 * (1 - var(--timer-progress)))
+    ), 
+    rgba(
+      calc(234 * var(--timer-progress) + 220 * (1 - var(--timer-progress))), 
+      calc(88 * var(--timer-progress) + 38 * (1 - var(--timer-progress))), 
+      calc(12 * var(--timer-progress) + 38 * (1 - var(--timer-progress))), 
+      calc(0.1 * var(--timer-progress) + 0.3 * (1 - var(--timer-progress)))
+    ));
+  transition: background-image 0.5s ease-in-out;
+}
+
+.timer-gradient-active.tech-card {
+  background-image: linear-gradient(135deg, 
+    rgba(
+      calc(139 * var(--timer-progress) + 239 * (1 - var(--timer-progress))), 
+      calc(92 * var(--timer-progress) + 68 * (1 - var(--timer-progress))), 
+      calc(246 * var(--timer-progress) + 68 * (1 - var(--timer-progress))), 
+      calc(0.2 * var(--timer-progress) + 0.4 * (1 - var(--timer-progress)))
+    ), 
+    rgba(
+      calc(124 * var(--timer-progress) + 220 * (1 - var(--timer-progress))), 
+      calc(58 * var(--timer-progress) + 38 * (1 - var(--timer-progress))), 
+      calc(237 * var(--timer-progress) + 38 * (1 - var(--timer-progress))), 
+      calc(0.1 * var(--timer-progress) + 0.3 * (1 - var(--timer-progress)))
+    ));
+  transition: background-image 0.5s ease-in-out;
+}
+
+.timer-gradient-active.celebrity-card {
+  background-image: linear-gradient(135deg, 
+    rgba(
+      calc(236 * var(--timer-progress) + 239 * (1 - var(--timer-progress))), 
+      calc(72 * var(--timer-progress) + 68 * (1 - var(--timer-progress))), 
+      calc(153 * var(--timer-progress) + 68 * (1 - var(--timer-progress))), 
+      calc(0.2 * var(--timer-progress) + 0.4 * (1 - var(--timer-progress)))
+    ), 
+    rgba(
+      calc(219 * var(--timer-progress) + 220 * (1 - var(--timer-progress))), 
+      calc(39 * var(--timer-progress) + 38 * (1 - var(--timer-progress))), 
+      calc(119 * var(--timer-progress) + 38 * (1 - var(--timer-progress))), 
+      calc(0.1 * var(--timer-progress) + 0.3 * (1 - var(--timer-progress)))
+    ));
+  transition: background-image 0.5s ease-in-out;
+}
+
+.timer-gradient-active.sports-card {
+  background-image: linear-gradient(135deg, 
+    rgba(
+      calc(16 * var(--timer-progress) + 239 * (1 - var(--timer-progress))), 
+      calc(185 * var(--timer-progress) + 68 * (1 - var(--timer-progress))), 
+      calc(129 * var(--timer-progress) + 68 * (1 - var(--timer-progress))), 
+      calc(0.2 * var(--timer-progress) + 0.4 * (1 - var(--timer-progress)))
+    ), 
+    rgba(
+      calc(5 * var(--timer-progress) + 220 * (1 - var(--timer-progress))), 
+      calc(150 * var(--timer-progress) + 38 * (1 - var(--timer-progress))), 
+      calc(105 * var(--timer-progress) + 38 * (1 - var(--timer-progress))), 
+      calc(0.1 * var(--timer-progress) + 0.3 * (1 - var(--timer-progress)))
+    ));
+  transition: background-image 0.5s ease-in-out;
+}
+
+.timer-gradient-active.politics-card {
+  background-image: linear-gradient(135deg, 
+    rgba(
+      calc(99 * var(--timer-progress) + 239 * (1 - var(--timer-progress))), 
+      calc(102 * var(--timer-progress) + 68 * (1 - var(--timer-progress))), 
+      calc(241 * var(--timer-progress) + 68 * (1 - var(--timer-progress))), 
+      calc(0.2 * var(--timer-progress) + 0.4 * (1 - var(--timer-progress)))
+    ), 
+    rgba(
+      calc(79 * var(--timer-progress) + 220 * (1 - var(--timer-progress))), 
+      calc(70 * var(--timer-progress) + 38 * (1 - var(--timer-progress))), 
+      calc(229 * var(--timer-progress) + 38 * (1 - var(--timer-progress))), 
+      calc(0.1 * var(--timer-progress) + 0.3 * (1 - var(--timer-progress)))
+    ));
+  transition: background-image 0.5s ease-in-out;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
