@@ -1,0 +1,43 @@
+{
+  "name": "based",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@coinbase/onchainkit": "latest",
+    "@farcaster/frame-sdk": "^0.1.8",
+    "@tanstack/react-query": "^5",
+    "@upstash/redis": "^1.34.4",
+    "@use-gesture/react": "^10.3.1",
+    "framer-motion": "^12.23.12",
+    "lucide-react": "^0.540.0",
+    "next": "^15.3.3",
+    "react": "^18",
+    "react-dom": "^18",
+    "react-hot-toast": "^2.6.0",
+    "react-spring": "^10.0.1",
+    "viem": "^2.27.2",
+    "wagmi": "^2.16.0",
+    "zustand": "^5.0.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "eslint": "^8",
+    "eslint-config-next": "15.3.3",
+    "eslint-config-prettier": "^10.1.1",
+    "eslint-plugin-prettier": "^5.2.3",
+    "eslint-plugin-react": "^7.37.4",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "postcss": "^8",
+    "prettier": "^3.5.3",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}
