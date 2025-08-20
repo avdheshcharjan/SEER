@@ -23,10 +23,10 @@ export function SwipeStack({ markets, onSwipe, className = '' }: SwipeStackProps
     const x = useMotionValue(0);
     const y = useMotionValue(0);
     const rotate = useTransform(x, [-400, 400], [-25, 25]);
-    const scale = useTransform(y, [0, -200], [1, 0.9]);
     const opacity = useTransform(
         [x, y],
-        ([xVal, yVal]) => {
+        (latest: number[]) => {
+            const [xVal, yVal] = latest;
             const distance = Math.sqrt(xVal * xVal + yVal * yVal);
             return distance > 200 ? Math.max(0, 1 - (distance - 200) / 300) : 1;
         }
@@ -122,39 +122,7 @@ export function SwipeStack({ markets, onSwipe, className = '' }: SwipeStackProps
         }, 400);
     };
 
-    const programmaticSwipe = (direction: 'left' | 'right' | 'up') => {
-        if (isAnimating) return;
 
-        const currentMarket = markets[currentIndex];
-        if (!currentMarket) return;
-
-        setIsAnimating(true);
-        setIsTimerActive(false); // Pause timer during animation
-
-        switch (direction) {
-            case 'left':
-                x.set(-1200);
-                y.set(-50); // Slight upward drift for natural feel
-                break;
-            case 'right':
-                x.set(1200);
-                y.set(-50); // Slight upward drift for natural feel
-                break;
-            case 'up':
-                y.set(-1200);
-                x.set(0); // Keep centered for up swipe
-                break;
-        }
-
-        onSwipe(currentMarket.id, direction);
-
-        setTimeout(() => {
-            setCurrentIndex(prev => prev + 1);
-            x.set(0);
-            y.set(0);
-            setIsAnimating(false);
-        }, 400);
-    };
 
     // Show message when no more markets
     if (currentIndex >= markets.length) {
