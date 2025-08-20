@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { useAccount } from 'wagmi';
 import { SwipeStack } from './SwipeStack';
 import { useAppStore } from '@/lib/store';
 import { getRandomMarkets } from '@/lib/prediction-markets';
-import { UserPrediction } from '@/lib/prediction-markets';
+import { UserPrediction, PredictionMarket } from '@/lib/prediction-markets';
 
 interface PredictionMarketProps {
     onBack?: () => void;
@@ -15,6 +15,8 @@ interface PredictionMarketProps {
 
 export function PredictionMarket({ onBack }: PredictionMarketProps) {
     const { address } = useAccount();
+    const [selectedCategory, setSelectedCategory] = useState<'all' | 'crypto' | 'tech' | 'celebrity' | 'sports' | 'politics'>('all');
+    const [allMarkets, setAllMarkets] = useState<PredictionMarket[]>([]);
     const {
         currentMarkets,
         setCurrentMarkets,
@@ -26,9 +28,10 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
 
     useEffect(() => {
         // Initialize markets when component mounts
-        if (currentMarkets.length === 0) {
-            const markets = getRandomMarkets(20); // Get 20 random markets
-            setCurrentMarkets(markets);
+        if (allMarkets.length === 0) {
+            const markets = getRandomMarkets(50); // Get more markets to have variety across categories
+            setAllMarkets(markets);
+            setCurrentMarkets(markets.slice(0, 20)); // Show first 20 initially
         }
 
         // Initialize user if connected but no user data
@@ -44,7 +47,18 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                 joinedAt: new Date().toISOString(),
             });
         }
-    }, [address, currentMarkets.length, user, setCurrentMarkets, setUser]);
+    }, [address, allMarkets.length, user, setCurrentMarkets, setUser]);
+
+    // Filter markets based on selected category
+    useEffect(() => {
+        if (allMarkets.length > 0) {
+            let filteredMarkets = allMarkets;
+            if (selectedCategory !== 'all') {
+                filteredMarkets = allMarkets.filter(market => market.category === selectedCategory);
+            }
+            setCurrentMarkets(filteredMarkets.slice(0, 20));
+        }
+    }, [selectedCategory, allMarkets, setCurrentMarkets]);
 
     const handleSwipe = async (marketId: string, direction: 'left' | 'right' | 'up') => {
         if (!address || !user) {
@@ -197,36 +211,37 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                     </svg>
                 </motion.button>
 
-                <h1 className="text-xl font-bold text-white">Prediction Market</h1>
+                <h1 className="text-xl font-bold text-white">BASED</h1>
 
                 <div className="p-2">
-                    <div className="w-6 h-6 bg-green-500 rounded-full animate-pulse" />
-                </div>
-            </div>
-
-            {/* User Stats */}
-            {user && (
-                <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-4 mb-6 border border-slate-700/50">
-                    <div className="grid grid-cols-3 gap-4 text-center">
-                        <div>
-                            <div className="text-2xl font-bold text-white">${user.totalSpent}</div>
-                            <div className="text-xs text-slate-400">Total Spent</div>
-                        </div>
-                        <div>
-                            <div className="text-2xl font-bold text-white">{user.totalPredictions}</div>
-                            <div className="text-xs text-slate-400">Predictions</div>
-                        </div>
-                        <div>
-                            <div className="text-2xl font-bold text-green-400">
-                                {user.totalPredictions > 0
-                                    ? Math.round((user.correctPredictions / user.totalPredictions) * 100)
-                                    : 0}%
-                            </div>
-                            <div className="text-xs text-slate-400">Win Rate</div>
+                    <div className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center">
+                        <div className="w-6 h-6 bg-slate-500 rounded-full flex items-center justify-center text-xs text-slate-300 font-medium">
+                            ?
                         </div>
                     </div>
                 </div>
-            )}
+            </div>
+
+            {/* Category Tab Bar */}
+            <div className="flex items-center space-x-1 mb-6 p-1 bg-slate-800/50 rounded-xl border border-slate-700/50">
+                {['all', 'crypto', 'tech', 'celebrity', 'sports', 'politics'].map((category) => (
+                    <motion.button
+                        key={category}
+                        onClick={() => setSelectedCategory(category as typeof selectedCategory)}
+                        className={`
+                            px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex-1 text-center
+                            ${selectedCategory === category
+                                ? 'bg-base-500 text-white shadow-lg'
+                                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
+                            }
+                        `}
+                        whileHover={{ scale: selectedCategory === category ? 1 : 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                    >
+                        {category.charAt(0).toUpperCase() + category.slice(1)}
+                    </motion.button>
+                ))}
+            </div>
 
             {/* Swipe Stack */}
             <SwipeStack

@@ -21,6 +21,27 @@ export function PredictionCard({ market, style, className = '', timeLeft = 60 }:
         return `$${price.toFixed(2)}`;
     };
 
+    const getTimeRemaining = () => {
+        // Generate a random time remaining between 1-24 hours for each market
+        // Using market.id as seed for consistency
+        const seed = market.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        const random = (seed % 24) + 1; // 1-24 hours
+
+        if (random < 1) {
+            const minutes = Math.floor(random * 60);
+            return `${minutes}m left`;
+        } else if (random < 24) {
+            const hours = Math.floor(random);
+            const minutes = Math.floor((random - hours) * 60);
+            if (minutes === 0) {
+                return `${hours}h left`;
+            }
+            return `${hours}h ${minutes}m left`;
+        } else {
+            return `${Math.floor(random)}h left`;
+        }
+    };
+
     const getCategoryColor = (category: string) => {
         const colors = {
             crypto: 'bg-prediction-crypto',
@@ -58,10 +79,7 @@ export function PredictionCard({ market, style, className = '', timeLeft = 60 }:
                 />
             </div>
 
-            {/* Timer Display */}
-            <div className="absolute top-4 left-4 bg-slate-900/80 backdrop-blur-sm rounded-lg px-2 py-1 text-xs font-medium text-white border border-slate-700/50">
-                {timeLeft}s
-            </div>
+
 
             {/* Header */}
             <div className="relative p-6 pb-4">
@@ -71,7 +89,7 @@ export function PredictionCard({ market, style, className = '', timeLeft = 60 }:
                     </div>
                     <div className="flex items-center text-slate-400 text-sm">
                         <Clock className="w-4 h-4 mr-1" />
-                        {market.endDate}
+                        {getTimeRemaining()}
                     </div>
                 </div>
 

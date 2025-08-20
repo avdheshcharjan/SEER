@@ -64,38 +64,7 @@ export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard }: Ho
                 </motion.div>
             </div>
 
-            {/* Connection Status */}
-            {isConnected && address ? (
-                <motion.div
-                    className="bg-green-500/20 border border-green-500/30 rounded-xl p-4 mb-6"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.2, duration: 0.3 }}
-                >
-                    <div className="flex items-center justify-center space-x-2">
-                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-                        <span className="text-green-300 text-sm font-medium">
-                            Wallet Connected
-                        </span>
-                    </div>
-                </motion.div>
-            ) : (
-                <motion.div
-                    className="bg-yellow-500/20 border border-yellow-500/30 rounded-xl p-4 mb-6"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.2, duration: 0.3 }}
-                >
-                    <div className="text-center">
-                        <div className="text-yellow-400 text-sm font-medium mb-2">
-                            Connect your wallet to start predicting
-                        </div>
-                        <div className="text-yellow-300 text-xs">
-                            Use the wallet button in the top-left corner
-                        </div>
-                    </div>
-                </motion.div>
-            )}
+
 
             {/* Action Buttons */}
             <div className="space-y-4 mb-8">

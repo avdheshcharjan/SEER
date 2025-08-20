@@ -1555,7 +1555,7 @@ export function getRandomMarkets(count: number): PredictionMarket[] {
 export function getCategoryColor(category: PredictionMarket['category']): string {
   const colors = {
     crypto: 'prediction-crypto',
-    tech: 'prediction-tech', 
+    tech: 'prediction-tech',
     celebrity: 'prediction-celebrity',
     sports: 'prediction-sports',
     politics: 'prediction-politics'
@@ -1567,7 +1567,7 @@ export function getCategoryGradient(category: PredictionMarket['category']): str
   const gradients = {
     crypto: 'crypto-card',
     tech: 'tech-card',
-    celebrity: 'celebrity-card', 
+    celebrity: 'celebrity-card',
     sports: 'sports-card',
     politics: 'politics-card'
   };
