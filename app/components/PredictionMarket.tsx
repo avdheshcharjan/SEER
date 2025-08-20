@@ -7,7 +7,7 @@ import { useAccount } from 'wagmi';
 import { SwipeStack } from './SwipeStack';
 import { useAppStore } from '@/lib/store';
 import { getRandomMarkets } from '@/lib/prediction-markets';
-import { UserPrediction, PredictionMarket } from '@/lib/prediction-markets';
+import { UserPrediction, type PredictionMarket } from '@/lib/prediction-markets';
 
 interface PredictionMarketProps {
     onBack?: () => void;

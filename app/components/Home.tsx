@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from 'framer-motion';
-import { useAccount } from 'wagmi';
 import { TrendingUp, Users, Zap, Trophy } from 'lucide-react';
 
 interface HomeProps {
@@ -11,7 +10,6 @@ interface HomeProps {
 }
 
 export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard }: HomeProps) {
-    const { address, isConnected } = useAccount();
 
     const features = [
         {
