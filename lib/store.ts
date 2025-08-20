@@ -11,6 +11,7 @@ interface User {
     totalPredictions: number;
     rank: number;
     joinedAt: string;
+    defaultBetAmount: number; // Default bet amount in USDC
 }
 
 interface AppState {
@@ -38,6 +39,7 @@ interface AppState {
     addSwipeHistory: (marketId: string) => void;
     addPrediction: (prediction: UserPrediction) => void;
     updateUser: (updates: Partial<User>) => void;
+    setDefaultBetAmount: (amount: number) => void;
     setCurrentView: (view: 'home' | 'predict' | 'profile' | 'leaderboard') => void;
     setLoading: (loading: boolean) => void;
     reset: () => void;
@@ -83,8 +85,8 @@ export const useAppStore = create<AppState>()(
                 const updatedPredictions = [...state.userPredictions, prediction];
                 const updatedUser = state.user ? {
                     ...state.user,
-                    totalSpent: state.user.totalSpent + prediction.amount,
-                    totalPredictions: state.user.totalPredictions + 1,
+                    totalSpent: (state.user.totalSpent || 0) + prediction.amount,
+                    totalPredictions: (state.user.totalPredictions || 0) + 1,
                 } : null;
 
                 return {
@@ -95,6 +97,10 @@ export const useAppStore = create<AppState>()(
 
             updateUser: (updates) => set((state) => ({
                 user: state.user ? { ...state.user, ...updates } : null
+            })),
+
+            setDefaultBetAmount: (amount) => set((state) => ({
+                user: state.user ? { ...state.user, defaultBetAmount: amount } : null
             })),
 
             setCurrentView: (view) => set({ currentView: view }),

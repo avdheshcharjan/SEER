@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { useAccount } from 'wagmi';
 import { useAppStore, useUserStats } from '@/lib/store';
 import { getMarketById } from '@/lib/prediction-markets';
-import { TrendingUp, TrendingDown, Clock, ExternalLink, Trophy, Target, DollarSign } from 'lucide-react';
+import { TrendingUp, TrendingDown, Clock, ExternalLink, Trophy, Target, DollarSign, Settings } from 'lucide-react';
 
 interface ProfileProps {
   onBack?: () => void;
@@ -13,7 +13,7 @@ interface ProfileProps {
 export function Profile({ onBack }: ProfileProps) {
   const { address } = useAccount();
   const userStats = useUserStats();
-  const { userPredictions } = useAppStore();
+  const { userPredictions, setDefaultBetAmount } = useAppStore();
 
   if (!address || !userStats) {
     return (
@@ -104,7 +104,7 @@ export function Profile({ onBack }: ProfileProps) {
             <div className="flex items-center justify-center mb-1">
               <DollarSign className="w-4 h-4 text-green-400 mr-1" />
             </div>
-            <div className="text-2xl font-bold text-white">${userStats.totalSpent}</div>
+            <div className="text-2xl font-bold text-white">${userStats.totalSpent || 0}</div>
             <div className="text-xs text-slate-400">Total Spent</div>
           </div>
           <div className="text-center">
@@ -121,6 +121,43 @@ export function Profile({ onBack }: ProfileProps) {
             <div className="text-2xl font-bold text-green-400">{userStats.winRate}%</div>
             <div className="text-xs text-slate-400">Win Rate</div>
           </div>
+        </div>
+      </div>
+
+      {/* Settings Section */}
+      <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-4 mb-6 border border-slate-700/50">
+        <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
+          <Settings className="w-5 h-5 mr-2" />
+          Bet Settings
+        </h3>
+        
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-slate-300 mb-3">
+            Default Bet Amount (USDC)
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            {[1, 5, 10].map((amount) => (
+              <motion.button
+                key={amount}
+                onClick={() => setDefaultBetAmount(amount)}
+                className={`
+                  py-3 px-4 rounded-xl border-2 text-center font-semibold transition-all duration-200
+                  ${userStats.defaultBetAmount === amount
+                    ? 'border-base-500 bg-base-500/20 text-base-400'
+                    : 'border-slate-600 hover:border-slate-500 bg-slate-800/50 text-slate-300 hover:text-white'
+                  }
+                `}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <div className="text-lg font-bold">${amount}</div>
+                <div className="text-xs opacity-80">USDC</div>
+              </motion.button>
+            ))}
+          </div>
+          <p className="text-xs text-slate-400 mt-2">
+            This amount will be bet automatically when you swipe on markets
+          </p>
         </div>
       </div>
 

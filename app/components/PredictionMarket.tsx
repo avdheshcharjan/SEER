@@ -45,6 +45,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                 totalPredictions: 0,
                 rank: 0,
                 joinedAt: new Date().toISOString(),
+                defaultBetAmount: 1, // Default $1 USDC
             });
         }
     }, [address, allMarkets.length, user, setCurrentMarkets, setUser]);
@@ -83,13 +84,14 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
             return;
         }
 
-        // Create prediction
+        // Create prediction using user's default bet amount (fallback to 1)
+        const betAmount = user.defaultBetAmount ?? 1;
         const prediction: UserPrediction = {
             id: `pred_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             marketId,
             userId: user.id,
             prediction: direction === 'right' ? 'yes' : 'no',
-            amount: 1, // $1 USDC per prediction as specified
+            amount: betAmount,
             timestamp: new Date().toISOString(),
         };
 
@@ -100,7 +102,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
         const predictionText = direction === 'right' ? 'YES' : 'NO';
         const emoji = direction === 'right' ? '✅' : '❌';
 
-        toast.success(`Predicted ${predictionText} for $1 USDC! ${emoji}`, {
+        toast.success(`Predicted ${predictionText} for $${betAmount} USDC! ${emoji}`, {
             style: {
                 borderRadius: '12px',
                 background: '#1e293b',
