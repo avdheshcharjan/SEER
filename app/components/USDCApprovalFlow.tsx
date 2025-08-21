@@ -82,9 +82,21 @@ export function USDCApprovalFlow({ onApprovalComplete }: USDCApprovalFlowProps) 
   }, [address, isApproved]);
 
   const handleTransactionStatus = (status: LifecycleStatus) => {
-    console.log('Approval transaction status:', status);
+    console.log('Approval transaction status:', status.statusName, status);
     
     switch (status.statusName) {
+      case 'init':
+        console.log('Transaction initialized');
+        break;
+        
+      case 'transactionIdle':
+        console.log('Transaction idle');
+        break;
+        
+      case 'buildingTransaction':
+        console.log('Building transaction...');
+        break;
+      
       case 'transactionPending':
         setIsApproving(true);
         toast.loading('Setting up USDC approval for gasless transactions...', {
@@ -126,8 +138,12 @@ export function USDCApprovalFlow({ onApprovalComplete }: USDCApprovalFlowProps) 
       
       case 'error':
         setIsApproving(false);
-        console.error('USDC approval failed:', status.statusData);
-        toast.error(`Failed to approve USDC: ${status.statusData?.message || 'Unknown error'}`);
+        console.error('USDC approval failed - Full status:', status);
+        console.error('Status data:', status.statusData);
+        const errorMessage = status.statusData?.message || 
+                           status.statusData?.error || 
+                           (typeof status.statusData === 'string' ? status.statusData : 'Unknown error');
+        toast.error(`Failed to approve USDC: ${errorMessage}`);
         break;
     }
   };
