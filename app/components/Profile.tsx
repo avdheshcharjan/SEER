@@ -325,17 +325,34 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
           <div className="space-y-3 max-h-96 overflow-y-auto">
             {/* Show real Supabase predictions first, then fall back to local predictions */}
             {(realPredictions.length > 0 ? realPredictions : userPredictions)
-              .sort((a, b) => new Date(b.created_at || b.createdAt).getTime() - new Date(a.created_at || a.createdAt).getTime())
+              .sort((a, b) => {
+                const getDate = (item: unknown): number => {
+                  if (item && typeof item === 'object') {
+                    const obj = item as Record<string, unknown>;
+                    const dateValue = obj.created_at || obj.createdAt;
+                    if (typeof dateValue === 'string' || typeof dateValue === 'number') {
+                      return new Date(dateValue).getTime();
+                    }
+                  }
+                  return 0;
+                };
+                return getDate(b) - getDate(a);
+              })
               .map((prediction) => {
+                // Type guard for prediction object
+                if (!prediction || typeof prediction !== 'object') return null;
+                const pred = prediction as Record<string, unknown>;
+                
                 // For real predictions, find market in Supabase data; for local predictions, use legacy lookup
                 const market = realPredictions.length > 0
-                  ? supabaseMarkets.find(m => m.id === prediction.market_id) || prediction.markets
-                  : getMarketById(prediction.marketId);
-                if (!market) return null;
+                  ? supabaseMarkets.find(m => m.id === pred.market_id) || pred.markets
+                  : getMarketById(pred.marketId as string);
+                if (!market || typeof market !== 'object' || !('question' in market)) return null;
+                const marketData = market as Record<string, unknown>;
 
                 return (
                   <motion.div
-                    key={prediction.id}
+                    key={pred.id as string}
                     className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -344,54 +361,61 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex-1">
                         <h4 className="text-white font-medium text-sm mb-1 line-clamp-2">
-                          {market.question}
+                          {marketData.question as string}
                         </h4>
                         <div className="flex items-center space-x-2 text-xs text-slate-400">
-                          <span>{formatDate(prediction.created_at || prediction.createdAt)}</span>
+                          <span>{formatDate((pred.created_at || pred.createdAt) as string)}</span>
                           <span>•</span>
-                          <span className={`px-2 py-1 rounded-full ${market.category === 'crypto' ? 'bg-prediction-crypto/20 text-prediction-crypto' :
-                            market.category === 'tech' ? 'bg-prediction-tech/20 text-prediction-tech' :
-                              market.category === 'celebrity' ? 'bg-prediction-celebrity/20 text-prediction-celebrity' :
-                                market.category === 'sports' ? 'bg-prediction-sports/20 text-prediction-sports' :
+                          <span className={`px-2 py-1 rounded-full ${marketData.category === 'crypto' ? 'bg-prediction-crypto/20 text-prediction-crypto' :
+                            marketData.category === 'tech' ? 'bg-prediction-tech/20 text-prediction-tech' :
+                              marketData.category === 'celebrity' ? 'bg-prediction-celebrity/20 text-prediction-celebrity' :
+                                marketData.category === 'sports' ? 'bg-prediction-sports/20 text-prediction-sports' :
                                   'bg-prediction-politics/20 text-prediction-politics'
                             }`}>
-                            {market.category}
+                            {marketData.category as string}
                           </span>
                         </div>
                       </div>
                       <div className="text-right ml-3">
-                        <div className={`text-lg font-bold ${prediction.side === 'yes' ? 'text-green-400' : 'text-red-400'
+                        <div className={`text-lg font-bold ${pred.side === 'yes' ? 'text-green-400' : 'text-red-400'
                           }`}>
-                          {prediction.side === 'yes' ? 'YES' : 'NO'}
+                          {pred.side === 'yes' ? 'YES' : 'NO'}
                         </div>
-                        <div className="text-xs text-slate-400">${prediction.amount}</div>
+                        <div className="text-xs text-slate-400">${pred.amount as number}</div>
                       </div>
                     </div>
 
-                    {(prediction.transaction_hash || prediction.transactionHash) && (
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-700/50">
-                        <span className="text-xs text-slate-400">Transaction:</span>
-                        <a
-                          href={`https://basescan.org/tx/${prediction.transaction_hash || prediction.transactionHash}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center text-xs text-base-400 hover:text-base-300 transition-colors"
-                        >
-                          {(prediction.transaction_hash || prediction.transactionHash).slice(0, 8)}...{(prediction.transaction_hash || prediction.transactionHash).slice(-6)}
-                          <ExternalLink className="w-3 h-3 ml-1" />
-                        </a>
-                      </div>
-                    )}
+                    {(() => {
+                      const txHash = (typeof pred.transaction_hash === 'string' ? pred.transaction_hash : null) || 
+                                    (typeof pred.transactionHash === 'string' ? pred.transactionHash : null);
+                      return txHash ? (
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-700/50">
+                          <span className="text-xs text-slate-400">Transaction:</span>
+                          <a
+                            href={`https://basescan.org/tx/${txHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center text-xs text-base-400 hover:text-base-300 transition-colors"
+                          >
+                            {txHash.slice(0, 8)}...{txHash.slice(-6)}
+                            <ExternalLink className="w-3 h-3 ml-1" />
+                          </a>
+                        </div>
+                      ) : null;
+                    })()}
 
-                    {prediction.resolved && (
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-700/50">
-                        <span className="text-xs text-slate-400">Result:</span>
-                        <span className={`text-xs font-medium ${prediction.correct ? 'text-green-400' : 'text-red-400'
-                          }`}>
-                          {prediction.correct ? '✓ Correct' : '✗ Incorrect'}
-                        </span>
-                      </div>
-                    )}
+                    {(() => {
+                      const isResolved = typeof pred.resolved === 'boolean' && pred.resolved;
+                      return isResolved ? (
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-700/50">
+                          <span className="text-xs text-slate-400">Result:</span>
+                          <span className={`text-xs font-medium ${pred.correct ? 'text-green-400' : 'text-red-400'
+                            }`}>
+                            {pred.correct ? '✓ Correct' : '✗ Incorrect'}
+                          </span>
+                        </div>
+                      ) : null;
+                    })()}
                   </motion.div>
                 );
               })}

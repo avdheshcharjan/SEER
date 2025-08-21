@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useCallback, ReactNode } from 'react';
 import { useAppStore } from '@/lib/store';
 import { SupabaseService } from '@/lib/supabase';
 import { useAccount } from 'wagmi';
@@ -57,7 +57,7 @@ export function SupabaseProvider({ children }: SupabaseProviderProps) {
         }
     }, [walletConnected, address, user, setUser]);
 
-    const refetchMarkets = async () => {
+    const refetchMarkets = useCallback(async () => {
         try {
             setLoading(true);
             setError(null);
@@ -70,9 +70,9 @@ export function SupabaseProvider({ children }: SupabaseProviderProps) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [setLoading, setError, setSupabaseMarkets]);
 
-    const refetchUserData = async () => {
+    const refetchUserData = useCallback(async () => {
         if (!address) return;
 
         try {
@@ -95,7 +95,7 @@ export function SupabaseProvider({ children }: SupabaseProviderProps) {
             console.error('Failed to fetch user data:', err);
             setError(err instanceof Error ? err.message : 'Failed to fetch user data');
         }
-    };
+    }, [address, setError, setUserPositions, user, setUser]);
 
     // Initial data fetch when component mounts or user connects
     useEffect(() => {
