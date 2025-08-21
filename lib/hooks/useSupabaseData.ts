@@ -39,7 +39,7 @@ export function useMarkets() {
         } finally {
             setLoading(false);
         }
-    }, [lastFetch, supabaseMarkets.length, setSupabaseMarkets, setLoading, setError]);
+    }, [lastFetch, CACHE_DURATION, supabaseMarkets.length, setSupabaseMarkets, setLoading, setError]);
 
     const fetchMarketsByCategory = useCallback(async (category: string) => {
         try {

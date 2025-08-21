@@ -9,7 +9,7 @@ import { useAppStore } from '@/lib/store';
 import { getRandomMarkets } from '@/lib/prediction-markets';
 import { UnifiedMarket, SchemaTransformer } from '@/lib/types';
 import { usePredictions, useMarkets } from '@/lib/hooks/useSupabaseData';
-import { useBuyShares, useUSDCFaucet, useUSDCBalance, useMarketData, useUserPosition, SmartContractUtils } from '@/lib/smart-contracts';
+import { useBuyShares, useUSDCFaucet, useUSDCBalance, SmartContractUtils } from '@/lib/smart-contracts';
 import { DEMO_MARKET_ADDRESS } from '@/lib/blockchain';
 
 interface PredictionMarketProps {

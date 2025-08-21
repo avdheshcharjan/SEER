@@ -100,13 +100,13 @@ export function SupabaseProvider({ children }: SupabaseProviderProps) {
     // Initial data fetch when component mounts or user connects
     useEffect(() => {
         refetchMarkets();
-    }, []);
+    }, [refetchMarkets]);
 
     useEffect(() => {
         if (address) {
             refetchUserData();
         }
-    }, [address]);
+    }, [address, refetchUserData]);
 
     const contextValue: SupabaseContextType = {
         isConnected: walletConnected,
