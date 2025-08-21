@@ -1,9 +1,11 @@
 "use client";
 
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAccount } from 'wagmi';
 import { useAppStore, useUserStats } from '@/lib/store';
 import { getMarketById } from '@/lib/prediction-markets';
+import { useUserData, useMarkets } from '@/lib/hooks/useSupabaseData';
 import { TrendingUp, TrendingDown, Clock, ExternalLink, Trophy, Target, DollarSign, Settings, Plus, Share } from 'lucide-react';
 
 interface ProfileProps {
@@ -14,7 +16,30 @@ interface ProfileProps {
 export function Profile({ onBack, onCreateMarket }: ProfileProps) {
   const { address } = useAccount();
   const userStats = useUserStats();
+  const { getUserPredictions, userPositions } = useUserData();
+  const { markets: supabaseMarkets } = useMarkets();
   const { userPredictions, createdMarkets, setDefaultBetAmount } = useAppStore();
+  const [realPredictions, setRealPredictions] = useState<any[]>([]);
+  const [isLoadingPredictions, setIsLoadingPredictions] = useState(false);
+
+  // Load real predictions from Supabase
+  useEffect(() => {
+    const loadPredictions = async () => {
+      if (!address) return;
+
+      setIsLoadingPredictions(true);
+      try {
+        const predictions = await getUserPredictions();
+        setRealPredictions(predictions || []);
+      } catch (error) {
+        console.error('Failed to load predictions:', error);
+      } finally {
+        setIsLoadingPredictions(false);
+      }
+    };
+
+    loadPredictions();
+  }, [address, getUserPredictions]);
 
   if (!address || !userStats) {
     return (
@@ -73,9 +98,9 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </motion.button>
-        
+
         <h1 className="text-xl font-bold text-white">Profile</h1>
-        
+
         <div className="w-8 h-8" />
       </div>
 
@@ -131,7 +156,7 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
           <Settings className="w-5 h-5 mr-2" />
           Bet Settings
         </h3>
-        
+
         <div className="mb-4">
           <label className="block text-sm font-medium text-slate-300 mb-3">
             Default Bet Amount (USDC)
@@ -199,7 +224,7 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
               </button>
             )}
           </div>
-          
+
           <div className="space-y-3 max-h-64 overflow-y-auto">
             {createdMarkets
               .sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime())
@@ -235,7 +260,7 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
                       <Share className="w-3 h-3 text-slate-400" />
                     </button>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-2">
                     <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-2 text-center">
                       <div className="text-green-400 font-bold text-xs">
@@ -284,8 +309,13 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
           <Clock className="w-5 h-5 mr-2" />
           Recent Predictions
         </h3>
-        
-        {userPredictions.length === 0 ? (
+
+        {isLoadingPredictions ? (
+          <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 text-center">
+            <div className="text-4xl mb-3">⏳</div>
+            <p className="text-slate-400">Loading predictions...</p>
+          </div>
+        ) : (realPredictions.length === 0 && userPredictions.length === 0) ? (
           <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 text-center">
             <div className="text-4xl mb-3">📊</div>
             <p className="text-slate-400">No predictions yet</p>
@@ -293,10 +323,14 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
           </div>
         ) : (
           <div className="space-y-3 max-h-96 overflow-y-auto">
-            {userPredictions
-              .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            {/* Show real Supabase predictions first, then fall back to local predictions */}
+            {(realPredictions.length > 0 ? realPredictions : userPredictions)
+              .sort((a, b) => new Date(b.created_at || b.createdAt).getTime() - new Date(a.created_at || a.createdAt).getTime())
               .map((prediction) => {
-                const market = getMarketById(prediction.marketId);
+                // For real predictions, find market in Supabase data; for local predictions, use legacy lookup
+                const market = realPredictions.length > 0
+                  ? supabaseMarkets.find(m => m.id === prediction.market_id) || prediction.markets
+                  : getMarketById(prediction.marketId);
                 if (!market) return null;
 
                 return (
@@ -313,50 +347,47 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
                           {market.question}
                         </h4>
                         <div className="flex items-center space-x-2 text-xs text-slate-400">
-                          <span>{formatDate(prediction.createdAt)}</span>
+                          <span>{formatDate(prediction.created_at || prediction.createdAt)}</span>
                           <span>•</span>
-                          <span className={`px-2 py-1 rounded-full ${
-                            market.category === 'crypto' ? 'bg-prediction-crypto/20 text-prediction-crypto' :
-                            market.category === 'tech' ? 'bg-prediction-tech/20 text-prediction-tech' :
-                            market.category === 'celebrity' ? 'bg-prediction-celebrity/20 text-prediction-celebrity' :
-                            market.category === 'sports' ? 'bg-prediction-sports/20 text-prediction-sports' :
-                            'bg-prediction-politics/20 text-prediction-politics'
-                          }`}>
+                          <span className={`px-2 py-1 rounded-full ${market.category === 'crypto' ? 'bg-prediction-crypto/20 text-prediction-crypto' :
+                              market.category === 'tech' ? 'bg-prediction-tech/20 text-prediction-tech' :
+                                market.category === 'celebrity' ? 'bg-prediction-celebrity/20 text-prediction-celebrity' :
+                                  market.category === 'sports' ? 'bg-prediction-sports/20 text-prediction-sports' :
+                                    'bg-prediction-politics/20 text-prediction-politics'
+                            }`}>
                             {market.category}
                           </span>
                         </div>
                       </div>
                       <div className="text-right ml-3">
-                        <div className={`text-lg font-bold ${
-                          prediction.side === 'yes' ? 'text-green-400' : 'text-red-400'
-                        }`}>
+                        <div className={`text-lg font-bold ${prediction.side === 'yes' ? 'text-green-400' : 'text-red-400'
+                          }`}>
                           {prediction.side === 'yes' ? 'YES' : 'NO'}
                         </div>
                         <div className="text-xs text-slate-400">${prediction.amount}</div>
                       </div>
                     </div>
-                    
-                    {prediction.transactionHash && (
+
+                    {(prediction.transaction_hash || prediction.transactionHash) && (
                       <div className="flex items-center justify-between pt-2 border-t border-slate-700/50">
                         <span className="text-xs text-slate-400">Transaction:</span>
                         <a
-                          href={`https://basescan.org/tx/${prediction.transactionHash}`}
+                          href={`https://basescan.org/tx/${prediction.transaction_hash || prediction.transactionHash}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center text-xs text-base-400 hover:text-base-300 transition-colors"
                         >
-                          {prediction.transactionHash.slice(0, 8)}...{prediction.transactionHash.slice(-6)}
+                          {(prediction.transaction_hash || prediction.transactionHash).slice(0, 8)}...{(prediction.transaction_hash || prediction.transactionHash).slice(-6)}
                           <ExternalLink className="w-3 h-3 ml-1" />
                         </a>
                       </div>
                     )}
-                    
+
                     {prediction.resolved && (
                       <div className="flex items-center justify-between pt-2 border-t border-slate-700/50">
                         <span className="text-xs text-slate-400">Result:</span>
-                        <span className={`text-xs font-medium ${
-                          prediction.correct ? 'text-green-400' : 'text-red-400'
-                        }`}>
+                        <span className={`text-xs font-medium ${prediction.correct ? 'text-green-400' : 'text-red-400'
+                          }`}>
                           {prediction.correct ? '✓ Correct' : '✗ Incorrect'}
                         </span>
                       </div>

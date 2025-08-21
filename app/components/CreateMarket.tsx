@@ -5,6 +5,9 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Plus, Calendar, TrendingUp, TrendingDown } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { UnifiedMarket } from '@/lib/types';
+import { useMarketCreation } from '@/lib/hooks/useSupabaseData';
+import { useCreateMarket, SmartContractService, SmartContractUtils } from '@/lib/smart-contracts';
+import { useAccount } from 'wagmi';
 import toast from 'react-hot-toast';
 
 interface CreateMarketProps {
@@ -25,7 +28,10 @@ interface TokenData {
 }
 
 export function CreateMarket({ onBack }: CreateMarketProps) {
-    const { user, addCreatedMarket } = useAppStore();
+    const { user } = useAppStore();
+    const { address } = useAccount();
+    const { createMarket: createMarketDB } = useMarketCreation();
+    const { createMarket: createMarketContract, isPending, isConfirming, isConfirmed, hash } = useCreateMarket();
     const [step, setStep] = useState<'form' | 'preview' | 'creating'>('form');
     const [formData, setFormData] = useState({
         ticker: 'ETH',
@@ -48,7 +54,7 @@ export function CreateMarket({ onBack }: CreateMarketProps) {
             );
             const data = await response.json();
             const tokenInfo = data[selectedToken.coinGeckoId];
-            
+
             if (tokenInfo) {
                 setTokenData({
                     currentPrice: tokenInfo.usd,
@@ -82,7 +88,7 @@ export function CreateMarket({ onBack }: CreateMarketProps) {
         if (!formData.ticker || !formData.price || !formData.endDate) {
             return 'Please fill all fields';
         }
-        
+
         const endDate = new Date(formData.endDate).toLocaleDateString();
         const direction = formData.direction === 'above' ? 'above' : 'below';
         return `Will ${formData.ticker} be ${direction} $${formData.price} by ${endDate}?`;
@@ -90,7 +96,7 @@ export function CreateMarket({ onBack }: CreateMarketProps) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!formData.ticker || !formData.price || !formData.endDate) {
             toast.error('Please fill all fields');
             return;
@@ -120,7 +126,7 @@ export function CreateMarket({ onBack }: CreateMarketProps) {
     };
 
     const handleCreateMarket = async () => {
-        if (!user?.address) {
+        if (!address) {
             toast.error('Please connect your wallet');
             return;
         }
@@ -128,60 +134,92 @@ export function CreateMarket({ onBack }: CreateMarketProps) {
         setStep('creating');
 
         try {
-            // Simulate market creation (in real app, this would call smart contract)
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            const question = generateQuestion();
+            const endTime = new Date(formData.endDate);
 
-            // Create new market object with CoinGecko data
-            const newMarket: UnifiedMarket = {
-                id: `market_${Date.now()}`,
-                question: generateQuestion(),
-                description: `A prediction market for ${formData.ticker} price`,
-                category: 'crypto',
-                endTime: new Date(formData.endDate).toISOString(),
-                totalVolume: 0,
-                yesPrice: 0.5,
-                noPrice: 0.5,
-                yesOdds: 50,
-                noOdds: 50,
-                yesPool: 0,
-                noPool: 0,
-                totalYesShares: 0,
-                totalNoShares: 0,
-                yesShares: 0,
-                noShares: 0,
-                creatorAddress: user.address,
-                createdAt: new Date().toISOString(),
-                resolved: false,
-                outcome: null,
-                ticker: formData.ticker,
-                targetPrice: parseFloat(formData.price),
-                direction: formData.direction,
-                isCreatedByUser: true,
-                // Add CoinGecko data to prevent crashes
-                currentPrice: tokenData?.currentPrice || 0,
-                priceChange: tokenData?.priceChange || 0,
-                marketCap: tokenData?.marketCap || 'N/A',
-                volume: tokenData?.volume || '$0 Volume',
-            };
-
-            // Add to store
-            addCreatedMarket(newMarket);
-
-            toast.success('Market created successfully!');
-            
-            // Reset form and go back
-            setFormData({
-                ticker: 'ETH',
-                price: '',
-                direction: 'above',
-                endDate: '',
+            // Show processing toast
+            const processingToast = toast.loading('Creating market on blockchain...', {
+                style: {
+                    borderRadius: '12px',
+                    background: '#1e293b',
+                    color: '#f1f5f9',
+                    border: '1px solid #475569',
+                },
             });
-            setStep('form');
-            onBack();
+
+            // Create market on blockchain first
+            await createMarketContract(question, endTime);
+
+            // Dismiss processing toast
+            toast.dismiss(processingToast);
+
+            // Wait for confirmation
+            if (isConfirmed && hash) {
+                // Market created successfully on blockchain
+                toast.success(
+                    <div className="flex items-center justify-between">
+                        <span>Market created on blockchain! 🎉</span>
+                        <a
+                            href={SmartContractUtils.getExplorerUrl(hash)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-2 text-base-400 hover:text-base-300 text-xs"
+                        >
+                            View ↗
+                        </a>
+                    </div>,
+                    {
+                        duration: 5000,
+                        style: {
+                            borderRadius: '12px',
+                            background: '#1e293b',
+                            color: '#f1f5f9',
+                            border: '1px solid #22c55e',
+                        },
+                    }
+                );
+
+                // Also save to database for tracking
+                try {
+                    const marketData = {
+                        question,
+                        category: 'crypto',
+                        endTime: endTime.toISOString(),
+                        creatorAddress: address,
+                        contractAddress: hash, // Store transaction hash for now
+                    };
+
+                    await createMarketDB(marketData);
+                } catch (dbError) {
+                    console.error('Failed to save market to database:', dbError);
+                    // Don't show error to user since blockchain creation succeeded
+                }
+
+                // Reset form and go back
+                setFormData({
+                    ticker: 'ETH',
+                    price: '',
+                    direction: 'above',
+                    endDate: '',
+                });
+                setStep('form');
+                onBack();
+            }
 
         } catch (error) {
             console.error('Error creating market:', error);
-            toast.error('Failed to create market. Please try again.');
+
+            // Check if it's a user rejection
+            if (error && typeof error === 'object' && 'message' in error) {
+                const errorMessage = (error as Error).message.toLowerCase();
+                if (errorMessage.includes('user rejected') || errorMessage.includes('user denied')) {
+                    toast.error('Transaction cancelled by user');
+                    setStep('preview');
+                    return;
+                }
+            }
+
+            toast.error(`Failed to create market: ${error instanceof Error ? error.message : 'Unknown error'}`);
             setStep('preview');
         }
     };
@@ -197,7 +235,21 @@ export function CreateMarket({ onBack }: CreateMarketProps) {
                     >
                         <div className="w-16 h-16 border-4 border-base-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                         <h2 className="text-xl font-bold text-white mb-2">Creating Market</h2>
-                        <p className="text-slate-400">Deploying to Base Sepolia...</p>
+                        <p className="text-slate-400">
+                            {isPending && 'Waiting for wallet confirmation...'}
+                            {isConfirming && 'Transaction confirming on Base Sepolia...'}
+                            {!isPending && !isConfirming && 'Deploying to Base Sepolia...'}
+                        </p>
+                        {hash && (
+                            <a
+                                href={SmartContractUtils.getExplorerUrl(hash)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-base-400 hover:text-base-300 text-sm mt-2 inline-block"
+                            >
+                                View Transaction ↗
+                            </a>
+                        )}
                     </motion.div>
                 </div>
             </div>
@@ -316,11 +368,10 @@ export function CreateMarket({ onBack }: CreateMarketProps) {
                                 key={ticker.value}
                                 type="button"
                                 onClick={() => setFormData(prev => ({ ...prev, ticker: ticker.value }))}
-                                className={`p-3 rounded-xl border transition-all ${
-                                    formData.ticker === ticker.value
-                                        ? 'bg-base-500/20 border-base-500 text-base-400'
-                                        : 'bg-slate-800/30 border-slate-700/50 text-slate-300 hover:bg-slate-700/50'
-                                }`}
+                                className={`p-3 rounded-xl border transition-all ${formData.ticker === ticker.value
+                                    ? 'bg-base-500/20 border-base-500 text-base-400'
+                                    : 'bg-slate-800/30 border-slate-700/50 text-slate-300 hover:bg-slate-700/50'
+                                    }`}
                             >
                                 <div className="text-center">
                                     <div className="font-bold text-sm">{ticker.symbol}</div>
@@ -351,9 +402,8 @@ export function CreateMarket({ onBack }: CreateMarketProps) {
                             </div>
                             <div className="flex items-center justify-between text-sm mt-1">
                                 <span className="text-slate-400">24h Change:</span>
-                                <span className={`font-medium ${
-                                    tokenData.priceChange >= 0 ? 'text-green-400' : 'text-red-400'
-                                }`}>
+                                <span className={`font-medium ${tokenData.priceChange >= 0 ? 'text-green-400' : 'text-red-400'
+                                    }`}>
                                     {tokenData.priceChange >= 0 ? '+' : ''}{tokenData.priceChange.toFixed(2)}%
                                 </span>
                             </div>
@@ -391,11 +441,10 @@ export function CreateMarket({ onBack }: CreateMarketProps) {
                         <button
                             type="button"
                             onClick={() => setFormData(prev => ({ ...prev, direction: 'above' }))}
-                            className={`flex items-center justify-center space-x-2 p-3 rounded-xl border transition-all ${
-                                formData.direction === 'above'
-                                    ? 'bg-green-500/20 border-green-500/50 text-green-400'
-                                    : 'bg-slate-800/30 border-slate-700/50 text-slate-300 hover:bg-slate-700/50'
-                            }`}
+                            className={`flex items-center justify-center space-x-2 p-3 rounded-xl border transition-all ${formData.direction === 'above'
+                                ? 'bg-green-500/20 border-green-500/50 text-green-400'
+                                : 'bg-slate-800/30 border-slate-700/50 text-slate-300 hover:bg-slate-700/50'
+                                }`}
                         >
                             <TrendingUp className="w-4 h-4" />
                             <span>Above</span>
@@ -403,11 +452,10 @@ export function CreateMarket({ onBack }: CreateMarketProps) {
                         <button
                             type="button"
                             onClick={() => setFormData(prev => ({ ...prev, direction: 'below' }))}
-                            className={`flex items-center justify-center space-x-2 p-3 rounded-xl border transition-all ${
-                                formData.direction === 'below'
-                                    ? 'bg-red-500/20 border-red-500/50 text-red-400'
-                                    : 'bg-slate-800/30 border-slate-700/50 text-slate-300 hover:bg-slate-700/50'
-                            }`}
+                            className={`flex items-center justify-center space-x-2 p-3 rounded-xl border transition-all ${formData.direction === 'below'
+                                ? 'bg-red-500/20 border-red-500/50 text-red-400'
+                                : 'bg-slate-800/30 border-slate-700/50 text-slate-300 hover:bg-slate-700/50'
+                                }`}
                         >
                             <TrendingDown className="w-4 h-4" />
                             <span>Below</span>

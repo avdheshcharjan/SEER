@@ -5,6 +5,8 @@ import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, Calendar, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useComposeCast } from '@coinbase/onchainkit/minikit';
+import { useMarketCreation } from '@/lib/hooks/useSupabaseData';
+import { useAccount } from 'wagmi';
 
 const TICKERS = [
   { value: 'ETH', label: 'Ethereum', symbol: 'ETH' },
@@ -14,6 +16,8 @@ const TICKERS = [
 
 export default function CreatePage() {
   const { composeCast } = useComposeCast();
+  const { address } = useAccount();
+  const { createMarket } = useMarketCreation();
   const [formData, setFormData] = useState({
     ticker: 'ETH',
     price: '',
@@ -34,13 +38,18 @@ export default function CreatePage() {
     if (!formData.ticker || !formData.price || !formData.endDate) {
       return 'Please fill all fields';
     }
-    
+
     const endDate = new Date(formData.endDate).toLocaleDateString();
     const direction = formData.direction === 'above' ? 'above' : 'below';
     return `Will ${formData.ticker} be ${direction} $${formData.price} by ${endDate}?`;
   };
 
   const handleCreateMarket = async () => {
+    if (!address) {
+      toast.error('Please connect your wallet');
+      return;
+    }
+
     if (!formData.ticker || !formData.price || !formData.endDate) {
       toast.error('Please fill all fields');
       return;
@@ -64,11 +73,16 @@ export default function CreatePage() {
     setIsCreating(true);
 
     try {
-      // Simulate market creation
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Create market in Supabase database
+      const marketData = {
+        question: generateQuestion(),
+        category: 'crypto',
+        endTime: formData.endDate,
+        creatorAddress: address,
+      };
 
-      const marketId = `market_${Date.now()}`;
-      const marketUrl = `${process.env.NEXT_PUBLIC_URL}/market/${marketId}`;
+      const createdMarket = await createMarket(marketData);
+      const marketUrl = `${process.env.NEXT_PUBLIC_URL}/market/${createdMarket.id}`;
       const question = generateQuestion();
 
       // Use OnchainKit's compose cast to share the created market
@@ -77,10 +91,10 @@ export default function CreatePage() {
         embeds: [marketUrl],
       });
 
-      toast.success('Market created and shared successfully!');
+      toast.success('Market created successfully and saved to database!');
     } catch (error) {
       console.error('Error creating market:', error);
-      toast.error('Failed to create market. Please try again.');
+      toast.error(`Failed to create market: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setIsCreating(false);
     }
   };
@@ -121,11 +135,10 @@ export default function CreatePage() {
                     key={ticker.value}
                     type="button"
                     onClick={() => setFormData(prev => ({ ...prev, ticker: ticker.value }))}
-                    className={`p-3 rounded-xl border-2 transition-all ${
-                      formData.ticker === ticker.value
+                    className={`p-3 rounded-xl border-2 transition-all ${formData.ticker === ticker.value
                         ? 'bg-blue-50 border-blue-500 text-blue-700'
                         : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
-                    }`}
+                      }`}
                   >
                     <div className="text-center">
                       <div className="font-bold text-sm">{ticker.symbol}</div>
@@ -165,11 +178,10 @@ export default function CreatePage() {
                 <button
                   type="button"
                   onClick={() => setFormData(prev => ({ ...prev, direction: 'above' }))}
-                  className={`flex items-center justify-center space-x-2 p-3 rounded-xl border-2 transition-all ${
-                    formData.direction === 'above'
+                  className={`flex items-center justify-center space-x-2 p-3 rounded-xl border-2 transition-all ${formData.direction === 'above'
                       ? 'bg-green-50 border-green-500 text-green-700'
                       : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
-                  }`}
+                    }`}
                 >
                   <TrendingUp className="w-4 h-4" />
                   <span>Above</span>
@@ -177,11 +189,10 @@ export default function CreatePage() {
                 <button
                   type="button"
                   onClick={() => setFormData(prev => ({ ...prev, direction: 'below' }))}
-                  className={`flex items-center justify-center space-x-2 p-3 rounded-xl border-2 transition-all ${
-                    formData.direction === 'below'
+                  className={`flex items-center justify-center space-x-2 p-3 rounded-xl border-2 transition-all ${formData.direction === 'below'
                       ? 'bg-red-50 border-red-500 text-red-700'
                       : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100'
-                  }`}
+                    }`}
                 >
                   <TrendingDown className="w-4 h-4" />
                   <span>Below</span>

@@ -8,6 +8,10 @@ import { SwipeStack } from './SwipeStack';
 import { useAppStore } from '@/lib/store';
 import { getRandomMarkets } from '@/lib/prediction-markets';
 import { UnifiedMarket, UnifiedUserPrediction, SchemaTransformer } from '@/lib/types';
+import { usePredictions, useMarkets } from '@/lib/hooks/useSupabaseData';
+import { useBuyShares, useUSDCFaucet, SmartContractService, SmartContractUtils } from '@/lib/smart-contracts';
+import { DEMO_MARKET_ADDRESS } from '@/lib/blockchain';
+import { Address } from 'viem';
 
 interface PredictionMarketProps {
     onBack?: () => void;
@@ -17,24 +21,34 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
     const { address } = useAccount();
     const [selectedCategory, setSelectedCategory] = useState<'all' | 'crypto' | 'tech' | 'celebrity' | 'sports' | 'politics'>('all');
     const [allMarkets, setAllMarkets] = useState<UnifiedMarket[]>([]);
+    const { createPrediction } = usePredictions();
+    const { markets: supabaseMarkets } = useMarkets();
     const {
         currentMarkets,
         setCurrentMarkets,
-        addPrediction,
         addSwipeHistory,
         user,
         setUser,
         createdMarkets
     } = useAppStore();
 
+    // Smart contract hooks
+    const { buyShares, executeBuyShares, isPending, isConfirming, isConfirmed, hash } = useBuyShares();
+    const { claimFaucet, isPending: isFaucetPending, isConfirmed: isFaucetConfirmed, canUseFaucet, faucetCooldown } = useUSDCFaucet();
+    const { data: usdcBalance } = SmartContractService.useUSDCBalance(address);
+    const { data: demoMarketData } = SmartContractService.useMarketData(DEMO_MARKET_ADDRESS);
+    const { data: userPosition } = SmartContractService.useUserPosition(DEMO_MARKET_ADDRESS, address);
+
     useEffect(() => {
-        // Combine static markets with user-created markets
-        const staticMarkets = getRandomMarkets(50).map(m => SchemaTransformer.legacyToUnified(m));
-        const allAvailableMarkets = [...staticMarkets, ...createdMarkets];
-        
+        // Combine Supabase markets with legacy markets for fallback
+        const staticMarkets = getRandomMarkets(20).map(m => SchemaTransformer.legacyToUnified(m));
+        const allAvailableMarkets = supabaseMarkets.length > 0
+            ? [...supabaseMarkets, ...createdMarkets]
+            : [...staticMarkets, ...createdMarkets];
+
         // Shuffle to mix created markets throughout the stack
         const shuffledMarkets = allAvailableMarkets.sort(() => 0.5 - Math.random());
-        
+
         setAllMarkets(shuffledMarkets);
         setCurrentMarkets(shuffledMarkets.slice(0, 20)); // Show first 20 initially
 
@@ -52,7 +66,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                 defaultBetAmount: 1, // Default $1 USDC
             });
         }
-    }, [address, user, setCurrentMarkets, setUser, createdMarkets]);
+    }, [address, user, setCurrentMarkets, setUser, createdMarkets, supabaseMarkets]);
 
     // Filter markets based on selected category
     useEffect(() => {
@@ -88,37 +102,52 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
             return;
         }
 
-        // Create prediction using user's default bet amount (fallback to 1)
+        // Get user's default bet amount (fallback to 1)
         const betAmount = user.defaultBetAmount ?? 1;
-        const prediction: UnifiedUserPrediction = {
-            id: `pred_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-            marketId,
-            userId: user.id,
-            side: direction === 'right' ? 'yes' : 'no',
-            amount: betAmount,
-            sharesReceived: betAmount, // Simplified
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-        };
+        const side = direction === 'right' ? 'yes' : 'no';
 
-        // Add prediction to store
-        addPrediction(prediction);
+        // Check USDC balance
+        const balance = usdcBalance ? SmartContractUtils.formatUSDC(usdcBalance) : 0;
 
-        // Show success toast
-        const predictionText = direction === 'right' ? 'YES' : 'NO';
-        const emoji = direction === 'right' ? '✅' : '❌';
-
-        toast.success(`Predicted ${predictionText} for $${betAmount} USDC! ${emoji}`, {
-            style: {
-                borderRadius: '12px',
-                background: '#1e293b',
-                color: '#f1f5f9',
-                border: '1px solid #475569',
-            },
-        });
+        if (balance < betAmount) {
+            // Offer to get test USDC from faucet
+            toast((t) => (
+                <div className="flex flex-col gap-2">
+                    <span>Insufficient USDC balance! You need ${betAmount} but have ${balance.toFixed(2)}</span>
+                    <button
+                        onClick={async () => {
+                            toast.dismiss(t.id);
+                            try {
+                                await claimFaucet();
+                                toast.success('Claimed 1,000 test USDC from faucet! 🎉');
+                            } catch (error: any) {
+                                const errorMessage = error?.message || 'Failed to claim from faucet. Try again later.';
+                                toast.error(errorMessage);
+                            }
+                        }}
+                        className="bg-base-500 hover:bg-base-600 text-white px-3 py-1 rounded text-sm"
+                        disabled={isFaucetPending || !canUseFaucet}
+                        title={!canUseFaucet && faucetCooldown > 0 ? `Cooldown: ${(faucetCooldown / 3600).toFixed(1)} hours remaining` : undefined}
+                    >
+                        {isFaucetPending ? 'Claiming...' :
+                            !canUseFaucet && faucetCooldown > 0 ? `Wait ${(faucetCooldown / 3600).toFixed(1)}h` :
+                                'Get Test USDC (1,000)'}
+                    </button>
+                </div>
+            ), {
+                duration: 10000,
+                style: {
+                    borderRadius: '12px',
+                    background: '#1e293b',
+                    color: '#f1f5f9',
+                    border: '1px solid #f59e0b',
+                },
+            });
+            return;
+        }
 
         // Show processing toast
-        const processingToast = toast.loading('Processing transaction on Base...', {
+        const processingToast = toast.loading('Executing blockchain transaction...', {
             style: {
                 borderRadius: '12px',
                 background: '#1e293b',
@@ -128,28 +157,33 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
         });
 
         try {
-            // Simulate blockchain transaction with realistic delay
-            await simulateBlockchainTransaction();
+            // For now, use demo market for all predictions
+            // In production, you'd determine the market address based on marketId
+            const marketAddress = DEMO_MARKET_ADDRESS;
 
-            // Update prediction with transaction hash (simulated)
-            const transactionHash = `0x${Math.random().toString(16).substring(2, 64)}`;
-            prediction.transactionHash = transactionHash;
+            // Execute the buy shares transaction
+            await executeBuyShares(marketAddress, side, betAmount);
 
             // Dismiss processing toast
             toast.dismiss(processingToast);
 
-            // Show success toast with transaction link
+            // Show success toast
+            const predictionText = direction === 'right' ? 'YES' : 'NO';
+            const emoji = direction === 'right' ? '✅' : '❌';
+
             toast.success(
                 <div className="flex items-center justify-between">
-                    <span>Transaction confirmed! 🔗</span>
-                    <a
-                        href={`https://sepolia.basescan.org/tx/${transactionHash}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="ml-2 text-base-400 hover:text-base-300 text-xs"
-                    >
-                        View ↗
-                    </a>
+                    <span>Predicted {predictionText} for ${betAmount} USDC! {emoji}</span>
+                    {hash && (
+                        <a
+                            href={SmartContractUtils.getExplorerUrl(hash)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-2 text-base-400 hover:text-base-300 text-xs"
+                        >
+                            View ↗
+                        </a>
+                    )}
                 </div>,
                 {
                     duration: 5000,
@@ -161,10 +195,53 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                     },
                 }
             );
+
+            // Also save to database for tracking
+            if (hash) {
+                try {
+                    await createPrediction(
+                        marketId,
+                        side,
+                        betAmount,
+                        betAmount, // shares received = amount for simplicity
+                        hash
+                    );
+                } catch (dbError) {
+                    console.error('Failed to save prediction to database:', dbError);
+                    // Don't show error to user since blockchain tx succeeded
+                }
+            }
+
         } catch (error) {
+            // Dismiss processing toast
             toast.dismiss(processingToast);
-            toast.error('Transaction failed. Please try again.');
-            console.error('Transaction error:', error);
+
+            console.error('Failed to execute prediction:', error);
+
+            // Check if it's a user rejection
+            if (error && typeof error === 'object' && 'message' in error) {
+                const errorMessage = (error as Error).message.toLowerCase();
+                if (errorMessage.includes('user rejected') || errorMessage.includes('user denied')) {
+                    toast.error('Transaction cancelled by user', {
+                        style: {
+                            borderRadius: '12px',
+                            background: '#1e293b',
+                            color: '#f1f5f9',
+                            border: '1px solid #f59e0b',
+                        },
+                    });
+                    return;
+                }
+            }
+
+            toast.error(`Transaction failed: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+                style: {
+                    borderRadius: '12px',
+                    background: '#1e293b',
+                    color: '#f1f5f9',
+                    border: '1px solid #dc2626',
+                },
+            });
         }
     };
 

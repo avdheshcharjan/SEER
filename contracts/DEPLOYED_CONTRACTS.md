@@ -6,13 +6,13 @@
 
 | Contract | Address | Purpose |
 |----------|---------|---------|
-| **MockUSDC** | `0x32dfDC3bB23d294a1b32E0EDDEddB12088112161` | Test USDC token (6 decimals) |
+| **MockUSDC** | `0xA892E08a5135C781f4eb08dBD946cd7b9E0772f2` | Test USDC token (6 decimals) - FIXED FAUCET |
 | **MarketFactory** | `0xAa84401Ef34C0334D4B85259955DE1fa99495B96` | Factory for creating prediction markets |
 | **Demo Market** | `0xC1f3f3528AD71348AC4683CAde6e5988019735D8` | "Will ETH be above $4000 on Dec 31, 2024?" |
 
 ### 🔗 Basescan Links
 
-- **MockUSDC**: https://sepolia.basescan.org/address/0x32dfDC3bB23d294a1b32E0EDDEddB12088112161
+- **MockUSDC**: https://sepolia.basescan.org/address/0xA892E08a5135C781f4eb08dBD946cd7b9E0772f2
 - **MarketFactory**: https://sepolia.basescan.org/address/0xAa84401Ef34C0334D4B85259955DE1fa99495B96  
 - **Demo Market**: https://sepolia.basescan.org/address/0xC1f3f3528AD71348AC4683CAde6e5988019735D8
 
@@ -45,7 +45,7 @@ The MockUSDC contract includes:
 ```typescript
 // Add to your frontend config
 export const BASE_SEPOLIA_CONTRACTS = {
-  USDC: "0x32dfDC3bB23d294a1b32E0EDDEddB12088112161",
+  USDC: "0xA892E08a5135C781f4eb08dBD946cd7b9E0772f2",
   FACTORY: "0xAa84401Ef34C0334D4B85259955DE1fa99495B96",
   DEMO_MARKET: "0xC1f3f3528AD71348AC4683CAde6e5988019735D8",
   CHAIN_ID: 84532,
@@ -57,7 +57,7 @@ export const BASE_SEPOLIA_CONTRACTS = {
 
 ```bash
 # Get test USDC (1,000 tokens)
-cast send 0x32dfDC3bB23d294a1b32E0EDDEddB12088112161 "faucet()" \
+cast send 0xA892E08a5135C781f4eb08dBD946cd7b9E0772f2 "faucet()" \
   --rpc-url https://sepolia.base.org --private-key YOUR_KEY
 
 # Create a new market
@@ -69,7 +69,7 @@ cast send 0xAa84401Ef34C0334D4B85259955DE1fa99495B96 \
   --rpc-url https://sepolia.base.org --private-key YOUR_KEY
 
 # Buy YES shares (approve first)
-cast send 0x32dfDC3bB23d294a1b32E0EDDEddB12088112161 \
+cast send 0xA892E08a5135C781f4eb08dBD946cd7b9E0772f2 \
   "approve(address,uint256)" 0xYOUR_MARKET_ADDRESS 100000000 \
   --rpc-url https://sepolia.base.org --private-key YOUR_KEY
 
@@ -87,7 +87,7 @@ To manually verify later:
 forge verify-contract --chain base-sepolia \
   --compiler-version v0.8.23 \
   --etherscan-api-key YOUR_KEY \
-  0x32dfDC3bB23d294a1b32E0EDDEddB12088112161 \
+  0xA892E08a5135C781f4eb08dBD946cd7b9E0772f2 \
   src/MockUSDC.sol:MockUSDC
 ```
 

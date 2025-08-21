@@ -1,7 +1,12 @@
 "use client";
 
 import { motion } from 'framer-motion';
-import { TrendingUp, Users, Zap, Trophy, Plus } from 'lucide-react';
+import { TrendingUp, Users, Zap, Trophy, Plus, Wallet } from 'lucide-react';
+import { useMarkets } from '@/lib/hooks/useSupabaseData';
+import { useAppStore } from '@/lib/store';
+import { useAccount } from 'wagmi';
+import { SmartContractService, useUSDCFaucet, SmartContractUtils } from '@/lib/smart-contracts';
+import toast from 'react-hot-toast';
 
 interface HomeProps {
     onStartPredicting: () => void;
@@ -11,6 +16,19 @@ interface HomeProps {
 }
 
 export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard, onCreateMarket }: HomeProps) {
+    const { markets, isLoading } = useMarkets();
+    const { userPredictions, user } = useAppStore();
+    const { address } = useAccount();
+
+    // Smart contract hooks
+    const { data: usdcBalance } = SmartContractService.useUSDCBalance(address);
+    const { claimFaucet, isPending: isFaucetPending, isConfirmed: isFaucetConfirmed, canUseFaucet, faucetCooldown } = useUSDCFaucet();
+
+    // Calculate real stats from Supabase data
+    const totalMarkets = markets.length;
+    const totalVolume = markets.reduce((sum, market) => sum + market.yesPool + market.noPool, 0);
+    const userPredictionCount = userPredictions.length;
+    const formattedBalance = usdcBalance ? SmartContractUtils.formatUSDC(usdcBalance) : 0;
 
     const features = [
         {
@@ -132,6 +150,66 @@ export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard, onCr
                 </div>
             </div>
 
+            {/* Wallet Info Section */}
+            {address && (
+                <motion.div
+                    className="bg-gradient-to-r from-base-500/10 to-purple-500/10 backdrop-blur-sm rounded-2xl p-4 border border-base-500/20 mb-8"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5, duration: 0.3 }}
+                >
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-base-500/20 rounded-full flex items-center justify-center">
+                                <Wallet className="w-5 h-5 text-base-400" />
+                            </div>
+                            <div>
+                                <div className="text-white font-semibold">
+                                    {formattedBalance.toFixed(2)} USDC
+                                </div>
+                                <div className="text-slate-400 text-sm">Test Balance</div>
+                            </div>
+                        </div>
+                        {formattedBalance < 10 && (
+                            <motion.button
+                                onClick={async () => {
+                                    try {
+                                        await claimFaucet();
+                                        toast.success('Claimed 1,000 test USDC! 🎉', {
+                                            style: {
+                                                borderRadius: '12px',
+                                                background: '#1e293b',
+                                                color: '#f1f5f9',
+                                                border: '1px solid #22c55e',
+                                            },
+                                        });
+                                    } catch (error: any) {
+                                        const errorMessage = error?.message || 'Failed to claim from faucet';
+                                        toast.error(errorMessage, {
+                                            style: {
+                                                borderRadius: '12px',
+                                                background: '#1e293b',
+                                                color: '#f1f5f9',
+                                                border: '1px solid #dc2626',
+                                            },
+                                        });
+                                    }
+                                }}
+                                className="bg-base-500 hover:bg-base-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
+                                disabled={isFaucetPending || !canUseFaucet}
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                title={!canUseFaucet && faucetCooldown > 0 ? `Cooldown: ${(faucetCooldown / 3600).toFixed(1)} hours remaining` : undefined}
+                            >
+                                {isFaucetPending ? 'Getting...' :
+                                    !canUseFaucet && faucetCooldown > 0 ? `Wait ${(faucetCooldown / 3600).toFixed(1)}h` :
+                                        'Get Test USDC'}
+                            </motion.button>
+                        )}
+                    </div>
+                </motion.div>
+            )}
+
             {/* Features Grid */}
             <div className="grid grid-cols-2 gap-4 mb-8">
                 {features.map((feature, index) => (
@@ -168,16 +246,22 @@ export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard, onCr
                 </h3>
                 <div className="grid grid-cols-3 gap-4 text-center">
                     <div>
-                        <div className="text-2xl font-bold text-base-400 mb-1">100+</div>
+                        <div className="text-2xl font-bold text-base-400 mb-1">
+                            {isLoading ? '...' : totalMarkets || '0'}
+                        </div>
                         <div className="text-xs text-slate-400">Markets</div>
                     </div>
                     <div>
-                        <div className="text-2xl font-bold text-green-400 mb-1">$10K+</div>
+                        <div className="text-2xl font-bold text-green-400 mb-1">
+                            {isLoading ? '...' : `$${Math.round(totalVolume)}`}
+                        </div>
                         <div className="text-xs text-slate-400">Volume</div>
                     </div>
                     <div>
-                        <div className="text-2xl font-bold text-purple-400 mb-1">500+</div>
-                        <div className="text-xs text-slate-400">Users</div>
+                        <div className="text-2xl font-bold text-purple-400 mb-1">
+                            {user ? userPredictionCount : '0'}
+                        </div>
+                        <div className="text-xs text-slate-400">Your Bets</div>
                     </div>
                 </div>
             </motion.div>
