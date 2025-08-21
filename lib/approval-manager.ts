@@ -1,6 +1,7 @@
-import { Address } from 'viem';
+import { Address, parseUnits } from 'viem';
 import { SupabaseService } from './supabase';
-import { executeGaslessUSDCApproval } from './gasless';
+import { generateApprovalCalls } from './gasless-onchainkit';
+import { USDC_CONTRACT_ADDRESS, MARKET_FACTORY_ADDRESS } from './blockchain';
 
 export interface ApprovalStatus {
     marketAddress: Address;
@@ -19,86 +20,82 @@ export class USDCApprovalManager {
     private static batchSize = 5; // Approve 5 markets at once
     
     /**
-     * Pre-approve USDC for active markets that need trading
+     * Get transaction calls for USDC approval to the MarketFactory
+     * This returns the calls array to be used with OnchainKit's Transaction component
      */
-    static async setupMultiMarketApprovals(userAddress: Address): Promise<{
-        success: boolean;
-        approvedMarkets: Address[];
-        failedMarkets: Address[];
-        totalApprovalAmount: number;
-    }> {
-        console.log('Setting up multi-market USDC approvals...');
+    static async getUSDCApprovalCalls(userAddress: Address) {
+        console.log('Preparing USDC approval calls for MarketFactory...');
         
         try {
-            // Get active markets that need approval
-            const activeMarkets = await SupabaseService.getDeployedMarkets();
-            const marketsNeedingApproval = activeMarkets
-                .filter(market => market.contract_address)
-                .slice(0, this.batchSize); // Limit batch size
-                
-            const approvedMarkets: Address[] = [];
-            const failedMarkets: Address[] = [];
-            let totalApprovalAmount = 0;
+            // Approve a reasonable amount of USDC to the MarketFactory
+            // The factory will handle transfers when users make predictions
+            const approvalAmount = parseUnits('10000', 6); // Approve 10,000 USDC (can be adjusted)
             
-            // Batch approve markets
-            for (const market of marketsNeedingApproval) {
-                try {
-                    const marketAddress = market.contract_address as Address;
-                    
-                    // Check if already approved
-                    const currentApproval = await this.getCurrentApproval(userAddress, marketAddress);
-                    
-                    if (currentApproval >= this.dailyLimit) {
-                        console.log(`Market ${marketAddress} already approved (${currentApproval} USDC)`);
-                        approvedMarkets.push(marketAddress);
-                        continue;
-                    }
-                    
-                    // Execute gasless approval
-                    console.log(`Approving ${this.dailyLimit} USDC for market ${marketAddress}...`);
-                    const result = await executeGaslessUSDCApproval(
-                        this.dailyLimit,
-                        marketAddress,
-                        userAddress
-                    );
-                    
-                    if (result.success) {
-                        approvedMarkets.push(marketAddress);
-                        totalApprovalAmount += this.dailyLimit;
-                        console.log(`Approved ${this.dailyLimit} USDC for market ${marketAddress}`);
-                    } else {
-                        failedMarkets.push(marketAddress);
-                        console.warn(`Failed to approve market ${marketAddress}:`, result.error);
-                    }
-                    
-                    // Small delay between approvals to avoid rate limits
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    
-                } catch (error) {
-                    console.error(`Error approving market ${market.contract_address}:`, error);
-                    failedMarkets.push(market.contract_address as Address);
-                }
-            }
+            // Generate approval call for the MarketFactory contract
+            const calls = generateApprovalCalls(
+                MARKET_FACTORY_ADDRESS, // The spender is the MarketFactory
+                approvalAmount
+            );
             
-            console.log(`Approval summary:`, {
-                approved: approvedMarkets.length,
-                failed: failedMarkets.length,
-                totalAmount: totalApprovalAmount
-            });
+            console.log(`Generated USDC approval call for MarketFactory: ${MARKET_FACTORY_ADDRESS}`);
+            console.log(`Approval amount: 10,000 USDC`);
+            // Don't use JSON.stringify with BigInt - just log the calls directly
+            console.log('Call structure:', calls);
             
             return {
-                success: approvedMarkets.length > 0,
-                approvedMarkets,
-                failedMarkets,
-                totalApprovalAmount
+                calls,
+                spenderAddress: MARKET_FACTORY_ADDRESS,
+                totalAmount: 10000
             };
             
         } catch (error) {
-            console.error('Multi-market approval failed:', error);
+            console.error('Failed to generate approval calls:', error);
+            throw error;
+        }
+    }
+    
+    /**
+     * Setup USDC approval for the MarketFactory
+     * Returns the prepared calls for the UI to execute via OnchainKit
+     */
+    static async setupUSDCApproval(userAddress: Address): Promise<{
+        success: boolean;
+        spenderAddress: Address;
+        totalApprovalAmount: number;
+        calls?: any[];
+    }> {
+        console.log('Setting up USDC approval for MarketFactory...');
+        
+        try {
+            const { calls, spenderAddress, totalAmount } = await this.getUSDCApprovalCalls(userAddress);
+            
+            if (!calls || calls.length === 0) {
+                console.error('No approval calls generated');
+                return {
+                    success: false,
+                    spenderAddress: MARKET_FACTORY_ADDRESS,
+                    totalApprovalAmount: 0
+                };
+            }
+            
+            console.log(`Approval summary:`, {
+                spender: spenderAddress,
+                totalAmount: totalAmount
+            });
+            
+            // Return the calls for the UI to execute
+            return {
+                success: true,
+                spenderAddress,
+                totalApprovalAmount: totalAmount,
+                calls // Return the calls for OnchainKit to execute
+            };
+            
+        } catch (error) {
+            console.error('USDC approval setup failed:', error);
             return {
                 success: false,
-                approvedMarkets: [],
-                failedMarkets: [],
+                spenderAddress: MARKET_FACTORY_ADDRESS,
                 totalApprovalAmount: 0
             };
         }

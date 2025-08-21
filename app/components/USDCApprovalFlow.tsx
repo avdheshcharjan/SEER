@@ -11,6 +11,8 @@ import {
   checkUserBalance
 } from '@/lib/gasless';
 import { USDCApprovalManager, ApprovalStatus } from '@/lib/approval-manager';
+import { Transaction, TransactionButton, TransactionSponsor } from '@coinbase/onchainkit/transaction';
+import type { LifecycleStatus } from '@coinbase/onchainkit/transaction';
 
 interface USDCApprovalFlowProps {
   onApprovalComplete?: () => void;
@@ -53,47 +55,60 @@ export function USDCApprovalFlow({ onApprovalComplete }: USDCApprovalFlowProps) 
     checkCurrentStatus();
   }, [address]);
 
-  const handleApproval = async () => {
-    if (!address) {
-      toast.error('Please connect your wallet first!');
-      return;
-    }
+  // Get approval calls for OnchainKit
+  const [approvalCalls, setApprovalCalls] = useState<any[]>([]);
+  const [approvalAmount, setApprovalAmount] = useState<number>(0);
+  
+  useEffect(() => {
+    const loadApprovalCalls = async () => {
+      if (!address || isApproved) return; // Don't load if already approved
+      
+      try {
+        const result = await USDCApprovalManager.setupUSDCApproval(address as Address);
+        console.log('USDC approval setup result:', result);
+        
+        if (result.success && result.calls && result.calls.length > 0) {
+          setApprovalCalls(result.calls);
+          setApprovalAmount(result.totalApprovalAmount);
+        } else {
+          console.warn('No approval calls generated, result:', result);
+        }
+      } catch (error) {
+        console.error('Failed to load approval calls:', error);
+      }
+    };
+    
+    loadApprovalCalls();
+  }, [address, isApproved]);
 
-    if (!validateGaslessConfig()) {
-      toast.error('Gasless transactions not configured. Please contact support.');
-      return;
-    }
-
-    setIsApproving(true);
-    const loadingToast = toast.loading('Setting up one-time USDC approval...', {
-      style: {
-        borderRadius: '12px',
-        background: '#1e293b',
-        color: '#f1f5f9',
-        border: '1px solid #475569',
-      },
-    });
-
-    try {
-      // ✅ SECURITY FIX: Batch approve multiple markets with daily limits
-      const result = await USDCApprovalManager.setupMultiMarketApprovals(address as Address);
-
-      if (result.success) {
+  const handleTransactionStatus = (status: LifecycleStatus) => {
+    console.log('Approval transaction status:', status);
+    
+    switch (status.statusName) {
+      case 'transactionPending':
+        setIsApproving(true);
+        toast.loading('Setting up USDC approval for gasless transactions...', {
+          style: {
+            borderRadius: '12px',
+            background: '#1e293b',
+            color: '#f1f5f9',
+            border: '1px solid #475569',
+          },
+        });
+        break;
+      
+      case 'success':
+        setIsApproving(false);
         setIsApproved(true);
-        setApprovedMarkets(result.approvedMarkets.length);
-        setTotalApprovalAmount(result.totalApprovalAmount);
+        setApprovedMarkets(1); // Single approval for MarketFactory
+        setTotalApprovalAmount(approvalAmount);
         
         toast.success(
           <div className="flex flex-col">
-            <span className="font-semibold">Multi-market USDC approval complete! 🎉</span>
+            <span className="font-semibold">USDC approval complete! 🎉</span>
             <span className="text-xs mt-1">
-              {result.approvedMarkets.length} markets • ${result.totalApprovalAmount} total approved
+              ${approvalAmount} USDC approved for gasless predictions
             </span>
-            {result.failedMarkets.length > 0 && (
-              <span className="text-yellow-300 text-xs mt-1">
-                {result.failedMarkets.length} markets failed - will retry automatically
-              </span>
-            )}
           </div>,
           {
             duration: 8000,
@@ -105,17 +120,15 @@ export function USDCApprovalFlow({ onApprovalComplete }: USDCApprovalFlowProps) 
             },
           }
         );
-
+        
         onApprovalComplete?.();
-      } else {
-        throw new Error('Multi-market approval failed');
-      }
-    } catch (error) {
-      console.error('USDC approval failed:', error);
-      toast.error('Failed to approve USDC. Please try again.');
-    } finally {
-      toast.dismiss(loadingToast);
-      setIsApproving(false);
+        break;
+      
+      case 'error':
+        setIsApproving(false);
+        console.error('USDC approval failed:', status.statusData);
+        toast.error(`Failed to approve USDC: ${status.statusData?.message || 'Unknown error'}`);
+        break;
     }
   };
 
@@ -142,14 +155,14 @@ export function USDCApprovalFlow({ onApprovalComplete }: USDCApprovalFlowProps) 
           <div>
             <h3 className="text-lg font-semibold text-green-400">Ready for Gasless Predictions!</h3>
             <p className="text-green-300 text-sm">
-              {approvedMarkets} markets approved • ${totalApprovalAmount} USDC total
+              ${totalApprovalAmount} USDC approved for gasless trading
             </p>
           </div>
         </div>
         <div className="text-center text-slate-400 text-xs space-y-1">
           <div>⚡ Swipe left or right to predict without gas fees or popups</div>
           <div className="text-green-400">
-            ✅ Multi-market approvals active • Daily limits: $100 per market
+            ✅ USDC approved for MarketFactory • Ready to trade
           </div>
         </div>
       </div>
@@ -175,31 +188,36 @@ export function USDCApprovalFlow({ onApprovalComplete }: USDCApprovalFlowProps) 
         </div>
       )}
 
-      <motion.button
-        onClick={handleApproval}
-        disabled={isApproving}
-        className={`
-          w-full py-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center
-          ${isApproving 
-            ? 'bg-slate-600 text-slate-400 cursor-not-allowed' 
-            : 'bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white shadow-lg hover:shadow-blue-500/25'
-          }
-        `}
-        whileHover={!isApproving ? { scale: 1.02 } : {}}
-        whileTap={!isApproving ? { scale: 0.98 } : {}}
-      >
-        {isApproving ? (
-          <>
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-slate-400 mr-3"></div>
-            Setting up gasless predictions...
-          </>
-        ) : (
-          <>
-            <DollarSign className="w-5 h-5 mr-2" />
-            Enable Gasless Predictions
-          </>
-        )}
-      </motion.button>
+      {approvalCalls.length > 0 ? (
+        <>
+          {(() => {
+            console.log('Rendering Transaction with calls:', approvalCalls);
+            console.log('First call structure:', approvalCalls[0]);
+            return null;
+          })()}
+          <Transaction
+            isSponsored={true}
+            calls={approvalCalls}
+            onStatus={handleTransactionStatus}
+            chainId={84532} // Base Sepolia
+          >
+            <TransactionButton 
+              className="w-full py-4 rounded-xl font-semibold transition-all duration-300 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white shadow-lg hover:shadow-blue-500/25"
+              text={isApproving ? 'Setting up gasless predictions...' : 'Enable Gasless Predictions'}
+              disabled={isApproving}
+            />
+            <TransactionSponsor />
+          </Transaction>
+        </>
+      ) : (
+        <motion.button
+          disabled={true}
+          className="w-full py-4 rounded-xl font-semibold bg-slate-600 text-slate-400 cursor-not-allowed flex items-center justify-center"
+        >
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-slate-400 mr-3"></div>
+          Preparing approval setup...
+        </motion.button>
+      )}
 
       <div className="mt-4 text-center">
         <div className="text-xs text-slate-500 mb-2">This approval allows gasless transactions via:</div>
