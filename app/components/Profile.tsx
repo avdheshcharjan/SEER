@@ -294,7 +294,7 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
         ) : (
           <div className="space-y-3 max-h-96 overflow-y-auto">
             {userPredictions
-              .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+              .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
               .map((prediction) => {
                 const market = getMarketById(prediction.marketId);
                 if (!market) return null;
@@ -313,7 +313,7 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
                           {market.question}
                         </h4>
                         <div className="flex items-center space-x-2 text-xs text-slate-400">
-                          <span>{formatDate(prediction.timestamp)}</span>
+                          <span>{formatDate(prediction.createdAt)}</span>
                           <span>•</span>
                           <span className={`px-2 py-1 rounded-full ${
                             market.category === 'crypto' ? 'bg-prediction-crypto/20 text-prediction-crypto' :
@@ -328,9 +328,9 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
                       </div>
                       <div className="text-right ml-3">
                         <div className={`text-lg font-bold ${
-                          prediction.prediction === 'yes' ? 'text-green-400' : 'text-red-400'
+                          prediction.side === 'yes' ? 'text-green-400' : 'text-red-400'
                         }`}>
-                          {prediction.prediction === 'yes' ? 'YES' : 'NO'}
+                          {prediction.side === 'yes' ? 'YES' : 'NO'}
                         </div>
                         <div className="text-xs text-slate-400">${prediction.amount}</div>
                       </div>

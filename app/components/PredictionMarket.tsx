@@ -7,7 +7,7 @@ import { useAccount } from 'wagmi';
 import { SwipeStack } from './SwipeStack';
 import { useAppStore } from '@/lib/store';
 import { getRandomMarkets } from '@/lib/prediction-markets';
-import { UserPrediction, type PredictionMarket } from '@/lib/prediction-markets';
+import { UnifiedMarket, UnifiedUserPrediction, SchemaTransformer } from '@/lib/types';
 
 interface PredictionMarketProps {
     onBack?: () => void;
@@ -16,7 +16,7 @@ interface PredictionMarketProps {
 export function PredictionMarket({ onBack }: PredictionMarketProps) {
     const { address } = useAccount();
     const [selectedCategory, setSelectedCategory] = useState<'all' | 'crypto' | 'tech' | 'celebrity' | 'sports' | 'politics'>('all');
-    const [allMarkets, setAllMarkets] = useState<PredictionMarket[]>([]);
+    const [allMarkets, setAllMarkets] = useState<UnifiedMarket[]>([]);
     const {
         currentMarkets,
         setCurrentMarkets,
@@ -29,7 +29,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
 
     useEffect(() => {
         // Combine static markets with user-created markets
-        const staticMarkets = getRandomMarkets(50);
+        const staticMarkets = getRandomMarkets(50).map(m => SchemaTransformer.legacyToUnified(m));
         const allAvailableMarkets = [...staticMarkets, ...createdMarkets];
         
         // Shuffle to mix created markets throughout the stack
@@ -90,13 +90,15 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
 
         // Create prediction using user's default bet amount (fallback to 1)
         const betAmount = user.defaultBetAmount ?? 1;
-        const prediction: UserPrediction = {
-            id: `pred_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        const prediction: UnifiedUserPrediction = {
+            id: `pred_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
             marketId,
             userId: user.id,
-            prediction: direction === 'right' ? 'yes' : 'no',
+            side: direction === 'right' ? 'yes' : 'no',
             amount: betAmount,
-            timestamp: new Date().toISOString(),
+            sharesReceived: betAmount, // Simplified
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
         };
 
         // Add prediction to store
@@ -130,7 +132,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
             await simulateBlockchainTransaction();
 
             // Update prediction with transaction hash (simulated)
-            const transactionHash = `0x${Math.random().toString(16).substr(2, 64)}`;
+            const transactionHash = `0x${Math.random().toString(16).substring(2, 64)}`;
             prediction.transactionHash = transactionHash;
 
             // Dismiss processing toast

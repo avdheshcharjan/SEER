@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, useMotionValue, useTransform, PanInfo } from 'framer-motion';
-import { PredictionMarket } from '@/lib/prediction-markets';
+import { UnifiedMarket } from '@/lib/types';
 import { SmartPredictionCard } from './cards/SmartPredictionCard';
 
 interface SwipeStackProps {
-    markets: PredictionMarket[];
+    markets: UnifiedMarket[];
     onSwipe: (marketId: string, direction: 'left' | 'right' | 'up') => void;
     className?: string;
 }

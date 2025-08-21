@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Plus, Calendar, TrendingUp, TrendingDown } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
-import { PredictionMarket } from '@/lib/prediction-markets';
+import { UnifiedMarket } from '@/lib/types';
 import toast from 'react-hot-toast';
 
 interface CreateMarketProps {
@@ -132,7 +132,7 @@ export function CreateMarket({ onBack }: CreateMarketProps) {
             await new Promise(resolve => setTimeout(resolve, 2000));
 
             // Create new market object with CoinGecko data
-            const newMarket: PredictionMarket = {
+            const newMarket: UnifiedMarket = {
                 id: `market_${Date.now()}`,
                 question: generateQuestion(),
                 description: `A prediction market for ${formData.ticker} price`,
@@ -143,9 +143,13 @@ export function CreateMarket({ onBack }: CreateMarketProps) {
                 noPrice: 0.5,
                 yesOdds: 50,
                 noOdds: 50,
+                yesPool: 0,
+                noPool: 0,
+                totalYesShares: 0,
+                totalNoShares: 0,
                 yesShares: 0,
                 noShares: 0,
-                createdBy: user.address,
+                creatorAddress: user.address,
                 createdAt: new Date().toISOString(),
                 resolved: false,
                 outcome: null,

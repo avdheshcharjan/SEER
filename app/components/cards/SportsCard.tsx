@@ -1,11 +1,11 @@
 "use client";
 
-import { PredictionMarket } from '@/lib/prediction-markets';
+import { UnifiedMarket } from '@/lib/types';
 import { BaseCard } from './BaseCard';
 import { Trophy, Target } from 'lucide-react';
 
 interface SportsCardProps {
-    market: PredictionMarket;
+    market: UnifiedMarket;
     style?: React.CSSProperties;
     className?: string;
     isActive?: boolean;

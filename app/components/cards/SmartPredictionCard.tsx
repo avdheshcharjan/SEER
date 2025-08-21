@@ -1,6 +1,6 @@
 "use client";
 
-import { PredictionMarket } from '@/lib/prediction-markets';
+import { UnifiedMarket } from '@/lib/types';
 import { CryptoCard } from './CryptoCard';
 import { TechCard } from './TechCard';
 import { CelebrityCard } from './CelebrityCard';
@@ -8,7 +8,7 @@ import { SportsCard } from './SportsCard';
 import { PoliticsCard } from './PoliticsCard';
 
 interface SmartPredictionCardProps {
-    market: PredictionMarket;
+    market: UnifiedMarket;
     style?: React.CSSProperties;
     className?: string;
     isActive?: boolean;

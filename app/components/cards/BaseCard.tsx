@@ -1,12 +1,13 @@
 "use client";
 
 import { motion } from 'framer-motion';
-import { PredictionMarket, getCategoryGradient } from '@/lib/prediction-markets';
+import { getCategoryGradient } from '@/lib/prediction-markets';
+import { UnifiedMarket, SchemaTransformer } from '@/lib/types';
 import { Clock } from 'lucide-react';
 import { memo, useRef, useEffect } from 'react';
 
 interface BaseCardProps {
-    market: PredictionMarket;
+    market: UnifiedMarket;
     style?: React.CSSProperties;
     className?: string;
     isActive?: boolean;
@@ -140,13 +141,13 @@ function BaseCardComponent({ market, style, className = '', isActive = false, ch
                     <div className="grid grid-cols-2 gap-2 mb-3">
                         <div className="bg-green-500/20 backdrop-blur-sm border border-green-500/30 rounded-xl p-2 text-center">
                             <div className="text-green-400 font-bold text-lg">
-                                {Math.round((market.yesPrice || market.yesOdds || 50) * (market.yesPrice ? 100 : 1))}%
+                                {SchemaTransformer.getYesPercentage(market)}%
                             </div>
                             <div className="text-green-300 text-sm font-medium">YES</div>
                         </div>
                         <div className="bg-red-500/20 backdrop-blur-sm border border-red-500/30 rounded-xl p-2 text-center">
                             <div className="text-red-400 font-bold text-lg">
-                                {Math.round((market.noPrice || market.noOdds || 50) * (market.noPrice ? 100 : 1))}%
+                                {SchemaTransformer.getNoPercentage(market)}%
                             </div>
                             <div className="text-red-300 text-sm font-medium">NO</div>
                         </div>

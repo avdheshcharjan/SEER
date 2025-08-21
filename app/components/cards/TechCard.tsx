@@ -1,11 +1,11 @@
 "use client";
 
-import { PredictionMarket } from '@/lib/prediction-markets';
+import { UnifiedMarket } from '@/lib/types';
 import { BaseCard } from './BaseCard';
 import { Building2, Users, Zap, TrendingUp, TrendingDown } from 'lucide-react';
 
 interface TechCardProps {
-    market: PredictionMarket;
+    market: UnifiedMarket;
     style?: React.CSSProperties;
     className?: string;
     isActive?: boolean;
