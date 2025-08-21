@@ -1,5 +1,5 @@
 import { base, baseSepolia } from 'wagmi/chains';
-import { encodeFunctionData, parseEther, Address, parseUnits } from 'viem';
+import { encodeFunctionData, Address, parseUnits } from 'viem';
 
 // Real deployed contract addresses on Base Sepolia
 export const USDC_CONTRACT_ADDRESS = '0xA892E08a5135C781f4eb08dBD946cd7b9E0772f2' as Address;

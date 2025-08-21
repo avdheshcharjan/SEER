@@ -16,10 +16,10 @@ interface ProfileProps {
 export function Profile({ onBack, onCreateMarket }: ProfileProps) {
   const { address } = useAccount();
   const userStats = useUserStats();
-  const { getUserPredictions, userPositions } = useUserData();
+  const { getUserPredictions } = useUserData();
   const { markets: supabaseMarkets } = useMarkets();
   const { userPredictions, createdMarkets, setDefaultBetAmount } = useAppStore();
-  const [realPredictions, setRealPredictions] = useState<any[]>([]);
+  const [realPredictions, setRealPredictions] = useState<unknown[]>([]);
   const [isLoadingPredictions, setIsLoadingPredictions] = useState(false);
 
   // Load real predictions from Supabase
@@ -350,10 +350,10 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
                           <span>{formatDate(prediction.created_at || prediction.createdAt)}</span>
                           <span>•</span>
                           <span className={`px-2 py-1 rounded-full ${market.category === 'crypto' ? 'bg-prediction-crypto/20 text-prediction-crypto' :
-                              market.category === 'tech' ? 'bg-prediction-tech/20 text-prediction-tech' :
-                                market.category === 'celebrity' ? 'bg-prediction-celebrity/20 text-prediction-celebrity' :
-                                  market.category === 'sports' ? 'bg-prediction-sports/20 text-prediction-sports' :
-                                    'bg-prediction-politics/20 text-prediction-politics'
+                            market.category === 'tech' ? 'bg-prediction-tech/20 text-prediction-tech' :
+                              market.category === 'celebrity' ? 'bg-prediction-celebrity/20 text-prediction-celebrity' :
+                                market.category === 'sports' ? 'bg-prediction-sports/20 text-prediction-sports' :
+                                  'bg-prediction-politics/20 text-prediction-politics'
                             }`}>
                             {market.category}
                           </span>

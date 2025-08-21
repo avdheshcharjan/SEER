@@ -7,11 +7,10 @@ import { useAccount } from 'wagmi';
 import { SwipeStack } from './SwipeStack';
 import { useAppStore } from '@/lib/store';
 import { getRandomMarkets } from '@/lib/prediction-markets';
-import { UnifiedMarket, UnifiedUserPrediction, SchemaTransformer } from '@/lib/types';
+import { UnifiedMarket, SchemaTransformer } from '@/lib/types';
 import { usePredictions, useMarkets } from '@/lib/hooks/useSupabaseData';
-import { useBuyShares, useUSDCFaucet, SmartContractService, SmartContractUtils } from '@/lib/smart-contracts';
+import { useBuyShares, useUSDCFaucet, useUSDCBalance, useMarketData, useUserPosition, SmartContractUtils } from '@/lib/smart-contracts';
 import { DEMO_MARKET_ADDRESS } from '@/lib/blockchain';
-import { Address } from 'viem';
 
 interface PredictionMarketProps {
     onBack?: () => void;
@@ -33,11 +32,9 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
     } = useAppStore();
 
     // Smart contract hooks
-    const { buyShares, executeBuyShares, isPending, isConfirming, isConfirmed, hash } = useBuyShares();
-    const { claimFaucet, isPending: isFaucetPending, isConfirmed: isFaucetConfirmed, canUseFaucet, faucetCooldown } = useUSDCFaucet();
-    const { data: usdcBalance } = SmartContractService.useUSDCBalance(address);
-    const { data: demoMarketData } = SmartContractService.useMarketData(DEMO_MARKET_ADDRESS);
-    const { data: userPosition } = SmartContractService.useUserPosition(DEMO_MARKET_ADDRESS, address);
+    const { executeBuyShares, hash } = useBuyShares();
+    const { claimFaucet, isPending: isFaucetPending, canUseFaucet, faucetCooldown } = useUSDCFaucet();
+    const { data: usdcBalance } = useUSDCBalance(address);
 
     useEffect(() => {
         // Combine Supabase markets with legacy markets for fallback
@@ -120,8 +117,8 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                             try {
                                 await claimFaucet();
                                 toast.success('Claimed 1,000 test USDC from faucet! 🎉');
-                            } catch (error: any) {
-                                const errorMessage = error?.message || 'Failed to claim from faucet. Try again later.';
+                            } catch (error: unknown) {
+                                const errorMessage = (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') ? error.message : 'Failed to claim from faucet. Try again later.';
                                 toast.error(errorMessage);
                             }
                         }}
@@ -245,19 +242,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
         }
     };
 
-    const simulateBlockchainTransaction = async (): Promise<void> => {
-        // Simulate network delay
-        return new Promise((resolve, reject) => {
-            setTimeout(() => {
-                // Simulate 95% success rate
-                if (Math.random() > 0.05) {
-                    resolve();
-                } else {
-                    reject(new Error('Transaction failed'));
-                }
-            }, 1000 + Math.random() * 2000); // 1-3 second delay
-        });
-    };
+
 
 
 

@@ -5,7 +5,7 @@ import { TrendingUp, Users, Zap, Trophy, Plus, Wallet } from 'lucide-react';
 import { useMarkets } from '@/lib/hooks/useSupabaseData';
 import { useAppStore } from '@/lib/store';
 import { useAccount } from 'wagmi';
-import { SmartContractService, useUSDCFaucet, SmartContractUtils } from '@/lib/smart-contracts';
+import { useUSDCBalance, useUSDCFaucet, SmartContractUtils } from '@/lib/smart-contracts';
 import toast from 'react-hot-toast';
 
 interface HomeProps {
@@ -21,8 +21,8 @@ export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard, onCr
     const { address } = useAccount();
 
     // Smart contract hooks
-    const { data: usdcBalance } = SmartContractService.useUSDCBalance(address);
-    const { claimFaucet, isPending: isFaucetPending, isConfirmed: isFaucetConfirmed, canUseFaucet, faucetCooldown } = useUSDCFaucet();
+    const { data: usdcBalance } = useUSDCBalance(address);
+    const { claimFaucet, isPending: isFaucetPending, canUseFaucet, faucetCooldown } = useUSDCFaucet();
 
     // Calculate real stats from Supabase data
     const totalMarkets = markets.length;
@@ -183,8 +183,8 @@ export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard, onCr
                                                 border: '1px solid #22c55e',
                                             },
                                         });
-                                    } catch (error: any) {
-                                        const errorMessage = error?.message || 'Failed to claim from faucet';
+                                    } catch (error: unknown) {
+                                        const errorMessage = (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') ? error.message : 'Failed to claim from faucet';
                                         toast.error(errorMessage, {
                                             style: {
                                                 borderRadius: '12px',

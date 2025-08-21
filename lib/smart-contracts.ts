@@ -3,14 +3,10 @@
 import {
     USDC_CONTRACT_ADDRESS,
     MARKET_FACTORY_ADDRESS,
-    DEMO_MARKET_ADDRESS,
     USDC_ABI,
     PREDICTION_MARKET_ABI,
     MARKET_FACTORY_ABI,
-    generateBuySharesTransaction,
-    generateUSDCApprovalTransaction,
-    generateFaucetTransaction,
-    generateCreateMarketTransaction
+    generateUSDCApprovalTransaction
 } from './blockchain';
 import { Address, parseUnits, formatUnits } from 'viem';
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt, useAccount } from 'wagmi';
@@ -34,191 +30,185 @@ export interface UserPosition {
 }
 
 /**
- * Smart Contract Service for interacting with prediction markets
+ * Get USDC balance for a user
  */
-export class SmartContractService {
+export function useUSDCBalance(address?: Address) {
+    return useReadContract({
+        address: USDC_CONTRACT_ADDRESS,
+        abi: USDC_ABI,
+        functionName: 'balanceOf',
+        args: address ? [address] : undefined,
+        query: {
+            enabled: !!address,
+        },
+    });
+}
 
-    /**
-     * Get USDC balance for a user
-     */
-    static useUSDCBalance(address?: Address) {
-        return useReadContract({
-            address: USDC_CONTRACT_ADDRESS,
-            abi: USDC_ABI,
-            functionName: 'balanceOf',
-            args: address ? [address] : undefined,
-            query: {
-                enabled: !!address,
-            },
-        });
+/**
+ * Get USDC allowance for a spender
+ */
+export function useUSDCAllowance(owner?: Address, spender?: Address) {
+    return useReadContract({
+        address: USDC_CONTRACT_ADDRESS,
+        abi: USDC_ABI,
+        functionName: 'allowance',
+        args: owner && spender ? [owner, spender] : undefined,
+        query: {
+            enabled: !!(owner && spender),
+        },
+    });
+}
+
+/**
+ * Get market data from a prediction market contract
+ */
+export function useMarketData(marketAddress?: Address) {
+    const { data: question } = useReadContract({
+        address: marketAddress,
+        abi: PREDICTION_MARKET_ABI,
+        functionName: 'question',
+        query: { enabled: !!marketAddress },
+    });
+
+    const { data: endTime } = useReadContract({
+        address: marketAddress,
+        abi: PREDICTION_MARKET_ABI,
+        functionName: 'endTime',
+        query: { enabled: !!marketAddress },
+    });
+
+    const { data: resolved } = useReadContract({
+        address: marketAddress,
+        abi: PREDICTION_MARKET_ABI,
+        functionName: 'resolved',
+        query: { enabled: !!marketAddress },
+    });
+
+    const { data: outcome } = useReadContract({
+        address: marketAddress,
+        abi: PREDICTION_MARKET_ABI,
+        functionName: 'outcome',
+        query: { enabled: !!marketAddress },
+    });
+
+    const { data: marketStats } = useReadContract({
+        address: marketAddress,
+        abi: PREDICTION_MARKET_ABI,
+        functionName: 'getMarketStats',
+        query: { enabled: !!marketAddress },
+    });
+
+    const { data: yesPrice } = useReadContract({
+        address: marketAddress,
+        abi: PREDICTION_MARKET_ABI,
+        functionName: 'getYesPrice',
+        query: { enabled: !!marketAddress },
+    });
+
+    const { data: noPrice } = useReadContract({
+        address: marketAddress,
+        abi: PREDICTION_MARKET_ABI,
+        functionName: 'getNoPrice',
+        query: { enabled: !!marketAddress },
+    });
+
+    if (!marketAddress) {
+        return { data: null, isLoading: false, error: null };
     }
 
-    /**
-     * Get USDC allowance for a spender
-     */
-    static useUSDCAllowance(owner?: Address, spender?: Address) {
-        return useReadContract({
-            address: USDC_CONTRACT_ADDRESS,
-            abi: USDC_ABI,
-            functionName: 'allowance',
-            args: owner && spender ? [owner, spender] : undefined,
-            query: {
-                enabled: !!(owner && spender),
-            },
-        });
+    const isLoading = !question || !endTime || resolved === undefined || !marketStats || !yesPrice || !noPrice;
+
+    if (isLoading) {
+        return { data: null, isLoading: true, error: null };
     }
 
-    /**
-     * Get market data from a prediction market contract
-     */
-    static useMarketData(marketAddress?: Address) {
-        const { data: question } = useReadContract({
-            address: marketAddress,
-            abi: PREDICTION_MARKET_ABI,
-            functionName: 'question',
-            query: { enabled: !!marketAddress },
-        });
+    const [yesPool, noPool] = marketStats as [bigint, bigint, bigint];
 
-        const { data: endTime } = useReadContract({
-            address: marketAddress,
-            abi: PREDICTION_MARKET_ABI,
-            functionName: 'endTime',
-            query: { enabled: !!marketAddress },
-        });
+    const marketData: MarketData = {
+        address: marketAddress,
+        question: question as string,
+        endTime: Number(endTime),
+        resolved: resolved as boolean,
+        outcome: outcome as boolean | undefined,
+        yesPool: Number(formatUnits(yesPool, 6)),
+        noPool: Number(formatUnits(noPool, 6)),
+        yesPrice: Number(yesPrice) / 1e18, // Convert from wei to decimal
+        noPrice: Number(noPrice) / 1e18,
+    };
 
-        const { data: resolved } = useReadContract({
-            address: marketAddress,
-            abi: PREDICTION_MARKET_ABI,
-            functionName: 'resolved',
-            query: { enabled: !!marketAddress },
-        });
+    return { data: marketData, isLoading: false, error: null };
+}
 
-        const { data: outcome } = useReadContract({
-            address: marketAddress,
-            abi: PREDICTION_MARKET_ABI,
-            functionName: 'outcome',
-            query: { enabled: !!marketAddress },
-        });
+/**
+ * Get user's position in a market
+ */
+export function useUserPosition(marketAddress?: Address, userAddress?: Address) {
+    const { data: userShares } = useReadContract({
+        address: marketAddress,
+        abi: PREDICTION_MARKET_ABI,
+        functionName: 'getUserShares',
+        args: userAddress ? [userAddress] : undefined,
+        query: {
+            enabled: !!(marketAddress && userAddress),
+        },
+    });
 
-        const { data: marketStats } = useReadContract({
-            address: marketAddress,
-            abi: PREDICTION_MARKET_ABI,
-            functionName: 'getMarketStats',
-            query: { enabled: !!marketAddress },
-        });
-
-        const { data: yesPrice } = useReadContract({
-            address: marketAddress,
-            abi: PREDICTION_MARKET_ABI,
-            functionName: 'getYesPrice',
-            query: { enabled: !!marketAddress },
-        });
-
-        const { data: noPrice } = useReadContract({
-            address: marketAddress,
-            abi: PREDICTION_MARKET_ABI,
-            functionName: 'getNoPrice',
-            query: { enabled: !!marketAddress },
-        });
-
-        if (!marketAddress) {
-            return { data: null, isLoading: false, error: null };
-        }
-
-        const isLoading = !question || !endTime || resolved === undefined || !marketStats || !yesPrice || !noPrice;
-
-        if (isLoading) {
-            return { data: null, isLoading: true, error: null };
-        }
-
-        const [yesPool, noPool] = marketStats as [bigint, bigint, bigint];
-
-        const marketData: MarketData = {
-            address: marketAddress,
-            question: question as string,
-            endTime: Number(endTime),
-            resolved: resolved as boolean,
-            outcome: outcome as boolean | undefined,
-            yesPool: Number(formatUnits(yesPool, 6)),
-            noPool: Number(formatUnits(noPool, 6)),
-            yesPrice: Number(yesPrice) / 1e18, // Convert from wei to decimal
-            noPrice: Number(noPrice) / 1e18,
-        };
-
-        return { data: marketData, isLoading: false, error: null };
+    if (!userShares) {
+        return { data: null, isLoading: !!(marketAddress && userAddress), error: null };
     }
 
-    /**
-     * Get user's position in a market
-     */
-    static useUserPosition(marketAddress?: Address, userAddress?: Address) {
-        const { data: userShares } = useReadContract({
-            address: marketAddress,
-            abi: PREDICTION_MARKET_ABI,
-            functionName: 'getUserShares',
-            args: userAddress ? [userAddress] : undefined,
-            query: {
-                enabled: !!(marketAddress && userAddress),
-            },
-        });
+    const [yesShares, noShares] = userShares as [bigint, bigint];
 
-        if (!userShares) {
-            return { data: null, isLoading: !!(marketAddress && userAddress), error: null };
-        }
+    const position: UserPosition = {
+        yesShares: Number(formatUnits(yesShares, 6)),
+        noShares: Number(formatUnits(noShares, 6)),
+    };
 
-        const [yesShares, noShares] = userShares as [bigint, bigint];
+    return { data: position, isLoading: false, error: null };
+}
 
-        const position: UserPosition = {
-            yesShares: Number(formatUnits(yesShares, 6)),
-            noShares: Number(formatUnits(noShares, 6)),
-        };
+/**
+ * Calculate shares that would be received for a given USDC amount
+ */
+export function useCalculateShares(marketAddress?: Address, amount?: number, side?: boolean) {
+    const amountWei = amount ? parseUnits(amount.toString(), 6) : undefined;
 
-        return { data: position, isLoading: false, error: null };
-    }
+    return useReadContract({
+        address: marketAddress,
+        abi: PREDICTION_MARKET_ABI,
+        functionName: 'calculateSharesOut',
+        args: marketAddress && amountWei && side !== undefined ? [amountWei, side] : undefined,
+        query: {
+            enabled: !!(marketAddress && amountWei && side !== undefined),
+        },
+    });
+}
 
-    /**
-     * Calculate shares that would be received for a given USDC amount
-     */
-    static useCalculateShares(marketAddress?: Address, amount?: number, side?: boolean) {
-        const amountWei = amount ? parseUnits(amount.toString(), 6) : undefined;
+/**
+ * Get active markets from the factory
+ */
+export function useActiveMarkets(limit: number = 10) {
+    return useReadContract({
+        address: MARKET_FACTORY_ADDRESS,
+        abi: MARKET_FACTORY_ABI,
+        functionName: 'getActiveMarkets',
+        args: [BigInt(limit)],
+    });
+}
 
-        return useReadContract({
-            address: marketAddress,
-            abi: PREDICTION_MARKET_ABI,
-            functionName: 'calculateSharesOut',
-            args: marketAddress && amountWei && side !== undefined ? [amountWei, side] : undefined,
-            query: {
-                enabled: !!(marketAddress && amountWei && side !== undefined),
-            },
-        });
-    }
-
-    /**
-     * Get active markets from the factory
-     */
-    static useActiveMarkets(limit: number = 10) {
-        return useReadContract({
-            address: MARKET_FACTORY_ADDRESS,
-            abi: MARKET_FACTORY_ABI,
-            functionName: 'getActiveMarkets',
-            args: [BigInt(limit)],
-        });
-    }
-
-    /**
-     * Get markets created by a user
-     */
-    static useCreatorMarkets(creator?: Address) {
-        return useReadContract({
-            address: MARKET_FACTORY_ADDRESS,
-            abi: MARKET_FACTORY_ABI,
-            functionName: 'getCreatorMarkets',
-            args: creator ? [creator] : undefined,
-            query: {
-                enabled: !!creator,
-            },
-        });
-    }
+/**
+ * Get markets created by a user
+ */
+export function useCreatorMarkets(creator?: Address) {
+    return useReadContract({
+        address: MARKET_FACTORY_ADDRESS,
+        abi: MARKET_FACTORY_ABI,
+        functionName: 'getCreatorMarkets',
+        args: creator ? [creator] : undefined,
+        query: {
+            enabled: !!creator,
+        },
+    });
 }
 
 /**
@@ -234,8 +224,7 @@ export function useBuyShares() {
     const buyShares = async (
         marketAddress: Address,
         side: 'yes' | 'no',
-        amount: number,
-        userAddress: Address
+        amount: number
     ) => {
         // First check/request USDC approval
         const approvalTx = generateUSDCApprovalTransaction(amount, marketAddress);
@@ -341,11 +330,11 @@ export function useUSDCFaucet() {
                 args: [],
                 chain: baseSepolia,
             });
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Faucet claim failed:', error);
 
             // Handle specific contract errors
-            if (error?.message?.includes('FaucetCooldownActive')) {
+            if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string' && error.message.includes('FaucetCooldownActive')) {
                 const hoursRemaining = faucetCooldown ? Number(faucetCooldown) / 3600 : 24;
                 throw new Error(`Faucet cooldown active. Try again in ${hoursRemaining.toFixed(1)} hours.`);
             }

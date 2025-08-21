@@ -4,9 +4,8 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Plus, Calendar, TrendingUp, TrendingDown } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
-import { UnifiedMarket } from '@/lib/types';
 import { useMarketCreation } from '@/lib/hooks/useSupabaseData';
-import { useCreateMarket, SmartContractService, SmartContractUtils } from '@/lib/smart-contracts';
+import { useCreateMarket, SmartContractUtils } from '@/lib/smart-contracts';
 import { useAccount } from 'wagmi';
 import toast from 'react-hot-toast';
 
