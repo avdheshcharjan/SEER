@@ -1,9 +1,15 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Helper function to check if Supabase is configured
+const isSupabaseConfigured = () => Boolean(supabaseUrl && supabaseAnonKey)
+
+// Create Supabase client only if configured
+export const supabase = isSupabaseConfigured() 
+  ? createClient(supabaseUrl!, supabaseAnonKey!)
+  : null
 
 // Types for our database
 export interface UserPrediction {
@@ -51,6 +57,11 @@ export class SupabaseService {
   
   // User Predictions
   static async createPrediction(prediction: Omit<UserPrediction, 'id' | 'created_at' | 'updated_at'>) {
+    if (!supabase) {
+      console.warn('Supabase not configured')
+      return null
+    }
+    
     const { data, error } = await supabase
       .from('user_predictions')
       .insert(prediction)
@@ -62,6 +73,11 @@ export class SupabaseService {
   }
 
   static async getUserPredictions(userId: string) {
+    if (!supabase) {
+      console.warn('Supabase not configured, returning empty predictions array')
+      return []
+    }
+    
     const { data, error } = await supabase
       .from('user_predictions')
       .select(`
@@ -76,10 +92,15 @@ export class SupabaseService {
       .order('created_at', { ascending: false })
     
     if (error) throw error
-    return data
+    return data || []
   }
 
   static async updatePrediction(id: string, updates: Partial<UserPrediction>) {
+    if (!supabase) {
+      console.warn('Supabase not configured')
+      return null
+    }
+    
     const { data, error } = await supabase
       .from('user_predictions')
       .update({ ...updates, updated_at: new Date().toISOString() })
@@ -93,6 +114,11 @@ export class SupabaseService {
 
   // Markets
   static async createMarket(market: Omit<Market, 'id' | 'created_at'>) {
+    if (!supabase) {
+      console.warn('Supabase not configured')
+      return null
+    }
+    
     const { data, error } = await supabase
       .from('markets')
       .insert(market)
@@ -104,6 +130,11 @@ export class SupabaseService {
   }
 
   static async getMarkets(limit = 20) {
+    if (!supabase) {
+      console.warn('Supabase not configured, returning empty markets array')
+      return []
+    }
+    
     const { data, error } = await supabase
       .from('markets')
       .select('*')
@@ -111,10 +142,15 @@ export class SupabaseService {
       .limit(limit)
     
     if (error) throw error
-    return data
+    return data || []
   }
 
   static async getMarket(id: string) {
+    if (!supabase) {
+      console.warn('Supabase not configured')
+      return null
+    }
+    
     const { data, error } = await supabase
       .from('markets')
       .select('*')
@@ -126,6 +162,11 @@ export class SupabaseService {
   }
 
   static async updateMarket(id: string, updates: Partial<Market>) {
+    if (!supabase) {
+      console.warn('Supabase not configured')
+      return null
+    }
+    
     const { data, error } = await supabase
       .from('markets')
       .update(updates)
@@ -137,7 +178,12 @@ export class SupabaseService {
     return data
   }
 
-  static async getActiveMarkets() {
+  static async getActiveMarkets(): Promise<Market[]> {
+    if (!supabase) {
+      console.warn('Supabase not configured, returning empty markets array')
+      return []
+    }
+    
     const now = new Date().toISOString()
     const { data, error } = await supabase
       .from('markets')
@@ -147,10 +193,15 @@ export class SupabaseService {
       .order('created_at', { ascending: false })
     
     if (error) throw error
-    return data
+    return data || []
   }
 
   static async getMarketsByCategory(category: string) {
+    if (!supabase) {
+      console.warn('Supabase not configured, returning empty markets array')
+      return []
+    }
+    
     const { data, error } = await supabase
       .from('markets')
       .select('*')
@@ -159,11 +210,16 @@ export class SupabaseService {
       .order('created_at', { ascending: false })
     
     if (error) throw error
-    return data
+    return data || []
   }
 
   // User Positions
   static async updateUserPosition(position: Omit<UserPosition, 'id' | 'created_at' | 'updated_at'>) {
+    if (!supabase) {
+      console.warn('Supabase not configured')
+      return null
+    }
+    
     const { data, error } = await supabase
       .from('user_positions')
       .upsert(
@@ -178,6 +234,11 @@ export class SupabaseService {
   }
 
   static async getUserPositions(userId: string) {
+    if (!supabase) {
+      console.warn('Supabase not configured, returning empty positions array')
+      return []
+    }
+    
     const { data, error } = await supabase
       .from('user_positions')
       .select(`
@@ -194,10 +255,15 @@ export class SupabaseService {
       .order('updated_at', { ascending: false })
     
     if (error) throw error
-    return data
+    return data || []
   }
 
   static async getUserPosition(userId: string, marketId: string) {
+    if (!supabase) {
+      console.warn('Supabase not configured')
+      return null
+    }
+    
     const { data, error } = await supabase
       .from('user_positions')
       .select('*')
@@ -211,6 +277,18 @@ export class SupabaseService {
 
   // Analytics
   static async getMarketStats(marketId: string) {
+    if (!supabase) {
+      console.warn('Supabase not configured, returning default market stats')
+      return {
+        yesTotal: 0,
+        noTotal: 0,
+        total: 0,
+        yesPercentage: 50,
+        noPercentage: 50,
+        totalPredictions: 0
+      }
+    }
+    
     const { data: predictions, error } = await supabase
       .from('user_predictions')
       .select('side, amount')
@@ -233,6 +311,14 @@ export class SupabaseService {
   }
 
   static async getUserStats(userId: string) {
+    if (!supabase) {
+      console.warn('Supabase not configured, returning default user stats')
+      return {
+        totalInvested: 0,
+        totalPredictions: 0
+      }
+    }
+    
     const { data, error } = await supabase
       .from('user_predictions')
       .select('amount')
