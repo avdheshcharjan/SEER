@@ -7,7 +7,7 @@ import { useAccount } from 'wagmi';
 import { SwipeStack } from './SwipeStack';
 import { useAppStore } from '@/lib/store';
 import { getRandomMarkets } from '@/lib/prediction-markets';
-import { UserPrediction, type PredictionMarket } from '@/lib/prediction-markets';
+import { UnifiedMarket, UnifiedUserPrediction, SchemaTransformer } from '@/lib/types';
 
 interface PredictionMarketProps {
     onBack?: () => void;
@@ -16,23 +16,27 @@ interface PredictionMarketProps {
 export function PredictionMarket({ onBack }: PredictionMarketProps) {
     const { address } = useAccount();
     const [selectedCategory, setSelectedCategory] = useState<'all' | 'crypto' | 'tech' | 'celebrity' | 'sports' | 'politics'>('all');
-    const [allMarkets, setAllMarkets] = useState<PredictionMarket[]>([]);
+    const [allMarkets, setAllMarkets] = useState<UnifiedMarket[]>([]);
     const {
         currentMarkets,
         setCurrentMarkets,
         addPrediction,
         addSwipeHistory,
         user,
-        setUser
+        setUser,
+        createdMarkets
     } = useAppStore();
 
     useEffect(() => {
-        // Initialize markets when component mounts
-        if (allMarkets.length === 0) {
-            const markets = getRandomMarkets(50); // Get more markets to have variety across categories
-            setAllMarkets(markets);
-            setCurrentMarkets(markets.slice(0, 20)); // Show first 20 initially
-        }
+        // Combine static markets with user-created markets
+        const staticMarkets = getRandomMarkets(50).map(m => SchemaTransformer.legacyToUnified(m));
+        const allAvailableMarkets = [...staticMarkets, ...createdMarkets];
+        
+        // Shuffle to mix created markets throughout the stack
+        const shuffledMarkets = allAvailableMarkets.sort(() => 0.5 - Math.random());
+        
+        setAllMarkets(shuffledMarkets);
+        setCurrentMarkets(shuffledMarkets.slice(0, 20)); // Show first 20 initially
 
         // Initialize user if connected but no user data
         if (address && !user) {
@@ -45,9 +49,10 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                 totalPredictions: 0,
                 rank: 0,
                 joinedAt: new Date().toISOString(),
+                defaultBetAmount: 1, // Default $1 USDC
             });
         }
-    }, [address, allMarkets.length, user, setCurrentMarkets, setUser]);
+    }, [address, user, setCurrentMarkets, setUser, createdMarkets]);
 
     // Filter markets based on selected category
     useEffect(() => {
@@ -69,7 +74,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
         // Add to swipe history
         addSwipeHistory(marketId);
 
-        // Handle skip
+        // Handle skip - no blockchain transaction needed
         if (direction === 'up') {
             toast('Market skipped! 📊', {
                 icon: '⏭️',
@@ -83,14 +88,17 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
             return;
         }
 
-        // Create prediction
-        const prediction: UserPrediction = {
-            id: `pred_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        // Create prediction using user's default bet amount (fallback to 1)
+        const betAmount = user.defaultBetAmount ?? 1;
+        const prediction: UnifiedUserPrediction = {
+            id: `pred_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
             marketId,
             userId: user.id,
-            prediction: direction === 'right' ? 'yes' : 'no',
-            amount: 1, // $1 USDC per prediction as specified
-            timestamp: new Date().toISOString(),
+            side: direction === 'right' ? 'yes' : 'no',
+            amount: betAmount,
+            sharesReceived: betAmount, // Simplified
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
         };
 
         // Add prediction to store
@@ -100,7 +108,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
         const predictionText = direction === 'right' ? 'YES' : 'NO';
         const emoji = direction === 'right' ? '✅' : '❌';
 
-        toast.success(`Predicted ${predictionText} for $1 USDC! ${emoji}`, {
+        toast.success(`Predicted ${predictionText} for $${betAmount} USDC! ${emoji}`, {
             style: {
                 borderRadius: '12px',
                 background: '#1e293b',
@@ -124,7 +132,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
             await simulateBlockchainTransaction();
 
             // Update prediction with transaction hash (simulated)
-            const transactionHash = `0x${Math.random().toString(16).substr(2, 64)}`;
+            const transactionHash = `0x${Math.random().toString(16).substring(2, 64)}`;
             prediction.transactionHash = transactionHash;
 
             // Dismiss processing toast
