@@ -6,6 +6,8 @@ import { ArrowLeft, Plus, Calendar, TrendingUp, TrendingDown } from 'lucide-reac
 import { useAppStore } from '@/lib/store';
 import { UnifiedMarket } from '@/lib/types';
 import { SupabaseService } from '@/lib/supabase';
+import { createPredictionMarket, validateMarketParams } from '@/lib/market-factory';
+import { Address } from 'viem';
 import toast from 'react-hot-toast';
 
 interface CreateMarketProps {
@@ -127,22 +129,50 @@ export function CreateMarket({ onBack }: CreateMarketProps) {
         }
 
         setStep('creating');
+        
+        const loadingToast = toast.loading('Deploying prediction market contract...', {
+            style: {
+                borderRadius: '12px',
+                background: '#1e293b',
+                color: '#f1f5f9',
+                border: '1px solid #475569',
+            },
+        });
 
         try {
-            // Create market in Supabase
-            const supabaseMarket = await SupabaseService.createMarket({
-                question: generateQuestion(),
+            const question = generateQuestion();
+            const endTime = new Date(formData.endDate);
+            
+            // ✅ SECURITY FIX: Validate parameters before creation
+            const validation = validateMarketParams({
+                question,
                 category: 'crypto',
-                end_time: new Date(formData.endDate).toISOString(),
-                creator_address: user.address,
-                yes_pool: 0,
-                no_pool: 0,
-                total_yes_shares: 0,
-                total_no_shares: 0,
-                resolved: false
+                endTime,
+                creatorAddress: user.address as Address
             });
+            
+            if (!validation.valid) {
+                throw new Error(validation.errors.join(', '));
+            }
+            
+            // 🏭 Create market with deployed smart contract
+            const result = await createPredictionMarket({
+                question,
+                category: 'crypto',
+                endTime,
+                creatorAddress: user.address as Address
+            });
+            
+            if (!result.success) {
+                throw new Error(result.error || 'Failed to create market');
+            }
+            
+            // Get the created market from database
+            const supabaseMarket = await SupabaseService.getMarket(result.marketId!);
+            
+            toast.dismiss(loadingToast);
 
-            // Create unified market object with CoinGecko data for local store
+            // Create unified market object with deployed contract data
             const newMarket: UnifiedMarket = {
                 id: supabaseMarket.id,
                 question: supabaseMarket.question,
@@ -161,6 +191,7 @@ export function CreateMarket({ onBack }: CreateMarketProps) {
                 yesShares: 0,
                 noShares: 0,
                 creatorAddress: supabaseMarket.creator_address,
+                contractAddress: result.contractAddress,
                 createdAt: supabaseMarket.created_at,
                 resolved: supabaseMarket.resolved,
                 outcome: supabaseMarket.outcome,
@@ -178,7 +209,30 @@ export function CreateMarket({ onBack }: CreateMarketProps) {
             // Add to local store
             addCreatedMarket(newMarket);
 
-            toast.success('Market created successfully and saved to database!');
+            toast.success(
+                <div className="flex items-center justify-between">
+                    <span>Market deployed to contract {result.contractAddress?.slice(0, 8)}...! 🏭</span>
+                    {result.transactionHash && (
+                        <a
+                            href={`https://sepolia.basescan.org/tx/${result.transactionHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="ml-2 text-base-400 hover:text-base-300 text-xs"
+                        >
+                            View ↗
+                        </a>
+                    )}
+                </div>,
+                {
+                    duration: 8000,
+                    style: {
+                        borderRadius: '12px',
+                        background: '#1e293b',
+                        color: '#f1f5f9',
+                        border: '1px solid #22c55e',
+                    },
+                }
+            );
             
             // Reset form and go back
             setFormData({
@@ -192,7 +246,10 @@ export function CreateMarket({ onBack }: CreateMarketProps) {
 
         } catch (error) {
             console.error('Error creating market:', error);
-            toast.error('Failed to create market. Please try again.');
+            toast.dismiss(loadingToast);
+            
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+            toast.error(`Failed to create market: ${errorMessage}`);
             setStep('preview');
         }
     };

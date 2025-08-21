@@ -103,6 +103,37 @@ export class SupabaseService {
     return data
   }
 
+  // Get market with contract address validation
+  static async getMarketWithContract(id: string) {
+    const { data, error } = await supabase
+      .from('markets')
+      .select('*')
+      .eq('id', id)
+      .single()
+    
+    if (error) throw error
+    
+    // Validate contract address exists for blockchain interactions
+    if (!data.contract_address) {
+      console.warn(`Market ${id} has no contract address - using demo contract`);
+    }
+    
+    return data
+  }
+
+  // Get markets that have deployed contracts (ready for real predictions)
+  static async getDeployedMarkets() {
+    const { data, error } = await supabase
+      .from('markets')
+      .select('*')
+      .not('contract_address', 'is', null)
+      .eq('resolved', false)
+      .order('created_at', { ascending: false })
+    
+    if (error) throw error
+    return data
+  }
+
   static async getMarkets(limit = 20) {
     const { data, error } = await supabase
       .from('markets')

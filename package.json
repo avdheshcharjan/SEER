@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:config": "node scripts/check-config.js",
+    "test:paymaster": "echo 'Run test:config first to verify setup'",
+    "test:production": "echo 'Production testing - check your configuration first'"
   },
   "dependencies": {
     "@coinbase/onchainkit": "latest",
@@ -19,11 +22,12 @@
     "framer-motion": "^12.23.12",
     "lucide-react": "^0.540.0",
     "next": "^15.3.3",
+    "permissionless": "^0.2.54",
     "react": "^18",
     "react-dom": "^18",
     "react-hot-toast": "^2.6.0",
     "react-spring": "^10.0.1",
-    "viem": "^2.27.2",
+    "viem": "^2.34.0",
     "wagmi": "^2.16.0",
     "zustand": "^5.0.7"
   },

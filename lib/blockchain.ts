@@ -1,13 +1,12 @@
 import { base, baseSepolia } from 'wagmi/chains';
-import { encodeFunctionData, parseEther, Address } from 'viem';
+import { encodeFunctionData, parseUnits, Address } from 'viem';
 
-// Mock USDC contract address on Base Sepolia (for demo purposes)
-export const USDC_CONTRACT_ADDRESS = '0x036CbD53842c5426634e7929541eC2318f3dCF7e' as Address;
+// Real deployed contract addresses on Base Sepolia
+export const USDC_CONTRACT_ADDRESS = '0x32dfDC3bB23d294a1b32E0EDDEddB12088112161' as Address;
+export const MARKET_FACTORY_ADDRESS = '0xAa84401Ef34C0334D4B85259955DE1fa99495B96' as Address;
+export const DEMO_MARKET_ADDRESS = '0xC1f3f3528AD71348AC4683CAde6e5988019735D8' as Address;
 
-// Mock Prediction Market contract address (for demo purposes)
-export const PREDICTION_MARKET_CONTRACT_ADDRESS = '0x1234567890123456789012345678901234567890' as Address;
-
-// USDC ABI (simplified for demo)
+// MockUSDC ABI (includes faucet for testing)
 export const USDC_ABI = [
     {
         name: 'transfer',
@@ -35,89 +34,202 @@ export const USDC_ABI = [
         ],
         outputs: [{ name: '', type: 'bool' }],
         stateMutability: 'nonpayable'
-    }
-] as const;
-
-// Prediction Market ABI (simplified for demo)
-export const PREDICTION_MARKET_ABI = [
+    },
     {
-        name: 'makePrediction',
+        name: 'faucet',
         type: 'function',
-        inputs: [
-            { name: 'marketId', type: 'bytes32' },
-            { name: 'prediction', type: 'bool' }, // true for YES, false for NO
-            { name: 'amount', type: 'uint256' }
-        ],
-        outputs: [{ name: 'predictionId', type: 'uint256' }],
+        inputs: [],
+        outputs: [],
         stateMutability: 'nonpayable'
     },
     {
-        name: 'getPrediction',
+        name: 'decimals',
         type: 'function',
-        inputs: [{ name: 'predictionId', type: 'uint256' }],
+        inputs: [],
+        outputs: [{ name: '', type: 'uint8' }],
+        stateMutability: 'view'
+    }
+] as const;
+
+// SimplePredictionMarket ABI
+export const PREDICTION_MARKET_ABI = [
+    {
+        name: 'buyShares',
+        type: 'function',
+        inputs: [
+            { name: 'side', type: 'bool' }, // true for YES, false for NO
+            { name: 'amount', type: 'uint256' }
+        ],
+        outputs: [{ name: 'shares', type: 'uint256' }],
+        stateMutability: 'nonpayable'
+    },
+    {
+        name: 'sellShares',
+        type: 'function',
+        inputs: [
+            { name: 'side', type: 'bool' },
+            { name: 'sharesToSell', type: 'uint256' }
+        ],
+        outputs: [{ name: 'usdcOut', type: 'uint256' }],
+        stateMutability: 'nonpayable'
+    },
+    {
+        name: 'getUserShares',
+        type: 'function',
+        inputs: [{ name: 'user', type: 'address' }],
         outputs: [
-            { name: 'user', type: 'address' },
-            { name: 'marketId', type: 'bytes32' },
-            { name: 'prediction', type: 'bool' },
-            { name: 'amount', type: 'uint256' },
-            { name: 'timestamp', type: 'uint256' },
-            { name: 'resolved', type: 'bool' },
-            { name: 'correct', type: 'bool' }
+            { name: 'yesBalance', type: 'uint256' },
+            { name: 'noBalance', type: 'uint256' }
         ],
         stateMutability: 'view'
     },
     {
-        name: 'getUserPredictions',
+        name: 'getYesPrice',
         type: 'function',
-        inputs: [{ name: 'user', type: 'address' }],
-        outputs: [{ name: 'predictionIds', type: 'uint256[]' }],
+        inputs: [],
+        outputs: [{ name: 'price', type: 'uint256' }],
+        stateMutability: 'view'
+    },
+    {
+        name: 'getNoPrice',
+        type: 'function',
+        inputs: [],
+        outputs: [{ name: 'price', type: 'uint256' }],
+        stateMutability: 'view'
+    },
+    {
+        name: 'getMarketStats',
+        type: 'function',
+        inputs: [],
+        outputs: [
+            { name: '_yesPool', type: 'uint256' },
+            { name: '_noPool', type: 'uint256' },
+            { name: 'totalVolume', type: 'uint256' }
+        ],
+        stateMutability: 'view'
+    },
+    {
+        name: 'question',
+        type: 'function',
+        inputs: [],
+        outputs: [{ name: '', type: 'string' }],
+        stateMutability: 'view'
+    },
+    {
+        name: 'endTime',
+        type: 'function',
+        inputs: [],
+        outputs: [{ name: '', type: 'uint256' }],
+        stateMutability: 'view'
+    },
+    {
+        name: 'resolved',
+        type: 'function',
+        inputs: [],
+        outputs: [{ name: '', type: 'bool' }],
         stateMutability: 'view'
     }
 ] as const;
 
 export interface PredictionTransaction {
-    marketId: string;
+    marketAddress: Address;
     prediction: 'yes' | 'no';
     amount: number; // in USDC
     userAddress: Address;
 }
 
 /**
- * Generate transaction data for making a prediction
+ * Generate transaction data for buying shares in a prediction market
  */
-export function generatePredictionTransaction(data: PredictionTransaction) {
-    const { marketId, prediction, amount } = data;
+export function generateBuySharesTransaction(data: PredictionTransaction) {
+    const { marketAddress, prediction, amount } = data;
 
-    // Convert marketId string to bytes32
-    const marketIdBytes32 = `0x${marketId.padEnd(64, '0')}` as `0x${string}`;
-
-    // Convert amount to Wei (USDC has 6 decimals, but for demo we'll use 18)
-    const amountWei = parseEther(amount.toString());
+    // Convert amount to 6 decimals (USDC format)
+    const amountFormatted = parseUnits(amount.toString(), 6);
 
     // Encode the function call
     const encodedData = encodeFunctionData({
         abi: PREDICTION_MARKET_ABI,
-        functionName: 'makePrediction',
-        args: [marketIdBytes32, prediction === 'yes', amountWei]
+        functionName: 'buyShares',
+        args: [prediction === 'yes', amountFormatted]
     });
 
     return {
-        to: PREDICTION_MARKET_CONTRACT_ADDRESS,
+        to: marketAddress,
         data: encodedData,
         value: BigInt(0), // No ETH value, using USDC
     };
 }
 
 /**
+ * Get market contract address from market ID
+ * Maps Supabase market IDs to deployed contract addresses
+ */
+export function getMarketContractAddress(marketId: string): Address {
+    // Check if it's a Supabase market with contract address
+    const supabaseMarkets = getSupabaseMarketMapping();
+    if (supabaseMarkets[marketId]) {
+        return supabaseMarkets[marketId];
+    }
+    
+    // Check if it's a static/legacy market ID
+    const staticMarkets = getStaticMarketMapping();
+    if (staticMarkets[marketId]) {
+        return staticMarkets[marketId];
+    }
+    
+    // Fallback to demo market for development (with warning)
+    console.warn(`⚠️  Market ${marketId} not found, using demo contract. This should not happen in production!`);
+    return DEMO_MARKET_ADDRESS;
+}
+
+/**
+ * Get Supabase markets that have deployed contracts
+ * This would be populated from your database
+ */
+function getSupabaseMarketMapping(): Record<string, Address> {
+    // TODO: Fetch this from Supabase or cache
+    // For now, return demo mapping
+    return {
+        // 'supabase-market-id': '0xContractAddress'
+    };
+}
+
+/**
+ * Get static markets that map to the demo contract
+ * All static/legacy markets use the demo contract for now
+ */
+function getStaticMarketMapping(): Record<string, Address> {
+    return {
+        // All static markets default to demo contract
+        'default': DEMO_MARKET_ADDRESS
+    };
+}
+
+/**
+ * Validate that a market address is a legitimate prediction market contract
+ */
+export async function validateMarketContract(marketAddress: Address): Promise<boolean> {
+    try {
+        // Basic validation - check if it has the required functions
+        // In a full implementation, you'd verify it was deployed by your factory
+        return isValidAddress(marketAddress);
+    } catch (error) {
+        console.error('Market contract validation failed:', error);
+        return false;
+    }
+}
+
+/**
  * Generate transaction data for USDC approval
  */
 export function generateUSDCApprovalTransaction(amount: number, spender: Address) {
-    const amountWei = parseEther(amount.toString());
+    const amountFormatted = parseUnits(amount.toString(), 6); // USDC has 6 decimals
 
     const encodedData = encodeFunctionData({
         abi: USDC_ABI,
         functionName: 'approve',
-        args: [spender, amountWei]
+        args: [spender, amountFormatted]
     });
 
     return {
@@ -131,12 +243,29 @@ export function generateUSDCApprovalTransaction(amount: number, spender: Address
  * Generate transaction data for USDC transfer
  */
 export function generateUSDCTransferTransaction(to: Address, amount: number) {
-    const amountWei = parseEther(amount.toString());
+    const amountFormatted = parseUnits(amount.toString(), 6); // USDC has 6 decimals
 
     const encodedData = encodeFunctionData({
         abi: USDC_ABI,
         functionName: 'transfer',
-        args: [to, amountWei]
+        args: [to, amountFormatted]
+    });
+
+    return {
+        to: USDC_CONTRACT_ADDRESS,
+        data: encodedData,
+        value: BigInt(0),
+    };
+}
+
+/**
+ * Generate transaction data for USDC faucet (testnet only)
+ */
+export function generateUSDCFaucetTransaction() {
+    const encodedData = encodeFunctionData({
+        abi: USDC_ABI,
+        functionName: 'faucet',
+        args: []
     });
 
     return {

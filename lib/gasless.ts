@@ -1,0 +1,361 @@
+import { createPublicClient, http, Address } from 'viem';
+import { baseSepolia } from 'viem/chains';
+import { toast } from 'react-hot-toast';
+
+// Entry point address constant for EIP-4337
+const ENTRYPOINT_ADDRESS_V07 = '0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789' as const;
+
+// Environment configuration - Project-specific endpoints
+const PAYMASTER_URL = process.env.NEXT_PUBLIC_PAYMASTER_URL;
+const BUNDLER_URL = process.env.NEXT_PUBLIC_BUNDLER_URL;
+
+if (!PAYMASTER_URL || !BUNDLER_URL) {
+  console.warn('Missing environment variables: NEXT_PUBLIC_PAYMASTER_URL and NEXT_PUBLIC_BUNDLER_URL. Gasless transactions will not work.');
+}
+
+// Create clients for Account Abstraction
+export const publicClient = createPublicClient({
+  transport: http('https://sepolia.base.org'),
+  chain: baseSepolia,
+});
+
+// Type definitions for the client
+interface CoinbaseClient {
+  request(method: string, params: unknown[]): Promise<unknown>;
+}
+
+interface TransactionReceipt {
+  receipt: {
+    transactionHash: string;
+  };
+}
+
+interface GaslessTransactionResult {
+  success: boolean;
+  userOpHash: unknown;
+  transactionHash: string;
+  receipt: TransactionReceipt;
+  error?: string;
+}
+
+// Simple HTTP client for Coinbase Paymaster/Bundler
+function createCoinbaseClient(url: string): CoinbaseClient {
+  return {
+    async request(method: string, params: unknown[]) {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method,
+          params,
+        }),
+      });
+      
+      const data = await response.json();
+      if (data.error) {
+        throw new Error(data.error.message);
+      }
+      return data.result;
+    }
+  };
+}
+
+// Lazy-initialize clients
+let paymasterClient: CoinbaseClient | null = null;
+let bundlerClient: CoinbaseClient | null = null;
+
+function getPaymasterClient() {
+  if (!paymasterClient && PAYMASTER_URL) {
+    paymasterClient = createCoinbaseClient(PAYMASTER_URL);
+  }
+  return paymasterClient;
+}
+
+function getBundlerClient() {
+  if (!bundlerClient && BUNDLER_URL) {
+    bundlerClient = createCoinbaseClient(BUNDLER_URL);
+  }
+  return bundlerClient;
+}
+
+/**
+ * Execute a gasless transaction using existing Base smart account
+ * No smart account creation needed - leverages user's existing Base account
+ */
+export async function executeGaslessTransaction(
+  transaction: {
+    to: Address;
+    data: `0x${string}`;
+    value: bigint;
+  },
+  userAddress: Address
+): Promise<GaslessTransactionResult> {
+  if (!PAYMASTER_URL || !BUNDLER_URL) {
+    throw new Error('Gasless transactions not configured. Please set PAYMASTER_URL and BUNDLER_URL environment variables.');
+  }
+
+  const paymaster = getPaymasterClient();
+  const bundler = getBundlerClient();
+  
+  if (!paymaster || !bundler) {
+    throw new Error('Failed to initialize paymaster or bundler client');
+  }
+
+  try {
+    console.log('Executing gasless transaction via existing Base smart account:', transaction);
+
+    // Use the existing Base smart account for the transaction
+    // This leverages the user's existing account rather than creating a new one
+    const userOperation = {
+      sender: userAddress,
+      nonce: '0x0', // Will be populated by bundler
+      initCode: '0x', // No init code needed for existing accounts
+      callData: transaction.data,
+      callGasLimit: '0x186A0', // 100000
+      verificationGasLimit: '0x186A0', // 100000
+      preVerificationGas: '0x5208', // 21000
+      maxFeePerGas: '0x3B9ACA00', // 1 gwei
+      maxPriorityFeePerGas: '0x3B9ACA00', // 1 gwei
+      paymasterAndData: '0x', // Will be populated by paymaster
+      signature: '0x', // Will be populated by bundler
+    };
+
+    const userOpHash = await bundler.request('eth_sendUserOperation', [
+      userOperation,
+      ENTRYPOINT_ADDRESS_V07
+    ]);
+
+    console.log('UserOperation hash:', userOpHash);
+
+    // Wait for the transaction to be mined
+    const receipt = await bundler.request('eth_getUserOperationReceipt', [userOpHash]) as TransactionReceipt;
+
+    console.log('Transaction receipt:', receipt);
+
+    return {
+      success: true,
+      userOpHash,
+      transactionHash: receipt.receipt.transactionHash,
+      receipt,
+    };
+  } catch (error) {
+    console.error('Gasless transaction failed:', error);
+    throw error;
+  }
+}
+
+
+/**
+ * Check if the paymaster will sponsor a transaction
+ */
+export async function checkSponsorshipEligibility(
+  transaction: {
+    to: Address;
+    data: `0x${string}`;
+    value: bigint;
+  },
+  userAddress: Address
+) {
+  const paymaster = getPaymasterClient();
+  
+  if (!paymaster) {
+    return {
+      eligible: false,
+      error: 'Paymaster client not available',
+    };
+  }
+
+  try {
+    // Check if paymaster will sponsor this operation for the existing Base smart account
+    const userOperation = {
+      sender: userAddress,
+      nonce: '0x0',
+      initCode: '0x',
+      callData: transaction.data,
+      callGasLimit: '0x186A0',
+      verificationGasLimit: '0x186A0', 
+      preVerificationGas: '0x5208',
+      maxFeePerGas: '0x3B9ACA00',
+      maxPriorityFeePerGas: '0x3B9ACA00',
+      paymasterAndData: '0x',
+      signature: '0x',
+    };
+
+    const sponsorship = await paymaster.request('pm_sponsorUserOperation', [
+      userOperation,
+      ENTRYPOINT_ADDRESS_V07
+    ]);
+
+    return {
+      eligible: true,
+      sponsorship,
+    };
+  } catch (error) {
+    console.error('Sponsorship check failed:', error);
+    return {
+      eligible: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+/**
+ * Validate that gasless transactions are properly configured
+ */
+export function validateGaslessConfig(): boolean {
+  if (!PAYMASTER_URL || !BUNDLER_URL) {
+    toast.error('Gasless transactions not configured. Please contact support.');
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Estimate gas for a user operation
+ */
+export async function estimateUserOperationGas(
+  transaction: {
+    to: Address;
+    data: `0x${string}`;
+    value: bigint;
+  },
+  userAddress: Address
+) {
+  const bundler = getBundlerClient();
+  
+  if (!bundler) {
+    throw new Error('Bundler client not available');
+  }
+
+  try {
+    const userOperation = {
+      sender: userAddress,
+      nonce: '0x0',
+      initCode: '0x',
+      callData: transaction.data,
+      callGasLimit: '0x0', // Will be estimated
+      verificationGasLimit: '0x0', // Will be estimated
+      preVerificationGas: '0x0', // Will be estimated
+      maxFeePerGas: '0x3B9ACA00',
+      maxPriorityFeePerGas: '0x3B9ACA00',
+      paymasterAndData: '0x',
+      signature: '0x',
+    };
+
+    const gasEstimate = await bundler.request('eth_estimateUserOperationGas', [
+      userOperation,
+      ENTRYPOINT_ADDRESS_V07
+    ]);
+
+    return gasEstimate;
+  } catch (error) {
+    console.error('Gas estimation failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Check if user has sufficient balance for the operation (if not sponsored)
+ */
+export async function checkUserBalance(userAddress: Address): Promise<{
+  balance: bigint;
+  hasMinimumBalance: boolean;
+}> {
+  try {
+    const balance = await publicClient.getBalance({
+      address: userAddress,
+    });
+
+    // Check if user has at least 0.001 ETH for potential gas
+    const minimumBalance = BigInt('1000000000000000'); // 0.001 ETH
+
+    return {
+      balance,
+      hasMinimumBalance: balance >= minimumBalance,
+    };
+  } catch (error) {
+    console.error('Balance check failed:', error);
+    return {
+      balance: BigInt(0),
+      hasMinimumBalance: false,
+    };
+  }
+}
+
+/**
+ * Execute USDC approval transaction with gasless support
+ */
+export async function executeGaslessUSDCApproval(
+  amount: number,
+  spender: Address,
+  userAddress: Address
+): Promise<{ success: boolean; transactionHash?: string; error?: string }> {
+  if (!validateGaslessConfig()) {
+    return { success: false, error: 'Gasless configuration invalid' };
+  }
+
+  try {
+    // Import the transaction generation function
+    const { generateUSDCApprovalTransaction } = await import('./blockchain');
+    
+    // Generate the approval transaction
+    const approvalTx = generateUSDCApprovalTransaction(amount, spender);
+    
+    // Execute via gasless transaction
+    const result = await executeGaslessTransaction(approvalTx, userAddress);
+    
+    return { 
+      success: true, 
+      transactionHash: result.transactionHash 
+    };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+}
+
+/**
+ * Execute buy shares transaction with gasless support
+ */
+export async function executeGaslessBuyShares(
+  marketAddress: Address,
+  prediction: 'yes' | 'no',
+  amount: number,
+  userAddress: Address
+): Promise<{ success: boolean; transactionHash?: string; error?: string }> {
+  if (!validateGaslessConfig()) {
+    return { success: false, error: 'Gasless configuration invalid' };
+  }
+
+  try {
+    // Import the transaction generation function
+    const { generateBuySharesTransaction } = await import('./blockchain');
+    
+    // Generate the buy shares transaction
+    const buySharesTx = generateBuySharesTransaction({
+      marketAddress,
+      prediction,
+      amount,
+      userAddress,
+    });
+    
+    // Execute via gasless transaction
+    const result = await executeGaslessTransaction(buySharesTx, userAddress);
+    
+    return { 
+      success: true, 
+      transactionHash: result.transactionHash 
+    };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+}

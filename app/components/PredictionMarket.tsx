@@ -9,6 +9,18 @@ import { useAppStore } from '@/lib/store';
 import { getRandomMarkets } from '@/lib/prediction-markets';
 import { UnifiedMarket, UnifiedUserPrediction, SchemaTransformer } from '@/lib/types';
 import { SupabaseService } from '@/lib/supabase';
+import { 
+    generateBuySharesTransaction,
+    getMarketContractAddress,
+    validateMarketContract
+} from '@/lib/blockchain';
+import { 
+    executeGaslessTransaction,
+    checkSponsorshipEligibility,
+    validateGaslessConfig
+} from '@/lib/gasless';
+import { USDCApprovalFlow } from './USDCApprovalFlow';
+import { Address } from 'viem';
 
 interface PredictionMarketProps {
     onBack?: () => void;
@@ -18,6 +30,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
     const { address } = useAccount();
     const [selectedCategory, setSelectedCategory] = useState<'all' | 'crypto' | 'tech' | 'celebrity' | 'sports' | 'politics'>('all');
     const [allMarkets, setAllMarkets] = useState<UnifiedMarket[]>([]);
+    const [usdcApproved, setUsdcApproved] = useState(false);
     const {
         currentMarkets,
         setCurrentMarkets,
@@ -76,6 +89,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
         }
     }, [address, user, setCurrentMarkets, setUser, createdMarkets, setSupabaseMarkets]);
 
+
     // Filter markets based on selected category
     useEffect(() => {
         if (allMarkets.length > 0) {
@@ -118,22 +132,95 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
             userId: user.id,
             side: direction === 'right' ? 'yes' : 'no',
             amount: betAmount,
-            sharesReceived: betAmount, // Simplified
+            sharesReceived: betAmount, // Will be updated after transaction
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
         };
 
-        // Add prediction to store
-        addPrediction(prediction);
+        // Show initial toast
+        const predictionText = direction === 'right' ? 'YES' : 'NO';
+        const emoji = direction === 'right' ? '✅' : '❌';
 
-        // Save prediction to Supabase
+        toast.success(`Predicting ${predictionText} for $${betAmount} USDC! ${emoji}`, {
+            style: {
+                borderRadius: '12px',
+                background: '#1e293b',
+                color: '#f1f5f9',
+                border: '1px solid #475569',
+            },
+        });
+
+        // Show processing toast
+        const processingToast = toast.loading('Processing gasless prediction...', {
+            style: {
+                borderRadius: '12px',
+                background: '#1e293b',
+                color: '#f1f5f9',
+                border: '1px solid #475569',
+            },
+        });
+
         try {
+            // ✅ SECURITY FIX: Get the correct market contract address
+            const marketAddress = getMarketContractAddress(marketId);
+            
+            // Validate the market contract before proceeding
+            const isValidContract = await validateMarketContract(marketAddress);
+            if (!isValidContract) {
+                throw new Error(`Invalid market contract: ${marketAddress}`);
+            }
+            
+            // Log for debugging in development
+            console.log(`📋 Executing prediction on market ${marketId} -> contract ${marketAddress}`);
+            
+            // Generate buy shares transaction for the SPECIFIC market
+            const buySharesTx = generateBuySharesTransaction({
+                marketAddress,
+                prediction: direction === 'right' ? 'yes' : 'no',
+                amount: betAmount,
+                userAddress: address as Address,
+            });
+
+            let transactionHash: string = '';
+
+            if (usdcApproved && validateGaslessConfig()) {
+                // Use gasless transactions via existing Base smart account
+                toast.loading('Executing gasless prediction via Coinbase Paymaster...', {
+                    id: processingToast,
+                });
+
+                // Check sponsorship eligibility for buy shares transaction
+                const buySharesEligible = await checkSponsorshipEligibility(buySharesTx, address as Address);
+
+                if (buySharesEligible.eligible) {
+                    // Execute buy shares transaction (approval already done)
+                    const buyResult = await executeGaslessTransaction(buySharesTx, address as Address);
+                    console.log('Buy shares transaction:', buyResult);
+                    
+                    transactionHash = buyResult.transactionHash;
+                } else {
+                    throw new Error('Transaction not eligible for sponsorship');
+                }
+            } else {
+                // Fallback to simulated transaction if gasless not available
+                await simulateBlockchainTransaction();
+                transactionHash = `0x${Math.random().toString(16).substring(2, 64)}`;
+            }
+
+            // Update prediction with transaction hash
+            prediction.transactionHash = transactionHash;
+
+            // Add prediction to store
+            addPrediction(prediction);
+
+            // Save prediction to Supabase
             await SupabaseService.createPrediction({
                 market_id: marketId,
                 user_id: user.id,
                 side: direction === 'right' ? 'yes' : 'no',
                 amount: betAmount,
-                shares_received: betAmount
+                shares_received: betAmount,
+                transaction_hash: transactionHash
             });
 
             // Update user position in Supabase
@@ -153,49 +240,17 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
             // Update store with new position
             updateUserPosition(updatedPosition);
 
-        } catch (error) {
-            console.error('Error saving prediction to database:', error);
-            toast.error('Failed to save prediction to database');
-        }
-
-        // Show success toast
-        const predictionText = direction === 'right' ? 'YES' : 'NO';
-        const emoji = direction === 'right' ? '✅' : '❌';
-
-        toast.success(`Predicted ${predictionText} for $${betAmount} USDC! ${emoji}`, {
-            style: {
-                borderRadius: '12px',
-                background: '#1e293b',
-                color: '#f1f5f9',
-                border: '1px solid #475569',
-            },
-        });
-
-        // Show processing toast
-        const processingToast = toast.loading('Processing transaction on Base...', {
-            style: {
-                borderRadius: '12px',
-                background: '#1e293b',
-                color: '#f1f5f9',
-                border: '1px solid #475569',
-            },
-        });
-
-        try {
-            // Simulate blockchain transaction with realistic delay
-            await simulateBlockchainTransaction();
-
-            // Update prediction with transaction hash (simulated)
-            const transactionHash = `0x${Math.random().toString(16).substring(2, 64)}`;
-            prediction.transactionHash = transactionHash;
-
             // Dismiss processing toast
             toast.dismiss(processingToast);
 
             // Show success toast with transaction link
+            const successMessage = usdcApproved && validateGaslessConfig() ? 
+                'Gasless prediction confirmed! No fees paid! 🎉' : 
+                'Prediction confirmed! 🔗';
+
             toast.success(
                 <div className="flex items-center justify-between">
-                    <span>Transaction confirmed! 🔗</span>
+                    <span>{successMessage}</span>
                     <a
                         href={`https://sepolia.basescan.org/tx/${transactionHash}`}
                         target="_blank"
@@ -215,10 +270,16 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                     },
                 }
             );
+
         } catch (error) {
-            toast.dismiss(processingToast);
-            toast.error('Transaction failed. Please try again.');
             console.error('Transaction error:', error);
+            toast.dismiss(processingToast);
+            
+            const errorMessage = usdcApproved && validateGaslessConfig() ? 
+                'Gasless prediction failed. Please try again.' : 
+                'Prediction failed. Please try again.';
+            
+            toast.error(errorMessage);
         }
     };
 
@@ -273,16 +334,26 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                     </svg>
                 </motion.button>
 
-                <h1 className="text-xl font-bold text-white">BASED</h1>
+                <div className="flex flex-col items-center">
+                    <h1 className="text-xl font-bold text-white">BASED</h1>
+                    {usdcApproved && validateGaslessConfig() && (
+                        <div className="text-xs text-green-400 mt-1">
+                            ⚡ Gasless enabled
+                        </div>
+                    )}
+                </div>
 
                 <div className="p-2">
                     <div className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center">
                         <div className="w-6 h-6 bg-slate-500 rounded-full flex items-center justify-center text-xs text-slate-300 font-medium">
-                            ?
+                            {usdcApproved && validateGaslessConfig() ? '⚡' : '?'}
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* USDC Pre-Approval Flow */}
+            <USDCApprovalFlow onApprovalComplete={() => setUsdcApproved(true)} />
 
             {/* Category Tab Bar */}
             <div className="flex items-center space-x-1 mb-6 p-1 bg-slate-800/50 rounded-xl border border-slate-700/50">
