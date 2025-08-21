@@ -4,7 +4,9 @@ import { motion } from 'framer-motion';
 import { useAccount } from 'wagmi';
 import { useAppStore, useUserStats } from '@/lib/store';
 import { getMarketById } from '@/lib/prediction-markets';
+import { SupabaseService } from '@/lib/supabase';
 import { TrendingUp, TrendingDown, Clock, ExternalLink, Trophy, Target, DollarSign, Settings, Plus, Share } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 interface ProfileProps {
   onBack?: () => void;
@@ -15,6 +17,55 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
   const { address } = useAccount();
   const userStats = useUserStats();
   const { userPredictions, createdMarkets, setDefaultBetAmount } = useAppStore();
+  const [supabasePredictions, setSupabasePredictions] = useState<Array<{
+    id: string;
+    market_id: string;
+    user_id: string;
+    side: 'yes' | 'no';
+    amount: number;
+    shares_received: number;
+    transaction_hash?: string;
+    created_at: string;
+    updated_at: string;
+  }>>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Load user predictions from Supabase
+  useEffect(() => {
+    const loadSupabasePredictions = async () => {
+      if (!address) return;
+      
+      setLoading(true);
+      try {
+        const predictions = await SupabaseService.getUserPredictions(address);
+        setSupabasePredictions(predictions || []);
+      } catch (error) {
+        console.error('Error loading user predictions:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSupabasePredictions();
+  }, [address]);
+
+  // Combine local and Supabase predictions
+  const allPredictions = [
+    ...userPredictions,
+    ...supabasePredictions.map(p => ({
+      id: p.id,
+      marketId: p.market_id,
+      userId: p.user_id,
+      side: p.side,
+      amount: p.amount,
+      sharesReceived: p.shares_received,
+      transactionHash: p.transaction_hash,
+      createdAt: p.created_at,
+      updatedAt: p.updated_at,
+      resolved: false,
+      correct: false
+    }))
+  ];
 
   if (!address || !userStats) {
     return (
@@ -285,7 +336,7 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
           Recent Predictions
         </h3>
         
-        {userPredictions.length === 0 ? (
+        {allPredictions.length === 0 ? (
           <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 text-center">
             <div className="text-4xl mb-3">📊</div>
             <p className="text-slate-400">No predictions yet</p>
@@ -293,7 +344,12 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
           </div>
         ) : (
           <div className="space-y-3 max-h-96 overflow-y-auto">
-            {userPredictions
+            {loading && (
+              <div className="text-center py-4">
+                <div className="text-slate-400">Loading predictions from database...</div>
+              </div>
+            )}
+            {allPredictions
               .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
               .map((prediction) => {
                 const market = getMarketById(prediction.marketId);

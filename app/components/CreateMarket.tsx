@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Plus, Calendar, TrendingUp, TrendingDown } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { UnifiedMarket } from '@/lib/types';
+import { SupabaseService } from '@/lib/supabase';
 import toast from 'react-hot-toast';
 
 interface CreateMarketProps {
@@ -128,31 +129,41 @@ export function CreateMarket({ onBack }: CreateMarketProps) {
         setStep('creating');
 
         try {
-            // Simulate market creation (in real app, this would call smart contract)
-            await new Promise(resolve => setTimeout(resolve, 2000));
-
-            // Create new market object with CoinGecko data
-            const newMarket: UnifiedMarket = {
-                id: `market_${Date.now()}`,
+            // Create market in Supabase
+            const supabaseMarket = await SupabaseService.createMarket({
                 question: generateQuestion(),
+                category: 'crypto',
+                end_time: new Date(formData.endDate).toISOString(),
+                creator_address: user.address,
+                yes_pool: 0,
+                no_pool: 0,
+                total_yes_shares: 0,
+                total_no_shares: 0,
+                resolved: false
+            });
+
+            // Create unified market object with CoinGecko data for local store
+            const newMarket: UnifiedMarket = {
+                id: supabaseMarket.id,
+                question: supabaseMarket.question,
                 description: `A prediction market for ${formData.ticker} price`,
                 category: 'crypto',
-                endTime: new Date(formData.endDate).toISOString(),
+                endTime: supabaseMarket.end_time,
                 totalVolume: 0,
                 yesPrice: 0.5,
                 noPrice: 0.5,
                 yesOdds: 50,
                 noOdds: 50,
-                yesPool: 0,
-                noPool: 0,
-                totalYesShares: 0,
-                totalNoShares: 0,
+                yesPool: supabaseMarket.yes_pool,
+                noPool: supabaseMarket.no_pool,
+                totalYesShares: supabaseMarket.total_yes_shares,
+                totalNoShares: supabaseMarket.total_no_shares,
                 yesShares: 0,
                 noShares: 0,
-                creatorAddress: user.address,
-                createdAt: new Date().toISOString(),
-                resolved: false,
-                outcome: null,
+                creatorAddress: supabaseMarket.creator_address,
+                createdAt: supabaseMarket.created_at,
+                resolved: supabaseMarket.resolved,
+                outcome: supabaseMarket.outcome,
                 ticker: formData.ticker,
                 targetPrice: parseFloat(formData.price),
                 direction: formData.direction,
@@ -164,10 +175,10 @@ export function CreateMarket({ onBack }: CreateMarketProps) {
                 volume: tokenData?.volume || '$0 Volume',
             };
 
-            // Add to store
+            // Add to local store
             addCreatedMarket(newMarket);
 
-            toast.success('Market created successfully!');
+            toast.success('Market created successfully and saved to database!');
             
             // Reset form and go back
             setFormData({

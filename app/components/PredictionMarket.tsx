@@ -8,6 +8,7 @@ import { SwipeStack } from './SwipeStack';
 import { useAppStore } from '@/lib/store';
 import { getRandomMarkets } from '@/lib/prediction-markets';
 import { UnifiedMarket, UnifiedUserPrediction, SchemaTransformer } from '@/lib/types';
+import { SupabaseService } from '@/lib/supabase';
 
 interface PredictionMarketProps {
     onBack?: () => void;
@@ -24,19 +25,40 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
         addSwipeHistory,
         user,
         setUser,
-        createdMarkets
+        createdMarkets,
+        setSupabaseMarkets,
+        updateUserPosition
     } = useAppStore();
 
     useEffect(() => {
-        // Combine static markets with user-created markets
-        const staticMarkets = getRandomMarkets(50).map(m => SchemaTransformer.legacyToUnified(m));
-        const allAvailableMarkets = [...staticMarkets, ...createdMarkets];
-        
-        // Shuffle to mix created markets throughout the stack
-        const shuffledMarkets = allAvailableMarkets.sort(() => 0.5 - Math.random());
-        
-        setAllMarkets(shuffledMarkets);
-        setCurrentMarkets(shuffledMarkets.slice(0, 20)); // Show first 20 initially
+        const loadMarkets = async () => {
+            try {
+                // Load markets from Supabase
+                const supabaseMarkets = await SupabaseService.getActiveMarkets();
+                setSupabaseMarkets(supabaseMarkets);
+
+                // Combine Supabase markets with static markets and user-created markets
+                const staticMarkets = getRandomMarkets(20).map(m => SchemaTransformer.legacyToUnified(m));
+                const unifiedSupabaseMarkets = supabaseMarkets.map(m => SchemaTransformer.supabaseToUnified(m));
+                const allAvailableMarkets = [...unifiedSupabaseMarkets, ...staticMarkets, ...createdMarkets];
+                
+                // Shuffle to mix all market sources throughout the stack
+                const shuffledMarkets = allAvailableMarkets.sort(() => 0.5 - Math.random());
+                
+                setAllMarkets(shuffledMarkets);
+                setCurrentMarkets(shuffledMarkets.slice(0, 20)); // Show first 20 initially
+            } catch (error) {
+                console.error('Error loading markets:', error);
+                // Fallback to static markets only
+                const staticMarkets = getRandomMarkets(50).map(m => SchemaTransformer.legacyToUnified(m));
+                const allAvailableMarkets = [...staticMarkets, ...createdMarkets];
+                const shuffledMarkets = allAvailableMarkets.sort(() => 0.5 - Math.random());
+                setAllMarkets(shuffledMarkets);
+                setCurrentMarkets(shuffledMarkets.slice(0, 20));
+            }
+        };
+
+        loadMarkets();
 
         // Initialize user if connected but no user data
         if (address && !user) {
@@ -52,7 +74,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                 defaultBetAmount: 1, // Default $1 USDC
             });
         }
-    }, [address, user, setCurrentMarkets, setUser, createdMarkets]);
+    }, [address, user, setCurrentMarkets, setUser, createdMarkets, setSupabaseMarkets]);
 
     // Filter markets based on selected category
     useEffect(() => {
@@ -103,6 +125,38 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
 
         // Add prediction to store
         addPrediction(prediction);
+
+        // Save prediction to Supabase
+        try {
+            await SupabaseService.createPrediction({
+                market_id: marketId,
+                user_id: user.id,
+                side: direction === 'right' ? 'yes' : 'no',
+                amount: betAmount,
+                shares_received: betAmount
+            });
+
+            // Update user position in Supabase
+            const existingPosition = await SupabaseService.getUserPosition(user.id, marketId);
+            const currentYesShares = existingPosition?.yes_shares || 0;
+            const currentNoShares = existingPosition?.no_shares || 0;
+            const currentInvested = existingPosition?.total_invested || 0;
+
+            const updatedPosition = await SupabaseService.updateUserPosition({
+                user_id: user.id,
+                market_id: marketId,
+                yes_shares: direction === 'right' ? currentYesShares + betAmount : currentYesShares,
+                no_shares: direction === 'left' ? currentNoShares + betAmount : currentNoShares,
+                total_invested: currentInvested + betAmount
+            });
+
+            // Update store with new position
+            updateUserPosition(updatedPosition);
+
+        } catch (error) {
+            console.error('Error saving prediction to database:', error);
+            toast.error('Failed to save prediction to database');
+        }
 
         // Show success toast
         const predictionText = direction === 'right' ? 'YES' : 'NO';
