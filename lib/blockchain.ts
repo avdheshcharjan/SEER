@@ -51,6 +51,39 @@ export const USDC_ABI = [
     }
 ] as const;
 
+// MarketFactory ABI for creating markets
+export const MARKET_FACTORY_ABI = [
+    {
+        name: 'createMarket',
+        type: 'function',
+        inputs: [
+            { name: 'question', type: 'string' },
+            { name: 'endTime', type: 'uint256' },
+            { name: 'resolver', type: 'address' }
+        ],
+        outputs: [{ name: 'market', type: 'address' }],
+        stateMutability: 'nonpayable'
+    },
+    {
+        name: 'getMarketCount',
+        type: 'function',
+        inputs: [],
+        outputs: [{ name: '', type: 'uint256' }],
+        stateMutability: 'view'
+    },
+    {
+        name: 'MarketCreated',
+        type: 'event',
+        inputs: [
+            { name: 'market', type: 'address', indexed: true },
+            { name: 'creator', type: 'address', indexed: true },
+            { name: 'question', type: 'string', indexed: false },
+            { name: 'endTime', type: 'uint256', indexed: false },
+            { name: 'marketIndex', type: 'uint256', indexed: false }
+        ]
+    }
+] as const;
+
 // SimplePredictionMarket ABI
 export const PREDICTION_MARKET_ABI = [
     {

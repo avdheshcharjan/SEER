@@ -108,21 +108,52 @@ export async function executeGaslessTransaction(
   try {
     console.log('Executing gasless transaction via existing Base smart account:', transaction);
 
-    // Use the existing Base smart account for the transaction
-    // This leverages the user's existing account rather than creating a new one
-    const userOperation = {
+    // First, create a base user operation for gas estimation
+    let userOperation = {
       sender: userAddress,
       nonce: '0x0', // Will be populated by bundler
       initCode: '0x', // No init code needed for existing accounts
       callData: transaction.data,
-      callGasLimit: '0x186A0', // 100000
-      verificationGasLimit: '0x186A0', // 100000
-      preVerificationGas: '0x5208', // 21000
+      callGasLimit: '0x0', // Will be estimated
+      verificationGasLimit: '0x0', // Will be estimated
+      preVerificationGas: '0x0', // Will be estimated
       maxFeePerGas: '0x3B9ACA00', // 1 gwei
       maxPriorityFeePerGas: '0x3B9ACA00', // 1 gwei
       paymasterAndData: '0x', // Will be populated by paymaster
       signature: '0x', // Will be populated by bundler
     };
+
+    // Estimate gas for the user operation
+    console.log('Estimating gas for user operation...');
+    try {
+      const gasEstimate = await bundler.request('eth_estimateUserOperationGas', [
+        userOperation,
+        ENTRYPOINT_ADDRESS_V07
+      ]) as any;
+      
+      console.log('Gas estimate received:', gasEstimate);
+      
+      // Update user operation with estimated gas values
+      // Add 20% buffer to gas estimates to ensure success
+      userOperation.callGasLimit = gasEstimate.callGasLimit ? 
+        '0x' + (BigInt(gasEstimate.callGasLimit) * BigInt(120) / BigInt(100)).toString(16) : 
+        '0x30D40';
+      userOperation.verificationGasLimit = gasEstimate.verificationGasLimit ? 
+        '0x' + (BigInt(gasEstimate.verificationGasLimit) * BigInt(120) / BigInt(100)).toString(16) : 
+        '0x30D40';
+      userOperation.preVerificationGas = gasEstimate.preVerificationGas ? 
+        '0x' + (BigInt(gasEstimate.preVerificationGas) * BigInt(120) / BigInt(100)).toString(16) : 
+        '0x5DC0';
+        
+    } catch (estimateError) {
+      console.warn('Gas estimation failed, using default values:', estimateError);
+      // Fall back to conservative defaults if estimation fails
+      userOperation.callGasLimit = '0x4C4B40'; // 5000000 - very high for safety
+      userOperation.verificationGasLimit = '0x4C4B40'; // 5000000 - very high for safety
+      userOperation.preVerificationGas = '0x186A0'; // 100000 - high for safety
+    }
+
+    console.log('Final user operation:', userOperation);
 
     const userOpHash = await bundler.request('eth_sendUserOperation', [
       userOperation,
@@ -176,9 +207,9 @@ export async function checkSponsorshipEligibility(
       nonce: '0x0',
       initCode: '0x',
       callData: transaction.data,
-      callGasLimit: '0x186A0',
-      verificationGasLimit: '0x186A0', 
-      preVerificationGas: '0x5208',
+      callGasLimit: '0x30D40', // 200000 - increased for complex operations
+      verificationGasLimit: '0x30D40', // 200000 - increased for verification
+      preVerificationGas: '0x5DC0', // 24000 - increased to meet minimum requirements
       maxFeePerGas: '0x3B9ACA00',
       maxPriorityFeePerGas: '0x3B9ACA00',
       paymasterAndData: '0x',
