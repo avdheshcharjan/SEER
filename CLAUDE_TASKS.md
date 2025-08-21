@@ -145,37 +145,63 @@ npm install @coinbase/onchainkit wagmi viem framer-motion
 
 ---
 
-## Phase 4: Farcaster Integration (8 hours)
-*Minimal frame support*
+#Phase 4: TBA Creator Studio Integration (8 hours)
+MiniKit integration for Base App Creator Studio
+Task 4.1: MiniKit Setup & Provider Configuration (2 hours)
+Priority: CRITICAL
+typescript// app/providers.tsx - MiniKit provider setup
+// app/layout.tsx - Mini app metadata configuration
 
-### Task 4.1: Frame Metadata (4 hours)
-**Priority: MEDIUM**
-```typescript
-// app/api/frame/route.ts
-```
-- [ ] Generate frame metadata for markets
-- [ ] Static image with market question
-- [ ] Basic frame buttons (View Market)
-- [ ] Handle frame interactions
+ Install and configure @coinbase/onchainkit with MiniKit
+ Setup MiniKitProvider with CDP API key and Base chain
+ Configure mini app metadata in layout.tsx with fc:miniapp tags
+ Initialize frame SDK and handle setFrameReady() lifecycle
 
-### Task 4.2: Share to Farcaster (2 hours)
-**Priority: MEDIUM**
-- [ ] Generate share URL with frame
-- [ ] Pre-filled cast text
-- [ ] Copy to clipboard fallback
+Task 4.2: Farcaster Manifest & Creator Studio Registration (2 hours)
+Priority: CRITICAL
+typescript// public/.well-known/farcaster.json - Manifest for TBA
+// public/manifest.json - PWA manifest
 
-### Task 4.3: Mini-app Manifest (2 hours)
-**Priority: LOW**
-- [ ] Create manifest.json for TBA
-- [ ] Configure mini-app metadata
-- [ ] Test in TBA simulator
+ Create farcaster.json with creatorStudio configuration ### CREATORSTUDIO CONFIGURATION IS NOT DEVELOPER-READY YET ###
+ Add tool metadata (name: "Create a prediction", icon, category)
+ Configure permissions for composer and wallet access
+ Design and add 192x192 icon for Creator Studio display
 
-**Deliverables:**
-- Shareable frame links
-- Basic frame rendering
-- Mini-app manifest file
+Task 4.3: Streamlined Creation Flow from Composer (2.5 hours)
+Priority: HIGH
+typescript// app/create/page.tsx - Entry point from Creator Studio
+// components/QuickPredictionForm.tsx - Single-screen form
 
----
+ Build compact creation form optimized for mobile viewport
+ Implement ticker selection (ETH, BTC, BASE) with price input
+ Add above/below toggle and date picker (min 24h future)
+ Handle market deployment and return embed URL to composer
+
+Task 4.4: Composer Return Flow & Embed Rendering (1 hour)
+Priority: HIGH
+typescript// lib/composer.ts - Handle return to TBA composer
+// app/market/[id]/page.tsx - Embedded vs full market view
+
+ Implement sdk.actions.close() with returnValue for composer
+ Create compact embed view for in-feed display (3:2 ratio)
+ Add "Place Prediction" button that opens full mini app
+ Handle isEmbedded detection for view switching
+
+Task 4.5: Testing & TBA Compatibility Verification (0.5 hours)
+Priority: CRITICAL
+bash# Deployment and testing checklist
+
+ Deploy to Vercel with public HTTPS URL
+ Verify manifest serves at /.well-known/farcaster.json
+ Test complete flow: Creator Studio → Create → Return → Embed
+ Validate safe area insets and mobile responsiveness
+
+Deliverables:
+
+"Create a prediction" tool appears in TBA Creator Studio
+Seamless market creation in <30 seconds
+Embedded predictions render in social feed
+Full mini app launches when embed is tapped
 
 ## Phase 5: Data & State Management (8 hours)
 *Simplified data layer*

@@ -20,14 +20,6 @@ export function CryptoCard({ market, style, className, isActive }: CryptoCardPro
         return `$${price.toLocaleString()}`;
     };
 
-    const formatLargeNumber = (num?: number, suffix: string = '') => {
-        if (!num) return 'N/A';
-        if (num >= 1e12) return `$${(num / 1e12).toFixed(1)}T${suffix}`;
-        if (num >= 1e9) return `$${(num / 1e9).toFixed(1)}B${suffix}`;
-        if (num >= 1e6) return `$${(num / 1e6).toFixed(1)}M${suffix}`;
-        if (num >= 1e3) return `$${(num / 1e3).toFixed(1)}K${suffix}`;
-        return `$${num.toFixed(2)}${suffix}`;
-    };
 
     return (
         <BaseCard market={market} style={style} className={className} isActive={isActive}>

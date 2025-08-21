@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { ArrowLeft, Plus, Calendar, TrendingUp, TrendingDown } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { PredictionMarket } from '@/lib/prediction-markets';
