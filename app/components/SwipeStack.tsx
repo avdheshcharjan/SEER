@@ -126,11 +126,11 @@ export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }
     // Show message when no more markets
     if (currentIndex >= markets.length) {
         return (
-            <div className={`flex items-center justify-center h-[600px] ${className}`}>
+            <div className={`flex items-center justify-center h-[500px] sm:h-[600px] ${className}`}>
                 <div className="text-center">
-                    <div className="text-6xl mb-4">🎉</div>
-                    <h3 className="text-2xl font-bold text-white mb-2">All done!</h3>
-                    <p className="text-slate-400">You&apos;ve swiped through all available markets.</p>
+                    <div className="text-5xl sm:text-6xl mb-4">🎉</div>
+                    <h3 className="mobile-text-2xl font-bold text-white mb-2">All done!</h3>
+                    <p className="text-slate-400 mobile-text-sm">You&apos;ve swiped through all available markets.</p>
                 </div>
             </div>
         );
@@ -139,7 +139,7 @@ export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }
     const visibleMarkets = markets.slice(currentIndex, currentIndex + 3);
 
     return (
-        <div className={`relative w-full h-[600px] ${className}`}>
+        <div className={`relative w-full h-[500px] sm:h-[600px] ${className}`}>
 
 
             {/* Card Stack */}
@@ -196,7 +196,7 @@ export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }
 
 
             {/* Progress Indicator */}
-            <div className="absolute top-4 right-4 bg-slate-800/90 backdrop-blur-sm rounded-full px-3 py-1 text-sm text-slate-300">
+            <div className="absolute top-4 right-4 bg-slate-800/90 backdrop-blur-sm rounded-full px-3 py-1 mobile-text-sm text-slate-300">
                 {currentIndex + 1} / {markets.length}
             </div>
         </div>
