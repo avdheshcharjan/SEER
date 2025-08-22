@@ -1,6 +1,8 @@
-# BASED - Prediction Market Platform
+# SEER - Prediction Market Platform
 
 A swipe-based prediction market platform built on Base, featuring gasless transactions and instant predictions. Users can create markets and make predictions with simple swipe gestures.
+Here's the demo link: https://based-rust.vercel.app/
+Youtube video: https://www.youtube.com/watch?v=wV99Tz0V4mw
 
 ## Tech Stack
 
