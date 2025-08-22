@@ -32,7 +32,6 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
         setUser,
         currentMarkets,
         setCurrentMarkets,
-        supabaseMarkets,
         setSupabaseMarkets,
         createdMarkets,
         addSwipeHistory,

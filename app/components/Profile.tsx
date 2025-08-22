@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { useAccount } from 'wagmi';
 import { toast } from 'react-hot-toast';
+import Image from 'next/image';
 import { useAppStore, useUserStats } from '@/lib/store';
 import { getMarketById } from '@/lib/prediction-markets';
 import { SupabaseService } from '@/lib/supabase';
@@ -156,9 +157,11 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
         <div className="flex items-center space-x-4 mb-4">
           <div className="w-16 h-16 bg-gradient-to-br from-base-500 to-base-600 rounded-full flex items-center justify-center">
             {avatar ? (
-              <img
+              <Image
                 src={avatar}
                 alt={basename || 'Profile'}
+                width={64}
+                height={64}
                 className="w-full h-full rounded-full object-cover"
               />
             ) : (
