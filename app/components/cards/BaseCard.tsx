@@ -20,33 +20,33 @@ function BaseCardComponent({ market, style, className = '', isActive = false, ch
     const cardRef = useRef<HTMLDivElement>(null);
     const timerStartTime = useRef<number>(Date.now());
     const timerDuration = 60000; // 60 seconds in milliseconds
-    
+
     // Self-contained timer that updates display and CSS progress without causing re-renders
     useEffect(() => {
         if (!isActive || !timerDisplayRef.current || !cardRef.current) return;
-        
+
         timerStartTime.current = Date.now();
         const updateTimer = () => {
             if (!timerDisplayRef.current || !cardRef.current) return;
-            
+
             const elapsed = Date.now() - timerStartTime.current;
             const remaining = Math.max(0, timerDuration - elapsed);
             const secondsLeft = Math.ceil(remaining / 1000);
             const progress = remaining / timerDuration;
-            
+
             // Update timer display
             timerDisplayRef.current.textContent = `${secondsLeft}s left`;
-            
+
             // Update CSS custom property for gradient animation
             cardRef.current.style.setProperty('--timer-progress', progress.toString());
-            
+
             if (remaining > 0) {
                 requestAnimationFrame(updateTimer);
             }
         };
-        
+
         updateTimer();
-        
+
         // Clean up is handled by the effect dependency
     }, [isActive, timerDuration]);
 
@@ -72,24 +72,28 @@ function BaseCardComponent({ market, style, className = '', isActive = false, ch
     };
 
     const getCategoryColor = (category: string) => {
-        const colors = {
+        const colors: Record<string, string> = {
             crypto: 'bg-prediction-crypto',
             tech: 'bg-prediction-tech',
             celebrity: 'bg-prediction-celebrity',
             sports: 'bg-prediction-sports',
             politics: 'bg-prediction-politics'
         };
-        return colors[category as keyof typeof colors] || 'bg-slate-500';
+        return colors[category] || 'bg-slate-500';
     };
 
+    // Safely get percentages with fallbacks
+    const yesPercentage = SchemaTransformer.getYesPercentage(market);
+    const noPercentage = SchemaTransformer.getNoPercentage(market);
+
     return (
-        <div className="relative">            
+        <div className="relative">
             <motion.div
                 ref={cardRef}
                 className={`
                     relative w-full h-[600px] rounded-3xl shadow-2xl overflow-hidden
                     ${isActive ? 'backdrop-blur-sm' : 'backdrop-blur-md'} border border-white/10
-                    ${isActive ? `timer-gradient-active ${baseGradientClass}` : `bg-${baseGradientClass}`} ${className}
+                    ${baseGradientClass} ${className}
                 `}
                 style={{
                     ...style,
@@ -141,13 +145,13 @@ function BaseCardComponent({ market, style, className = '', isActive = false, ch
                     <div className="grid grid-cols-2 gap-2 mb-3">
                         <div className="bg-green-500/20 backdrop-blur-sm border border-green-500/30 rounded-xl p-2 text-center">
                             <div className="text-green-400 font-bold text-lg">
-                                {SchemaTransformer.getYesPercentage(market)}%
+                                {yesPercentage}%
                             </div>
                             <div className="text-green-300 text-sm font-medium">YES</div>
                         </div>
                         <div className="bg-red-500/20 backdrop-blur-sm border border-red-500/30 rounded-xl p-2 text-center">
                             <div className="text-red-400 font-bold text-lg">
-                                {SchemaTransformer.getNoPercentage(market)}%
+                                {noPercentage}%
                             </div>
                             <div className="text-red-300 text-sm font-medium">NO</div>
                         </div>
@@ -156,8 +160,8 @@ function BaseCardComponent({ market, style, className = '', isActive = false, ch
                     {/* Swipe Instructions */}
                     <div className="text-center">
                         <div className="text-white/80 text-xs">
-                            Swipe <span className="text-green-400 font-semibold">→</span> for YES • 
-                            <span className="text-red-400 font-semibold"> ←</span> for NO • 
+                            Swipe <span className="text-green-400 font-semibold">→</span> for YES •
+                            <span className="text-red-400 font-semibold"> ←</span> for NO •
                             <span className="text-blue-400 font-semibold"> ↑</span> to skip
                         </div>
                     </div>
