@@ -54,7 +54,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#0052FF" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="BASED" />
+        <meta name="apple-mobile-web-app-title" content="Seer" />
         <link rel="apple-touch-icon" href="/icon.png" />
       </head>
       <body className="bg-background">

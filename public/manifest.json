@@ -1,6 +1,6 @@
 {
-  "name": "BASED - Prediction Markets",
-  "short_name": "BASED",
+  "name": "Seer - Prediction Markets",
+  "short_name": "Seer",
   "description": "Swipe-based prediction markets. Create and trade predictions by swiping.",
   "start_url": "/",
   "display": "standalone",

@@ -431,7 +431,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                 </motion.button>
 
                 <div className="flex flex-col items-center">
-                    <h1 className="text-xl font-bold text-white">BASED</h1>
+                    <h1 className="text-xl font-bold text-white">Seer</h1>
                     {isPaymasterConfigured() && (
                         <div className="text-xs text-green-400 mt-1">
                             ⚡ Gasless enabled

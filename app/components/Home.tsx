@@ -51,7 +51,7 @@ export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard, onCr
                     <div className="text-6xl mb-4">🔮</div>
                     <h1 className="text-4xl font-bold text-white mb-4">
                         <span className="bg-gradient-to-r from-base-400 to-base-600 bg-clip-text text-transparent">
-                            BASED
+                            Seer
                         </span>
                     </h1>
                     <p className="text-slate-300 text-lg mb-2">
