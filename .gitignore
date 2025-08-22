@@ -39,4 +39,5 @@ next-env.d.ts
 .claude/
 .cursor/
 .llms
+SCRIPT.md
 
