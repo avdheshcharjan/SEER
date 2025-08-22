@@ -35,7 +35,7 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
   useEffect(() => {
     const loadSupabasePredictions = async () => {
       if (!address) return;
-      
+
       setLoading(true);
       try {
         const predictions = await SupabaseService.getUserPredictions(address);
@@ -114,7 +114,7 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
   const handleFaucetRedirect = () => {
     // Redirect to Circle's official Base Sepolia USDC faucet
     window.open('https://faucet.circle.com/', '_blank');
-    
+
     toast.success(
       'Redirected to Circle Faucet! Get Base Sepolia USDC there.',
       {
@@ -143,9 +143,9 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </motion.button>
-        
+
         <h1 className="text-xl font-bold text-white">Profile</h1>
-        
+
         <div className="w-8 h-8" />
       </div>
 
@@ -201,7 +201,7 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
           <Settings className="w-5 h-5 mr-2" />
           Bet Settings
         </h3>
-        
+
         <div className="mb-4">
           <label className="block text-sm font-medium text-slate-300 mb-3">
             Default Bet Amount (USDC)
@@ -293,7 +293,7 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
               </button>
             )}
           </div>
-          
+
           <div className="space-y-3 max-h-64 overflow-y-auto">
             {createdMarkets
               .sort((a, b) => new Date(b.createdAt || '').getTime() - new Date(a.createdAt || '').getTime())
@@ -310,18 +310,42 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
                       <h4 className="text-white font-medium text-sm mb-1 line-clamp-2">
                         {market.question}
                       </h4>
-                      <div className="flex items-center space-x-2 text-xs text-slate-400">
+                      <div className="flex items-center space-x-2 text-xs text-slate-400 mb-1">
                         <span>Created {formatDate(market.createdAt || '')}</span>
                         <span>•</span>
                         <span className={market.resolved ? 'text-slate-500' : 'text-green-400'}>
                           {market.resolved ? 'Resolved' : 'Active'}
                         </span>
                       </div>
+                      <div className="text-xs text-slate-500 font-mono">
+                        ID: {market.id.slice(0, 8)}...{market.id.slice(-8)}
+                      </div>
                     </div>
                     <button
-                      onClick={() => {
-                        const shareUrl = `${window.location.origin}/market/${market.id}`;
-                        navigator.clipboard.writeText(shareUrl);
+                      onClick={async () => {
+                        try {
+                          const shareUrl = `${window.location.origin}/market/${market.id}`;
+                          await navigator.clipboard.writeText(shareUrl);
+                          toast.success('Market link copied to clipboard!', {
+                            duration: 3000,
+                            style: {
+                              borderRadius: '12px',
+                              background: '#1e293b',
+                              color: '#f1f5f9',
+                              border: '1px solid #10b981',
+                            },
+                          });
+                        } catch (error) {
+                          console.error('Failed to copy link:', error);
+                          toast.error('Failed to copy link', {
+                            style: {
+                              borderRadius: '12px',
+                              background: '#1e293b',
+                              color: '#f1f5f9',
+                              border: '1px solid #ef4444',
+                            },
+                          });
+                        }
                       }}
                       className="p-1 hover:bg-slate-700/50 rounded transition-colors"
                       title="Copy share link"
@@ -329,7 +353,7 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
                       <Share className="w-3 h-3 text-slate-400" />
                     </button>
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-2">
                     <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-2 text-center">
                       <div className="text-green-400 font-bold text-xs">
@@ -378,7 +402,7 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
           <Clock className="w-5 h-5 mr-2" />
           Recent Predictions
         </h3>
-        
+
         {allPredictions.length === 0 ? (
           <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-6 border border-slate-700/50 text-center">
             <div className="text-4xl mb-3">📊</div>
@@ -414,27 +438,25 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
                         <div className="flex items-center space-x-2 text-xs text-slate-400">
                           <span>{formatDate(prediction.createdAt)}</span>
                           <span>•</span>
-                          <span className={`px-2 py-1 rounded-full ${
-                            market.category === 'crypto' ? 'bg-prediction-crypto/20 text-prediction-crypto' :
-                            market.category === 'tech' ? 'bg-prediction-tech/20 text-prediction-tech' :
-                            market.category === 'celebrity' ? 'bg-prediction-celebrity/20 text-prediction-celebrity' :
-                            market.category === 'sports' ? 'bg-prediction-sports/20 text-prediction-sports' :
-                            'bg-prediction-politics/20 text-prediction-politics'
-                          }`}>
+                          <span className={`px-2 py-1 rounded-full ${market.category === 'crypto' ? 'bg-prediction-crypto/20 text-prediction-crypto' :
+                              market.category === 'tech' ? 'bg-prediction-tech/20 text-prediction-tech' :
+                                market.category === 'celebrity' ? 'bg-prediction-celebrity/20 text-prediction-celebrity' :
+                                  market.category === 'sports' ? 'bg-prediction-sports/20 text-prediction-sports' :
+                                    'bg-prediction-politics/20 text-prediction-politics'
+                            }`}>
                             {market.category}
                           </span>
                         </div>
                       </div>
                       <div className="text-right ml-3">
-                        <div className={`text-lg font-bold ${
-                          prediction.side === 'yes' ? 'text-green-400' : 'text-red-400'
-                        }`}>
+                        <div className={`text-lg font-bold ${prediction.side === 'yes' ? 'text-green-400' : 'text-red-400'
+                          }`}>
                           {prediction.side === 'yes' ? 'YES' : 'NO'}
                         </div>
                         <div className="text-xs text-slate-400">${prediction.amount}</div>
                       </div>
                     </div>
-                    
+
                     {prediction.transactionHash && (
                       <div className="flex items-center justify-between pt-2 border-t border-slate-700/50">
                         <span className="text-xs text-slate-400">Transaction:</span>
@@ -449,13 +471,12 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
                         </a>
                       </div>
                     )}
-                    
+
                     {prediction.resolved && (
                       <div className="flex items-center justify-between pt-2 border-t border-slate-700/50">
                         <span className="text-xs text-slate-400">Result:</span>
-                        <span className={`text-xs font-medium ${
-                          prediction.correct ? 'text-green-400' : 'text-red-400'
-                        }`}>
+                        <span className={`text-xs font-medium ${prediction.correct ? 'text-green-400' : 'text-red-400'
+                          }`}>
                           {prediction.correct ? '✓ Correct' : '✗ Incorrect'}
                         </span>
                       </div>

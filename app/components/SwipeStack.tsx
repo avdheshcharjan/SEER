@@ -9,11 +9,12 @@ interface SwipeStackProps {
     markets: UnifiedMarket[];
     onSwipe: (marketId: string, direction: 'left' | 'right' | 'up') => void;
     className?: string;
+    forceMarketCard?: boolean; // New prop to force using MarketCard
 }
 
 const SWIPE_THRESHOLD = 100;
 
-export function SwipeStack({ markets, onSwipe, className = '' }: SwipeStackProps) {
+export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }: SwipeStackProps) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isAnimating, setIsAnimating] = useState(false);
     const [isTimerActive, setIsTimerActive] = useState(true);
@@ -168,7 +169,7 @@ export function SwipeStack({ markets, onSwipe, className = '' }: SwipeStackProps
                                 whileDrag={{ scale: 1.05 }}
                                 transition={{ duration: 0.3, ease: "easeOut" }}
                             >
-                                <SmartPredictionCard market={market} isActive={true} />
+                                <SmartPredictionCard market={market} isActive={true} forceMarketCard={forceMarketCard} />
                             </motion.div>
                         );
                     }
@@ -186,7 +187,7 @@ export function SwipeStack({ markets, onSwipe, className = '' }: SwipeStackProps
                             animate={{ scale, y: yOffset }}
                             transition={{ duration: 0.3, ease: "easeOut" }}
                         >
-                            <SmartPredictionCard market={market} className="opacity-60" isActive={false} />
+                            <SmartPredictionCard market={market} className="opacity-60" isActive={false} forceMarketCard={forceMarketCard} />
                         </motion.div>
                     );
                 })}
