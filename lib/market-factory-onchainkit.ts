@@ -213,8 +213,10 @@ export function validateMarketCreation(params: {
     };
 }
 
-export default {
+const marketFactoryOnchainKit = {
     generateCreateMarketCalls,
     processMarketCreation,
     validateMarketCreation
 };
+
+export default marketFactoryOnchainKit;

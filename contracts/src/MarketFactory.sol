@@ -3,17 +3,24 @@ pragma solidity ^0.8.19;
 
 import "./SimplePredictionMarket.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Context.sol";
 
 /// @title MarketFactory
 /// @notice Factory contract for creating SimplePredictionMarket instances
 /// @dev Simplified factory for MVP - no complex features
-contract MarketFactory is Ownable {
+contract MarketFactory is Context, Ownable {
     
     address public immutable usdc;
     address public defaultResolver;
     
     SimplePredictionMarket[] public markets;
     mapping(address => SimplePredictionMarket[]) public creatorMarkets;
+    
+    address public constant ENTRY_POINT = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789; // ERC-4337 EntryPoint on Base
+    
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
+    uint256 private _entryPointReentrancyStatus;
     
     event MarketCreated(
         address indexed market,
@@ -26,9 +33,12 @@ contract MarketFactory is Ownable {
     error InvalidEndTime();
     error InvalidResolver();
     
-    constructor(address _usdc, address _defaultResolver) Ownable(msg.sender) {
+    constructor(address _usdc, address _defaultResolver) Ownable(_msgSender()) {
         usdc = _usdc;
         defaultResolver = _defaultResolver;
+        
+        // Initialize reentrancy protection for EntryPoint
+        _entryPointReentrancyStatus = _NOT_ENTERED;
     }
     
     /// @notice Create a new prediction market
@@ -40,7 +50,7 @@ contract MarketFactory is Ownable {
         string memory question,
         uint256 endTime,
         address resolver
-    ) external returns (SimplePredictionMarket market) {
+    ) external notPaused entryPointReentrancyGuard returns (SimplePredictionMarket market) {
         if (endTime <= block.timestamp + 1 hours) revert InvalidEndTime();
         
         address actualResolver = resolver == address(0) ? defaultResolver : resolver;
@@ -53,12 +63,13 @@ contract MarketFactory is Ownable {
             actualResolver
         );
         
+        address creator = _msgSender();
         markets.push(market);
-        creatorMarkets[msg.sender].push(market);
+        creatorMarkets[creator].push(market);
         
         emit MarketCreated(
             address(market),
-            msg.sender,
+            creator,
             question,
             endTime,
             markets.length - 1
@@ -142,11 +153,59 @@ contract MarketFactory is Ownable {
         _;
     }
     
+    modifier entryPointReentrancyGuard() {
+        if (_entryPointReentrancyStatus == _ENTERED) {
+            revert("EntryPoint reentrancy");
+        }
+        _entryPointReentrancyStatus = _ENTERED;
+        _;
+        _entryPointReentrancyStatus = _NOT_ENTERED;
+    }
+    
     function pause() external onlyOwner {
         paused = true;
     }
     
     function unpause() external onlyOwner {
         paused = false;
+    }
+    
+    /// @notice Get estimated gas for creating a market (helpful for ERC-4337 gas estimation)
+    /// @return gasEstimate Estimated gas units for the transaction
+    function estimateGasForCreateMarket(
+        string memory /* question */,
+        uint256 /* endTime */,
+        address /* resolver */
+    ) external view returns (uint256 gasEstimate) {
+        // Base gas for contract deployment: ~1.5M
+        // Storage writes for arrays and mappings: ~100k
+        // Buffer for ERC-4337 overhead: ~50k
+        gasEstimate = 1650000;
+        
+        // Add extra gas if this is the first market for the creator
+        address creator = _msgSender();
+        if (creatorMarkets[creator].length == 0) {
+            gasEstimate += 50000; // Extra gas for new creator mapping
+        }
+    }
+    
+    /// @notice Check if caller is a smart wallet (ERC-4337 compatible)
+    /// @return true if caller appears to be a smart wallet
+    function isSmartWallet() external view returns (bool) {
+        address user = _msgSender();
+        uint256 codeSize;
+        assembly {
+            codeSize := extcodesize(user)
+        }
+        return codeSize > 0;
+    }
+    
+    /// @notice Get creator statistics for gas optimization
+    /// @param creator Address to check
+    /// @return marketCount Number of markets created by this address
+    /// @return isNewCreator true if this would be their first market
+    function getCreatorStats(address creator) external view returns (uint256 marketCount, bool isNewCreator) {
+        marketCount = creatorMarkets[creator].length;
+        isNewCreator = marketCount == 0;
     }
 }

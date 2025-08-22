@@ -16,20 +16,11 @@ Your app is now running at: **http://localhost:3000**
 - [ ] **1.3** Switch to Base Sepolia network
 - [ ] **1.4** Verify wallet address matches: `0xbb65d349dca28a64b5ddba859c0389060efd3d71`
 
-### **Phase 2: USDC Setup & Multi-Market Approvals**
-- [ ] **2.1** Get test USDC from Circle Faucet
-  - Visit: https://faucet.circle.com/
-  - Connect wallet and request USDC on Base Sepolia
-  - Confirm you receive test USDC tokens
-- [ ] **2.2** Navigate to prediction markets
-- [ ] **2.3** Complete USDC approval flow
-  - Should show "One-Time Setup Required" initially
-  - Click "Enable Gasless Predictions"
-  - Verify gasless approval transaction succeeds
-  - Should show "Ready for Gasless Predictions!" after completion
-- [ ] **2.4** Verify multi-market approval status
-  - Check for "Multi-market approvals active" message
-  - Confirm daily limits shown: "$100 per market"
+### **Phase 2: Market Setup & Testing**
+- [ ] **2.1** Navigate to prediction markets interface
+- [ ] **2.2** Verify markets are loading correctly
+- [ ] **2.3** Check market display shows correct contract addresses
+- [ ] **2.4** Confirm all market data is displaying properly
 
 ### **Phase 3: Market Creation Testing**
 - [ ] **3.1** Navigate to "Create Market" 
@@ -73,15 +64,15 @@ Your app is now running at: **http://localhost:3000**
   - Check created markets still appear
 
 ### **Phase 6: Error Handling & Edge Cases**
-- [ ] **6.1** Test with insufficient USDC
-  - Try prediction with more USDC than balance
-  - Should show appropriate error message
-- [ ] **6.2** Test network switching
+- [ ] **6.1** Test network switching
   - Switch to different network
   - Should show network error or fallback
-- [ ] **6.3** Test wallet disconnection
+- [ ] **6.2** Test wallet disconnection
   - Disconnect wallet mid-session
   - Should prompt to reconnect
+- [ ] **6.3** Test invalid market interactions
+  - Try accessing non-existent markets
+  - Should show appropriate error messages
 
 ## 🔍 **What to Look For**
 
@@ -94,7 +85,7 @@ Your app is now running at: **http://localhost:3000**
 - **Error handling**: Graceful fallbacks when things go wrong
 
 ### **❌ FAILURE SIGNS**
-- **Demo contract usage**: All transactions going to `0xC1f3f3528AD71348AC4683CAde6e5988019735D8`
+- **Demo contract usage**: All transactions going to `0x688B4b38b8f73878Cd19ef7250FA63D6b36361d1` (current demo market)
 - **Wallet popups**: MetaMask requesting approval for every prediction
 - **Transaction failures**: "Transaction failed" or "Not eligible for sponsorship"
 - **Data loss**: Predictions don't persist after page refresh
@@ -120,28 +111,18 @@ Your app is now running at: **http://localhost:3000**
 3. Confirm paymaster covers createMarket() function
 ```
 
-### **USDC Approval Issues**
-```
-❌ Issue: "Failed to approve USDC"
-✅ Solution:
-1. Check USDC contract address
-2. Verify approval manager batch logic
-3. Confirm paymaster covers approve() function
-```
 
 ## 📊 **Expected Test Results**
 
 ### **Successful Production Test**
 - ✅ 5+ gasless predictions executed
 - ✅ 1+ market created with unique contract
-- ✅ Multi-market approvals working
 - ✅ All data persisting in database
 - ✅ Transaction links pointing to correct contracts
 
 ### **Performance Metrics**
 - **Market creation**: ~10-15 seconds (including contract deployment)
 - **Prediction execution**: ~3-5 seconds (gasless)
-- **USDC approval**: ~5-8 seconds (one-time setup)
 - **Page load time**: <2 seconds with cached data
 
 ## 🚀 **Next Steps After Successful Testing**

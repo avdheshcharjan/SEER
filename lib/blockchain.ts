@@ -2,54 +2,9 @@ import { base, baseSepolia } from 'wagmi/chains';
 import { encodeFunctionData, parseUnits, Address } from 'viem';
 
 // Real deployed contract addresses on Base Sepolia
-export const USDC_CONTRACT_ADDRESS = '0x32dfDC3bB23d294a1b32E0EDDEddB12088112161' as Address;
-export const MARKET_FACTORY_ADDRESS = '0xAa84401Ef34C0334D4B85259955DE1fa99495B96' as Address;
-export const DEMO_MARKET_ADDRESS = '0xC1f3f3528AD71348AC4683CAde6e5988019735D8' as Address;
+export const MARKET_FACTORY_ADDRESS = '0xfE7440a0C61aE1156E9B759Bb6C7E8BEFa0BCC3C' as Address;
+export const DEMO_MARKET_ADDRESS = '0x688B4b38b8f73878Cd19ef7250FA63D6b36361d1' as Address;
 
-// MockUSDC ABI (includes faucet for testing)
-export const USDC_ABI = [
-    {
-        name: 'transfer',
-        type: 'function',
-        inputs: [
-            { name: 'to', type: 'address' },
-            { name: 'amount', type: 'uint256' }
-        ],
-        outputs: [{ name: '', type: 'bool' }],
-        stateMutability: 'nonpayable'
-    },
-    {
-        name: 'balanceOf',
-        type: 'function',
-        inputs: [{ name: 'account', type: 'address' }],
-        outputs: [{ name: '', type: 'uint256' }],
-        stateMutability: 'view'
-    },
-    {
-        name: 'approve',
-        type: 'function',
-        inputs: [
-            { name: 'spender', type: 'address' },
-            { name: 'amount', type: 'uint256' }
-        ],
-        outputs: [{ name: '', type: 'bool' }],
-        stateMutability: 'nonpayable'
-    },
-    {
-        name: 'faucet',
-        type: 'function',
-        inputs: [],
-        outputs: [],
-        stateMutability: 'nonpayable'
-    },
-    {
-        name: 'decimals',
-        type: 'function',
-        inputs: [],
-        outputs: [{ name: '', type: 'uint8' }],
-        stateMutability: 'view'
-    }
-] as const;
 
 // MarketFactory ABI for creating markets
 export const MARKET_FACTORY_ABI = [
@@ -253,60 +208,6 @@ export async function validateMarketContract(marketAddress: Address): Promise<bo
     }
 }
 
-/**
- * Generate transaction data for USDC approval
- */
-export function generateUSDCApprovalTransaction(amount: number, spender: Address) {
-    const amountFormatted = parseUnits(amount.toString(), 6); // USDC has 6 decimals
-
-    const encodedData = encodeFunctionData({
-        abi: USDC_ABI,
-        functionName: 'approve',
-        args: [spender, amountFormatted]
-    });
-
-    return {
-        to: USDC_CONTRACT_ADDRESS,
-        data: encodedData,
-        value: BigInt(0),
-    };
-}
-
-/**
- * Generate transaction data for USDC transfer
- */
-export function generateUSDCTransferTransaction(to: Address, amount: number) {
-    const amountFormatted = parseUnits(amount.toString(), 6); // USDC has 6 decimals
-
-    const encodedData = encodeFunctionData({
-        abi: USDC_ABI,
-        functionName: 'transfer',
-        args: [to, amountFormatted]
-    });
-
-    return {
-        to: USDC_CONTRACT_ADDRESS,
-        data: encodedData,
-        value: BigInt(0),
-    };
-}
-
-/**
- * Generate transaction data for USDC faucet (testnet only)
- */
-export function generateUSDCFaucetTransaction() {
-    const encodedData = encodeFunctionData({
-        abi: USDC_ABI,
-        functionName: 'faucet',
-        args: []
-    });
-
-    return {
-        to: USDC_CONTRACT_ADDRESS,
-        data: encodedData,
-        value: BigInt(0),
-    };
-}
 
 /**
  * Get the appropriate chain configuration

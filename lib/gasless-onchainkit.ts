@@ -4,48 +4,13 @@
  * This is the recommended approach for Coinbase Paymaster integration
  */
 
-import { Address, encodeFunctionData, type Hex } from 'viem';
+import { Address, encodeFunctionData } from 'viem';
 import { 
-  USDC_CONTRACT_ADDRESS,
   MARKET_FACTORY_ADDRESS,
   PREDICTION_MARKET_ABI,
-  USDC_ABI,
   MARKET_FACTORY_ABI
 } from './blockchain';
 
-/**
- * Generate transaction calls for USDC approval
- * These calls will be used with OnchainKit's Transaction component
- */
-export function generateApprovalCalls(
-  spenderAddress: Address,
-  amount: bigint
-) {
-  // Use the Call type format: { to: Hex, data?: Hex, value?: bigint }
-  // Encode the function call data
-  const data = encodeFunctionData({
-    abi: USDC_ABI,
-    functionName: 'approve',
-    args: [spenderAddress, amount]
-  });
-  
-  // Create the call in the proper Call format
-  const call = {
-    to: USDC_CONTRACT_ADDRESS as Hex,
-    data: data as Hex,
-    value: 0n // No ETH being sent for approval
-  };
-  
-  console.log('Generated approval call (Call format):', {
-    to: call.to,
-    data: call.data?.substring(0, 10) + '...', // Log function selector
-    value: call.value,
-    spender: spenderAddress,
-    amount: amount.toString()
-  });
-  
-  return [call];
-}
 
 /**
  * Generate transaction calls for buying shares in a prediction market
@@ -55,11 +20,16 @@ export function generateBuySharesCalls(
   prediction: 'yes' | 'no',
   amount: bigint
 ) {
-  return [{
-    to: marketAddress,
+  const data = encodeFunctionData({
     abi: PREDICTION_MARKET_ABI,
     functionName: 'buyShares',
     args: [prediction === 'yes', amount]
+  });
+
+  return [{
+    to: marketAddress,
+    data: data as `0x${string}`,
+    value: BigInt(0)
   }];
 }
 
@@ -71,29 +41,19 @@ export function generateCreateMarketCalls(
   endTime: bigint,
   resolver: Address = '0x0000000000000000000000000000000000000000'
 ) {
-  return [{
-    to: MARKET_FACTORY_ADDRESS,
+  const data = encodeFunctionData({
     abi: MARKET_FACTORY_ABI,
     functionName: 'createMarket',
     args: [question, endTime, resolver]
+  });
+
+  return [{
+    to: MARKET_FACTORY_ADDRESS,
+    data: data as `0x${string}`,
+    value: BigInt(0)
   }];
 }
 
-/**
- * Generate batch approval calls for multiple markets
- * This creates an array of approval transactions
- */
-export function generateBatchApprovalCalls(
-  marketAddresses: Address[],
-  amountPerMarket: bigint
-) {
-  return marketAddresses.map(marketAddress => ({
-    to: USDC_CONTRACT_ADDRESS,
-    abi: USDC_ABI,
-    functionName: 'approve',
-    args: [marketAddress, amountPerMarket]
-  }));
-}
 
 /**
  * Validate that the paymaster is properly configured
@@ -136,10 +96,6 @@ export function getRequiredAllowlist() {
   return {
     contracts: [
       {
-        address: USDC_CONTRACT_ADDRESS,
-        functions: ['approve', 'transfer']
-      },
-      {
         address: MARKET_FACTORY_ADDRESS,
         functions: ['createMarket']
       },
@@ -164,7 +120,7 @@ export type TransactionStatus =
   | { statusName: 'buildingTransaction'; statusData: null }
   | { statusName: 'transactionPending'; statusData: null }
   | { statusName: 'transactionLegacyExecuted'; statusData: { transactionHashList: string[] } }
-  | { statusName: 'success'; statusData: { transactionReceipts: any[] } };
+  | { statusName: 'success'; statusData: { transactionReceipts: { transactionHash: string }[] } };
 
 /**
  * Handle transaction status updates from OnchainKit
@@ -227,12 +183,12 @@ export function handleTransactionStatus(
  * }
  */
 
-export default {
-  generateApprovalCalls,
+const gaslessOnchainKit = {
   generateBuySharesCalls,
   generateCreateMarketCalls,
-  generateBatchApprovalCalls,
   validatePaymasterConfig,
   getRequiredAllowlist,
   handleTransactionStatus
 };
+
+export default gaslessOnchainKit;

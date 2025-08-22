@@ -108,10 +108,21 @@ export async function executeGaslessTransaction(
   try {
     console.log('Executing gasless transaction via existing Base smart account:', transaction);
 
+    // Get the current nonce for the user's account
+    console.log('Getting nonce for account:', userAddress);
+    let nonce;
+    try {
+      nonce = await bundler.request('eth_getTransactionCount', [userAddress, 'latest']);
+      console.log('Retrieved nonce:', nonce);
+    } catch (nonceError) {
+      console.warn('Failed to get nonce, using default:', nonceError);
+      nonce = '0x0';
+    }
+
     // First, create a base user operation for gas estimation
-    let userOperation = {
+    const userOperation = {
       sender: userAddress,
-      nonce: '0x0', // Will be populated by bundler
+      nonce: nonce, // Retrieved from bundler
       initCode: '0x', // No init code needed for existing accounts
       callData: transaction.data,
       callGasLimit: '0x0', // Will be estimated
@@ -129,7 +140,11 @@ export async function executeGaslessTransaction(
       const gasEstimate = await bundler.request('eth_estimateUserOperationGas', [
         userOperation,
         ENTRYPOINT_ADDRESS_V07
-      ]) as any;
+      ]) as {
+        callGasLimit: string;
+        verificationGasLimit: string;
+        preVerificationGas: string;
+      };
       
       console.log('Gas estimate received:', gasEstimate);
       
@@ -155,6 +170,37 @@ export async function executeGaslessTransaction(
 
     console.log('Final user operation:', userOperation);
 
+    // Request sponsorship from paymaster
+    console.log('Requesting sponsorship from paymaster...');
+    try {
+      const sponsorshipResponse = await paymaster.request('pm_sponsorUserOperation', [
+        userOperation,
+        ENTRYPOINT_ADDRESS_V07
+      ]) as {
+        paymasterAndData: string;
+        signature?: string;
+      };
+      
+      console.log('Sponsorship response:', sponsorshipResponse);
+      
+      // Update the user operation with the paymaster data
+      if (sponsorshipResponse && sponsorshipResponse.paymasterAndData) {
+        userOperation.paymasterAndData = sponsorshipResponse.paymasterAndData;
+        
+        // Some paymasters may also provide a signature
+        if (sponsorshipResponse.signature) {
+          userOperation.signature = sponsorshipResponse.signature;
+        }
+      } else {
+        throw new Error('Paymaster did not provide valid sponsorship data');
+      }
+    } catch (sponsorError) {
+      console.error('Paymaster sponsorship failed:', sponsorError);
+      throw new Error('Transaction not eligible for sponsorship. Please try again or contact support.');
+    }
+    
+    console.log('Sending sponsored user operation:', userOperation);
+    
     const userOpHash = await bundler.request('eth_sendUserOperation', [
       userOperation,
       ENTRYPOINT_ADDRESS_V07
@@ -192,6 +238,7 @@ export async function checkSponsorshipEligibility(
   userAddress: Address
 ) {
   const paymaster = getPaymasterClient();
+  const bundler = getBundlerClient();
   
   if (!paymaster) {
     return {
@@ -200,11 +247,27 @@ export async function checkSponsorshipEligibility(
     };
   }
 
+  if (!bundler) {
+    return {
+      eligible: false,
+      error: 'Bundler client not available',
+    };
+  }
+
   try {
+    // Get the current nonce for the user's account
+    let nonce;
+    try {
+      nonce = await bundler.request('eth_getTransactionCount', [userAddress, 'latest']);
+    } catch (nonceError) {
+      console.warn('Failed to get nonce for eligibility check, using default:', nonceError);
+      nonce = '0x0';
+    }
+
     // Check if paymaster will sponsor this operation for the existing Base smart account
     const userOperation = {
       sender: userAddress,
-      nonce: '0x0',
+      nonce: nonce,
       initCode: '0x',
       callData: transaction.data,
       callGasLimit: '0x30D40', // 200000 - increased for complex operations
@@ -317,39 +380,8 @@ export async function checkUserBalance(userAddress: Address): Promise<{
   }
 }
 
-/**
- * Execute USDC approval transaction with gasless support
- */
-export async function executeGaslessUSDCApproval(
-  amount: number,
-  spender: Address,
-  userAddress: Address
-): Promise<{ success: boolean; transactionHash?: string; error?: string }> {
-  if (!validateGaslessConfig()) {
-    return { success: false, error: 'Gasless configuration invalid' };
-  }
-
-  try {
-    // Import the transaction generation function
-    const { generateUSDCApprovalTransaction } = await import('./blockchain');
-    
-    // Generate the approval transaction
-    const approvalTx = generateUSDCApprovalTransaction(amount, spender);
-    
-    // Execute via gasless transaction
-    const result = await executeGaslessTransaction(approvalTx, userAddress);
-    
-    return { 
-      success: true, 
-      transactionHash: result.transactionHash 
-    };
-  } catch (error) {
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    };
-  }
-}
+// USDC approval function removed as part of ERC-4337 migration
+// This functionality is now handled directly by the smart account
 
 /**
  * Execute buy shares transaction with gasless support

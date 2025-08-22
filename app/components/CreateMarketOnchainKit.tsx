@@ -1,29 +1,18 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Plus, Calendar, TrendingUp, TrendingDown } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { UnifiedMarket } from '@/lib/types';
 import { SupabaseService } from '@/lib/supabase';
-import { 
-    generateCreateMarketCalls, 
-    validateMarketCreation,
-    processMarketCreation 
-} from '@/lib/market-factory-onchainkit';
-import { Address, createPublicClient, http } from 'viem';
-import { baseSepolia } from 'viem/chains';
+import { validateMarketParams } from '@/lib/market-factory';
+import { generateCreateMarketCalls, handleTransactionStatus } from '@/lib/gasless-onchainkit';
+import { Address } from 'viem';
 import toast from 'react-hot-toast';
-import { 
-    Transaction, 
-    TransactionButton, 
-    TransactionSponsor,
-    TransactionStatus,
-    TransactionStatusAction,
-    TransactionStatusLabel,
-    type LifecycleStatus 
-} from '@coinbase/onchainkit/transaction';
 import { useAccount } from 'wagmi';
+// @ts-ignore - OnchainKit types not available in development
+import { Transaction, TransactionButton, TransactionSponsor, TransactionStatus, TransactionStatusLabel, TransactionStatusAction } from '@coinbase/onchainkit/transaction';
 
 interface CreateMarketProps {
     onBack: () => void;
@@ -43,7 +32,7 @@ interface TokenData {
 }
 
 export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
-    const { user, addCreatedMarket } = useAppStore();
+    const { addCreatedMarket } = useAppStore();
     const { address } = useAccount();
     const [step, setStep] = useState<'form' | 'preview' | 'creating'>('form');
     const [formData, setFormData] = useState({
@@ -54,113 +43,10 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
     });
     const [tokenData, setTokenData] = useState<TokenData | null>(null);
     const [loadingTokenData, setLoadingTokenData] = useState(false);
-    const [transactionCalls, setTransactionCalls] = useState<any[]>([]);
     const [marketQuestion, setMarketQuestion] = useState('');
     const [marketEndTime, setMarketEndTime] = useState<Date | null>(null);
-    const [pendingTxHash, setPendingTxHash] = useState<string | null>(null);
-    const txCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Create public client for checking transaction status
-    const publicClient = createPublicClient({
-        chain: baseSepolia,
-        transport: http('https://sepolia.base.org')
-    });
 
-    // Manually check transaction status if it gets stuck
-    const checkTransactionStatus = async (txHash: string) => {
-        try {
-            const receipt = await publicClient.getTransactionReceipt({ 
-                hash: txHash as `0x${string}` 
-            });
-            
-            if (receipt && receipt.status === 'success') {
-                console.log('Transaction confirmed manually:', receipt);
-                
-                // Clear the interval
-                if (txCheckIntervalRef.current) {
-                    clearInterval(txCheckIntervalRef.current);
-                    txCheckIntervalRef.current = null;
-                }
-                
-                // Process the market creation
-                const result = await processMarketCreation({
-                    question: marketQuestion,
-                    category: 'crypto',
-                    endTime: marketEndTime!,
-                    creatorAddress: address as Address,
-                    transactionHash: txHash
-                });
-                
-                if (result.success && result.marketId) {
-                    toast.dismiss('market-creation');
-                    toast.success('Market created successfully!');
-                    
-                    // Get the created market from database
-                    const supabaseMarket = await SupabaseService.getMarket(result.marketId);
-                    
-                    // Create unified market object
-                    const newMarket: UnifiedMarket = {
-                        id: supabaseMarket.id,
-                        question: supabaseMarket.question,
-                        description: `A prediction market for ${formData.ticker} price`,
-                        category: 'crypto',
-                        endTime: supabaseMarket.end_time,
-                        totalVolume: 0,
-                        yesPrice: 0.5,
-                        noPrice: 0.5,
-                        yesOdds: 50,
-                        noOdds: 50,
-                        yesPool: supabaseMarket.yes_pool,
-                        noPool: supabaseMarket.no_pool,
-                        totalYesShares: supabaseMarket.total_yes_shares,
-                        totalNoShares: supabaseMarket.total_no_shares,
-                        yesShares: 0,
-                        noShares: 0,
-                        creatorAddress: supabaseMarket.creator_address,
-                        contractAddress: result.contractAddress || supabaseMarket.contract_address as Address,
-                        createdAt: supabaseMarket.created_at,
-                        resolved: supabaseMarket.resolved,
-                        outcome: supabaseMarket.outcome,
-                        ticker: formData.ticker,
-                        targetPrice: parseFloat(formData.price),
-                        direction: formData.direction,
-                    };
-                    
-                    // Add to store
-                    addCreatedMarket(newMarket);
-                    
-                    // Navigate back after a short delay
-                    setTimeout(() => {
-                        onBack();
-                    }, 2000);
-                    
-                    setPendingTxHash(null);
-                }
-            } else if (receipt && receipt.status === 'reverted') {
-                console.error('Transaction reverted');
-                toast.dismiss('market-creation');
-                toast.error('Transaction failed - reverted');
-                setStep('preview');
-                setPendingTxHash(null);
-                
-                if (txCheckIntervalRef.current) {
-                    clearInterval(txCheckIntervalRef.current);
-                    txCheckIntervalRef.current = null;
-                }
-            }
-        } catch (error) {
-            console.log('Transaction still pending or error checking status:', error);
-        }
-    };
-
-    // Clean up interval on unmount
-    useEffect(() => {
-        return () => {
-            if (txCheckIntervalRef.current) {
-                clearInterval(txCheckIntervalRef.current);
-            }
-        };
-    }, []);
 
     // Fetch token data from CoinGecko
     const fetchTokenData = async (ticker: string) => {
@@ -194,21 +80,33 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
         fetchTokenData(formData.ticker);
     }, [formData.ticker]);
 
+    // Generate question string
+    const generateQuestion = () => {
+        if (!formData.ticker || !formData.price || !formData.endDate) {
+            return 'Please fill all fields';
+        }
+        
+        const endDate = new Date(formData.endDate).toLocaleDateString();
+        const direction = formData.direction === 'above' ? 'above' : 'below';
+        return `Will ${formData.ticker} be ${direction} $${formData.price} by ${endDate}?`;
+    };
+
     const handlePreview = () => {
         if (!formData.price || !formData.endDate) {
             toast.error('Please fill in all fields');
             return;
         }
 
-        const question = `Will ${formData.ticker} be ${formData.direction} $${formData.price} by ${new Date(formData.endDate).toLocaleDateString()}?`;
+        const question = generateQuestion();
         const endTime = new Date(formData.endDate);
         
         setMarketQuestion(question);
         setMarketEndTime(endTime);
         
         // Validate parameters
-        const validation = validateMarketCreation({
+        const validation = validateMarketParams({
             question,
+            category: 'crypto',
             endTime,
             creatorAddress: address as Address
         });
@@ -218,163 +116,109 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
             return;
         }
         
-        // Generate transaction calls for OnchainKit
-        const calls = generateCreateMarketCalls({
-            question,
-            endTime
-        });
-        
-        setTransactionCalls(calls);
         setStep('preview');
     };
 
-    const handleTransactionStatus = async (status: LifecycleStatus) => {
-        console.log('Market creation status:', status);
-        
-        switch (status.statusName) {
-            case 'init':
-                console.log('Transaction initialized');
-                break;
-                
-            case 'transactionIdle':
-                console.log('Transaction idle');
-                break;
-                
-            case 'buildingTransaction':
-                console.log('Building transaction...');
-                toast.loading('Preparing market creation...');
-                break;
-            
-            case 'transactionPending':
-                console.log('Transaction pending...', status.statusData);
-                setStep('creating');
-                toast.loading('Creating market (gasless)...', { id: 'market-creation' });
-                
-                // Sometimes the hash is available in pending state
-                if (status.statusData?.transactionHash && !pendingTxHash) {
-                    const txHash = status.statusData.transactionHash;
-                    setPendingTxHash(txHash);
-                    console.log('Got transaction hash in pending state:', txHash);
-                    
-                    // Start monitoring
-                    txCheckIntervalRef.current = setInterval(() => {
-                        checkTransactionStatus(txHash);
-                    }, 3000);
-                }
-                break;
-            
-            case 'transactionLegacyExecuted':
-                console.log('Legacy transaction executed:', status.statusData);
-                // For legacy transactions, we get the hash here
-                if (status.statusData?.transactionHashList?.[0]) {
-                    const txHash = status.statusData.transactionHashList[0];
-                    toast.loading('Transaction submitted, waiting for confirmation...', { id: 'market-creation' });
-                    setPendingTxHash(txHash);
-                    
-                    // Start checking transaction status manually
-                    // OnchainKit sometimes doesn't properly transition to success
-                    console.log('Starting manual transaction monitoring for:', txHash);
-                    txCheckIntervalRef.current = setInterval(() => {
-                        checkTransactionStatus(txHash);
-                    }, 3000); // Check every 3 seconds
-                }
-                break;
-            
-            case 'success':
-                console.log('Transaction success!', status.statusData);
-                toast.dismiss('market-creation');
-                
-                // Try to get transaction hash from different possible locations
-                let txHash: string | undefined;
-                
-                // Check for transaction receipts (standard)
-                if (status.statusData?.transactionReceipts?.[0]) {
-                    txHash = status.statusData.transactionReceipts[0].transactionHash;
-                }
-                // Check for transaction hash list (legacy)
-                else if (status.statusData?.transactionHashList?.[0]) {
-                    txHash = status.statusData.transactionHashList[0];
-                }
-                // Check for direct transactionHash
-                else if (status.statusData?.transactionHash) {
-                    txHash = status.statusData.transactionHash;
-                }
-                
-                if (txHash) {
-                    console.log('Processing market creation with tx hash:', txHash);
-                    
-                    // Process the successful transaction
-                    const result = await processMarketCreation({
-                        question: marketQuestion,
+
+    // Handle transaction status updates from OnchainKit
+    const onTransactionStatus = (status: TransactionStatus) => {
+        handleTransactionStatus(
+            status as any,
+            async (txHash: string) => {
+                // On success, create database entry and add to store
+                try {
+                    // Parse the market address from transaction receipt
+                    const supabaseMarket = await SupabaseService.createMarket({
+                        question: generateQuestion(),
                         category: 'crypto',
-                        endTime: marketEndTime!,
-                        creatorAddress: address as Address,
-                        transactionHash: txHash
+                        end_time: new Date(formData.endDate).toISOString(),
+                        creator_address: address as Address,
+                        contract_address: '0x0', // Will be updated once we parse the event
+                        yes_pool: 10,
+                        no_pool: 10,
+                        total_yes_shares: 0,
+                        total_no_shares: 0,
+                        resolved: false
                     });
-                    
-                    if (result.success && result.marketId) {
-                        toast.success('Market created successfully!');
-                        
-                        // Get the created market from database
-                        const supabaseMarket = await SupabaseService.getMarket(result.marketId);
-                        
-                        // Create unified market object
-                        const newMarket: UnifiedMarket = {
-                            id: supabaseMarket.id,
-                            question: supabaseMarket.question,
-                            description: `A prediction market for ${formData.ticker} price`,
-                            category: 'crypto',
-                            endTime: supabaseMarket.end_time,
-                            totalVolume: 0,
-                            yesPrice: 0.5,
-                            noPrice: 0.5,
-                            yesOdds: 50,
-                            noOdds: 50,
-                            yesPool: supabaseMarket.yes_pool,
-                            noPool: supabaseMarket.no_pool,
-                            totalYesShares: supabaseMarket.total_yes_shares,
-                            totalNoShares: supabaseMarket.total_no_shares,
-                            yesShares: 0,
-                            noShares: 0,
-                            creatorAddress: supabaseMarket.creator_address,
-                            contractAddress: result.contractAddress || supabaseMarket.contract_address as Address,
-                            createdAt: supabaseMarket.created_at,
-                            resolved: supabaseMarket.resolved,
-                            outcome: supabaseMarket.outcome,
-                            ticker: formData.ticker,
-                            targetPrice: parseFloat(formData.price),
-                            direction: formData.direction,
-                        };
-                        
-                        // Add to store
-                        addCreatedMarket(newMarket);
-                        
-                        // Navigate back after a short delay
-                        setTimeout(() => {
-                            onBack();
-                        }, 2000);
-                    } else {
-                        toast.error(result.error || 'Failed to process market creation');
-                        setStep('preview');
-                    }
-                } else {
-                    console.error('No transaction hash found in success status');
-                    toast.error('Transaction succeeded but could not extract transaction hash');
-                    setStep('preview');
+
+                    const newMarket: UnifiedMarket = {
+                        id: supabaseMarket.id,
+                        question: supabaseMarket.question,
+                        description: `A prediction market for ${formData.ticker} price`,
+                        category: 'crypto',
+                        endTime: supabaseMarket.end_time,
+                        totalVolume: 0,
+                        yesPrice: 0.5,
+                        noPrice: 0.5,
+                        yesOdds: 50,
+                        noOdds: 50,
+                        yesPool: supabaseMarket.yes_pool,
+                        noPool: supabaseMarket.no_pool,
+                        totalYesShares: supabaseMarket.total_yes_shares,
+                        totalNoShares: supabaseMarket.total_no_shares,
+                        yesShares: 0,
+                        noShares: 0,
+                        creatorAddress: supabaseMarket.creator_address,
+                        contractAddress: '0x0',
+                        createdAt: supabaseMarket.created_at,
+                        resolved: false,
+                        outcome: null,
+                        ticker: formData.ticker,
+                        targetPrice: parseFloat(formData.price),
+                        direction: formData.direction,
+                        transactionHash: txHash,
+                    };
+
+                    addCreatedMarket(newMarket);
+
+                    toast.success(`Market created successfully! 🎉\nTransaction: ${txHash}`, {
+                        duration: 8000,
+                        style: {
+                            borderRadius: '12px',
+                            background: '#1e293b',
+                            color: '#f1f5f9',
+                            border: '1px solid #10b981',
+                        },
+                    });
+
+                    // Reset form and go back
+                    setStep('form');
+                    setFormData({
+                        ticker: 'ETH',
+                        price: '',
+                        direction: 'above',
+                        endDate: '',
+                    });
+                    onBack();
+
+                } catch (error) {
+                    console.error('Market creation failed:', error);
+                    toast.error(`Failed to save market: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+                        style: {
+                            borderRadius: '12px',
+                            background: '#1e293b',
+                            color: '#f1f5f9',
+                            border: '1px solid #ef4444',
+                        },
+                    });
                 }
-                break;
-            
-            case 'error':
-                console.error('Transaction error:', status.statusData);
-                toast.dismiss('market-creation');
-                setStep('preview');
-                toast.error(`Market creation failed: ${status.statusData?.message || 'Unknown error'}`);
-                break;
+            },
+            (error: string) => {
+                // On error
+                toast.error(`Market creation failed: ${error}`, {
+                    style: {
+                        borderRadius: '12px',
+                        background: '#1e293b',
+                        color: '#f1f5f9',
+                        border: '1px solid #ef4444',
+                    },
+                });
                 
-            default:
-                console.log(`Unknown status: ${status.statusName}`, status.statusData);
-        }
+                setStep('preview');
+            }
+        );
     };
+
 
     if (!address) {
         return (
@@ -521,22 +365,22 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
                                 </div>
                             </div>
 
-                            {/* OnchainKit Transaction Component */}
+                            {/* OnchainKit Transaction - Gasless Market Creation */}
                             <Transaction
                                 isSponsored={true}
-                                calls={transactionCalls}
-                                onStatus={handleTransactionStatus}
-                                chainId={84532} // Base Sepolia
+                                calls={generateCreateMarketCalls(
+                                    generateQuestion(),
+                                    BigInt(Math.floor(new Date(formData.endDate).getTime() / 1000))
+                                )}
+                                onStatus={onTransactionStatus}
                             >
                                 <TransactionButton 
+                                    className="w-full py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
                                     text="Create Market"
-                                    className="w-full py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg font-semibold hover:opacity-90 transition-opacity"
                                 />
                                 <TransactionSponsor />
-                                <TransactionStatus>
-                                    <TransactionStatusLabel />
-                                    <TransactionStatusAction />
-                                </TransactionStatus>
+                                <TransactionStatusLabel />
+                                <TransactionStatusAction />
                             </Transaction>
 
                             <button

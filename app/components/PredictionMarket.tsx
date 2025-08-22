@@ -19,7 +19,6 @@ import {
     checkSponsorshipEligibility,
     validateGaslessConfig
 } from '@/lib/gasless';
-import { USDCApprovalFlow } from './USDCApprovalFlow';
 import { Address } from 'viem';
 
 interface PredictionMarketProps {
@@ -30,7 +29,6 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
     const { address } = useAccount();
     const [selectedCategory, setSelectedCategory] = useState<'all' | 'crypto' | 'tech' | 'celebrity' | 'sports' | 'politics'>('all');
     const [allMarkets, setAllMarkets] = useState<UnifiedMarket[]>([]);
-    const [usdcApproved, setUsdcApproved] = useState(false);
     const {
         currentMarkets,
         setCurrentMarkets,
@@ -183,7 +181,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
 
             let transactionHash: string = '';
 
-            if (usdcApproved && validateGaslessConfig()) {
+            if (validateGaslessConfig()) {
                 // Use gasless transactions via existing Base smart account
                 toast.loading('Executing gasless prediction via Coinbase Paymaster...', {
                     id: processingToast,
@@ -244,7 +242,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
             toast.dismiss(processingToast);
 
             // Show success toast with transaction link
-            const successMessage = usdcApproved && validateGaslessConfig() ? 
+            const successMessage = validateGaslessConfig() ? 
                 'Gasless prediction confirmed! No fees paid! 🎉' : 
                 'Prediction confirmed! 🔗';
 
@@ -275,7 +273,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
             console.error('Transaction error:', error);
             toast.dismiss(processingToast);
             
-            const errorMessage = usdcApproved && validateGaslessConfig() ? 
+            const errorMessage = validateGaslessConfig() ? 
                 'Gasless prediction failed. Please try again.' : 
                 'Prediction failed. Please try again.';
             
@@ -336,7 +334,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
 
                 <div className="flex flex-col items-center">
                     <h1 className="text-xl font-bold text-white">BASED</h1>
-                    {usdcApproved && validateGaslessConfig() && (
+                    {validateGaslessConfig() && (
                         <div className="text-xs text-green-400 mt-1">
                             ⚡ Gasless enabled
                         </div>
@@ -346,14 +344,12 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                 <div className="p-2">
                     <div className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center">
                         <div className="w-6 h-6 bg-slate-500 rounded-full flex items-center justify-center text-xs text-slate-300 font-medium">
-                            {usdcApproved && validateGaslessConfig() ? '⚡' : '?'}
+                            {validateGaslessConfig() ? '⚡' : '?'}
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* USDC Pre-Approval Flow */}
-            <USDCApprovalFlow onApprovalComplete={() => setUsdcApproved(true)} />
 
             {/* Category Tab Bar */}
             <div className="flex items-center space-x-1 mb-6 p-1 bg-slate-800/50 rounded-xl border border-slate-700/50">

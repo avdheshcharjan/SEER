@@ -50,6 +50,7 @@ export interface UnifiedMarket {
   targetPrice?: number;
   direction?: 'above' | 'below';
   isCreatedByUser?: boolean;
+  transactionHash?: string;
 }
 
 // User prediction unified interface
@@ -107,6 +108,7 @@ export class SchemaTransformer {
       totalNoShares: market.total_no_shares,
       creatorAddress: market.creator_address,
       contractAddress: market.contract_address,
+      transactionHash: market.transaction_hash,
       // Generate display format from ISO
       endDate: this.formatDisplayDate(market.end_time)
     };

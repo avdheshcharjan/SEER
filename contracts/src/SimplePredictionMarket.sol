@@ -4,11 +4,12 @@ pragma solidity ^0.8.19;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Context.sol";
 
 /// @title SimplePredictionMarket
 /// @notice A minimal prediction market for binary outcomes with fixed USDC settlement
 /// @dev Implements basic AMM pricing: YES price = YES pool / (YES pool + NO pool)
-contract SimplePredictionMarket is ReentrancyGuard, Ownable {
+contract SimplePredictionMarket is Context, ReentrancyGuard, Ownable {
     
     // State variables
     IERC20 public immutable usdc;
@@ -27,6 +28,12 @@ contract SimplePredictionMarket is ReentrancyGuard, Ownable {
     address public resolver;
     uint256 public constant MINIMUM_LIQUIDITY = 10e6; // 10 USDC in 6 decimals
     uint256 public constant RESOLUTION_BUFFER = 1 hours; // Time after endTime before manual resolution
+    
+    address public constant ENTRY_POINT = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789; // ERC-4337 EntryPoint on Base
+    
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
+    uint256 private _entryPointReentrancyStatus;
     
     // Events
     event SharesPurchased(address indexed buyer, bool side, uint256 amount, uint256 shares);
@@ -64,16 +71,28 @@ contract SimplePredictionMarket is ReentrancyGuard, Ownable {
         _;
     }
     
+    modifier entryPointReentrancyGuard() {
+        if (_entryPointReentrancyStatus == _ENTERED) {
+            revert("EntryPoint reentrancy");
+        }
+        _entryPointReentrancyStatus = _ENTERED;
+        _;
+        _entryPointReentrancyStatus = _NOT_ENTERED;
+    }
+    
     constructor(
         address _usdc,
         string memory _question,
         uint256 _endTime,
         address _resolver
-    ) Ownable(msg.sender) {
+    ) Ownable(_msgSender()) {
         usdc = IERC20(_usdc);
         question = _question;
         endTime = _endTime;
         resolver = _resolver;
+        
+        // Initialize reentrancy protection for EntryPoint
+        _entryPointReentrancyStatus = _NOT_ENTERED;
         
         // Initialize with minimal liquidity to avoid division by zero
         yesPool = MINIMUM_LIQUIDITY;
@@ -89,25 +108,27 @@ contract SimplePredictionMarket is ReentrancyGuard, Ownable {
         onlyBeforeEnd 
         notResolved 
         nonReentrant 
+        entryPointReentrancyGuard
         returns (uint256 shares) 
     {
         if (amount == 0) revert InvalidAmountError();
         
-        // Transfer USDC from user
-        usdc.transferFrom(msg.sender, address(this), amount);
+        // Transfer USDC from user (works with both EOAs and smart wallets)
+        usdc.transferFrom(_msgSender(), address(this), amount);
         
         // Calculate shares to mint based on AMM formula
         shares = calculateSharesOut(amount, side);
         
+        address user = _msgSender();
         if (side) {
-            yesShares[msg.sender] += shares;
+            yesShares[user] += shares;
             yesPool += amount;
         } else {
-            noShares[msg.sender] += shares;
+            noShares[user] += shares;
             noPool += amount;
         }
         
-        emit SharesPurchased(msg.sender, side, amount, shares);
+        emit SharesPurchased(user, side, amount, shares);
     }
     
     /// @notice Sell shares back to the pool
@@ -119,11 +140,13 @@ contract SimplePredictionMarket is ReentrancyGuard, Ownable {
         onlyBeforeEnd 
         notResolved 
         nonReentrant 
+        entryPointReentrancyGuard
         returns (uint256 usdcOut) 
     {
         if (sharesToSell == 0) revert InvalidAmountError();
         
-        uint256 userShares = side ? yesShares[msg.sender] : noShares[msg.sender];
+        address user = _msgSender();
+        uint256 userShares = side ? yesShares[user] : noShares[user];
         if (userShares < sharesToSell) revert InsufficientSharesError();
         
         // Calculate USDC to return based on current pool ratios
@@ -135,23 +158,24 @@ contract SimplePredictionMarket is ReentrancyGuard, Ownable {
         
         // Update state
         if (side) {
-            yesShares[msg.sender] -= sharesToSell;
+            yesShares[user] -= sharesToSell;
             yesPool -= usdcOut;
         } else {
-            noShares[msg.sender] -= sharesToSell;
+            noShares[user] -= sharesToSell;
             noPool -= usdcOut;
         }
         
         // Transfer USDC to user
-        usdc.transfer(msg.sender, usdcOut);
+        usdc.transfer(user, usdcOut);
         
-        emit SharesSold(msg.sender, side, sharesToSell, usdcOut);
+        emit SharesSold(user, side, sharesToSell, usdcOut);
     }
     
     /// @notice Resolve the market (only callable by resolver after end time)
     /// @param _outcome true if YES wins, false if NO wins
     function resolveMarket(bool _outcome) external onlyAfterEnd notResolved {
-        if (msg.sender != resolver && msg.sender != owner()) revert UnauthorizedResolverError();
+        address sender = _msgSender();
+        if (sender != resolver && sender != owner()) revert UnauthorizedResolverError();
         
         resolved = true;
         outcome = _outcome;
@@ -170,8 +194,9 @@ contract SimplePredictionMarket is ReentrancyGuard, Ownable {
     
     /// @notice Claim winnings after market resolution
     /// @return payout Amount of USDC claimed
-    function claimRewards() external onlyResolved nonReentrant returns (uint256 payout) {
-        uint256 winningShares = outcome ? yesShares[msg.sender] : noShares[msg.sender];
+    function claimRewards() external onlyResolved nonReentrant entryPointReentrancyGuard returns (uint256 payout) {
+        address user = _msgSender();
+        uint256 winningShares = outcome ? yesShares[user] : noShares[user];
         
         if (winningShares == 0) return 0;
         
@@ -180,15 +205,15 @@ contract SimplePredictionMarket is ReentrancyGuard, Ownable {
         
         // Clear user's shares
         if (outcome) {
-            yesShares[msg.sender] = 0;
+            yesShares[user] = 0;
         } else {
-            noShares[msg.sender] = 0;
+            noShares[user] = 0;
         }
         
         // Transfer payout (1 USDC per winning share)
-        usdc.transfer(msg.sender, payout);
+        usdc.transfer(user, payout);
         
-        emit RewardsClaimed(msg.sender, payout);
+        emit RewardsClaimed(user, payout);
     }
     
     /// @notice Calculate shares received for a given USDC amount
@@ -267,5 +292,47 @@ contract SimplePredictionMarket is ReentrancyGuard, Ownable {
         if (balance > 0) {
             usdc.transfer(owner(), balance);
         }
+    }
+    
+    /// @notice Get estimated gas for buying shares (helpful for ERC-4337 gas estimation)
+    /// @param side true for YES shares, false for NO shares
+    /// @return gasEstimate Estimated gas units for the transaction
+    function estimateGasForBuy(bool side, uint256 /* amount */) external view returns (uint256 gasEstimate) {
+        // Base gas for storage writes and transfers: ~65k
+        // Additional gas for calculations: ~5k
+        // Buffer for ERC-4337 overhead: ~30k
+        gasEstimate = 100000;
+        
+        // Add extra gas if this creates new user balances
+        address user = _msgSender();
+        if ((side && yesShares[user] == 0) || (!side && noShares[user] == 0)) {
+            gasEstimate += 20000; // Extra gas for new storage slot
+        }
+    }
+    
+    /// @notice Get estimated gas for selling shares
+    /// @param side true for YES shares, false for NO shares
+    /// @param sharesToSell Number of shares to sell
+    /// @return gasEstimate Estimated gas units for the transaction
+    function estimateGasForSell(bool side, uint256 sharesToSell) external view returns (uint256 gasEstimate) {
+        // Base gas similar to buy, but potentially less storage writes
+        gasEstimate = 80000;
+        
+        address user = _msgSender();
+        uint256 userShares = side ? yesShares[user] : noShares[user];
+        if (userShares >= sharesToSell && (userShares - sharesToSell) == 0) {
+            gasEstimate += 15000; // Gas refund for clearing storage
+        }
+    }
+    
+    /// @notice Check if caller is a smart wallet (ERC-4337 compatible)
+    /// @return true if caller appears to be a smart wallet
+    function isSmartWallet() external view returns (bool) {
+        address user = _msgSender();
+        uint256 codeSize;
+        assembly {
+            codeSize := extcodesize(user)
+        }
+        return codeSize > 0;
     }
 }

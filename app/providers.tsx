@@ -19,7 +19,7 @@ export function Providers(props: { children: ReactNode }) {
           name: process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME,
           logo: process.env.NEXT_PUBLIC_ICON_URL,
         },
-        // Add paymaster configuration for gasless transactions
+        // Custom paymaster configuration for gasless transactions
         paymaster: process.env.NEXT_PUBLIC_PAYMASTER_URL,
       }}
     >

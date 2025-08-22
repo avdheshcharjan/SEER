@@ -1,0 +1,23 @@
+{
+  "network": "Base Sepolia",
+  "chainId": "84532",
+  "deployer": "0x817ADecF13045578BDbA571eA204b6B0a1C90Ab8",
+  "factory": "0xfE7440a0C61aE1156E9B759Bb6C7E8BEFa0BCC3C",
+  "demoMarket": "0x688B4b38b8f73878Cd19ef7250FA63D6b36361d1",
+  "deployedAt": "1755846388",
+  "deployedAtReadable": "August 22, 2025",
+  "features": [
+    "ERC-4337 Compatible",
+    "Smart Wallet Support",
+    "Gas Estimation Utilities",
+    "Enhanced Reentrancy Protection",
+    "EntryPoint Awareness"
+  ],
+  "improvements": {
+    "msgSender": "Replaced msg.sender with _msgSender() for smart wallet compatibility",
+    "reentrancy": "Added EntryPoint-specific reentrancy guards",
+    "gasEstimation": "Added gas estimation functions for ERC-4337 bundlers",
+    "smartWalletDetection": "Added isSmartWallet() utility functions",
+    "compatibility": "Full compatibility with both EOAs and smart wallets"
+  }
+}

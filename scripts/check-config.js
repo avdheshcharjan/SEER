@@ -2,6 +2,30 @@
  * 🔍 Quick Configuration Check for BASED Production Testing
  */
 
+// Load environment variables from .env file
+const fs = require('fs');
+const path = require('path');
+
+// Simple .env file parser
+function loadEnvFile() {
+    try {
+        const envPath = path.join(__dirname, '..', '.env');
+        const envContent = fs.readFileSync(envPath, 'utf8');
+        
+        envContent.split('\n').forEach(line => {
+            const [key, ...valueParts] = line.split('=');
+            if (key && valueParts.length > 0) {
+                const value = valueParts.join('=').trim();
+                process.env[key.trim()] = value;
+            }
+        });
+    } catch (error) {
+        console.warn('Could not load .env file:', error.message);
+    }
+}
+
+loadEnvFile();
+
 console.log('🧪 BASED Production Configuration Check');
 console.log('='.repeat(45));
 

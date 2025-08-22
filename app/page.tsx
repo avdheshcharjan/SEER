@@ -1,10 +1,10 @@
 "use client";
 
-import {
-  useMiniKit,
-  useAddFrame,
-  useOpenUrl,
-} from "@coinbase/onchainkit/minikit";
+// import {
+//   useMiniKit,
+//   useAddFrame,
+//   useOpenUrl,
+// } from "@coinbase/onchainkit/minikit";
 import {
   Name,
   Identity,
@@ -18,7 +18,7 @@ import {
   WalletDropdown,
   WalletDropdownDisconnect,
 } from "@coinbase/onchainkit/wallet";
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useState } from "react";
 import { Toaster } from 'react-hot-toast';
 import { Home } from "./components/Home";
 import { PredictionMarket } from "./components/PredictionMarket";
@@ -26,53 +26,53 @@ import { Profile } from "./components/Profile";
 import { Leaderboard } from "./components/Leaderboard";
 import { CreateMarketOnchainKit } from "./components/CreateMarketOnchainKit";
 
-import { Plus, Check } from 'lucide-react';
+// import { Plus, Check } from 'lucide-react';
 
 type ViewType = 'home' | 'predict' | 'profile' | 'leaderboard' | 'create';
 
 export default function App() {
-  const { setFrameReady, isFrameReady, context } = useMiniKit();
-  const [frameAdded, setFrameAdded] = useState(false);
+  // const { setFrameReady, isFrameReady, context } = useMiniKit();
+  // const [frameAdded, setFrameAdded] = useState(false);
   const [currentView, setCurrentView] = useState<ViewType>("home");
 
-  const addFrame = useAddFrame();
-  const openUrl = useOpenUrl();
+  // const addFrame = useAddFrame();
+  // const openUrl = useOpenUrl();
 
-  useEffect(() => {
-    if (!isFrameReady) {
-      setFrameReady();
-    }
-  }, [setFrameReady, isFrameReady]);
+  // useEffect(() => {
+  //   if (!isFrameReady) {
+  //     setFrameReady();
+  //   }
+  // }, [setFrameReady, isFrameReady]);
 
-  const handleAddFrame = useCallback(async () => {
-    const frameAdded = await addFrame();
-    setFrameAdded(Boolean(frameAdded));
-  }, [addFrame]);
+  // const handleAddFrame = useCallback(async () => {
+  //   const frameAdded = await addFrame();
+  //   setFrameAdded(Boolean(frameAdded));
+  // }, [addFrame]);
 
-  const saveFrameButton = useMemo(() => {
-    if (context && !context.client.added) {
-      return (
-        <button
-          onClick={handleAddFrame}
-          className="flex items-center space-x-1 text-sm font-medium text-base-500 hover:text-base-400 transition-colors p-2"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Save Frame</span>
-        </button>
-      );
-    }
+  // const saveFrameButton = useMemo(() => {
+  //   if (context && !context.client.added) {
+  //     return (
+  //       <button
+  //         onClick={handleAddFrame}
+  //         className="flex items-center space-x-1 text-sm font-medium text-base-500 hover:text-base-400 transition-colors p-2"
+  //       >
+  //         <Plus className="w-4 h-4" />
+  //         <span>Save Frame</span>
+  //       </button>
+  //     );
+  //   }
 
-    if (frameAdded) {
-      return (
-        <div className="flex items-center space-x-1 text-sm font-medium text-green-400 animate-fade-out">
-          <Check className="w-4 h-4" />
-          <span>Saved</span>
-        </div>
-      );
-    }
+  //   if (frameAdded) {
+  //     return (
+  //       <div className="flex items-center space-x-1 text-sm font-medium text-green-400 animate-fade-out">
+  //         <Check className="w-4 h-4" />
+  //         <span>Saved</span>
+  //       </div>
+  //     );
+  //   }
 
-    return null;
-  }, [context, frameAdded, handleAddFrame]);
+  //   return null;
+  // }, [context, frameAdded, handleAddFrame]);
 
   const renderCurrentView = () => {
     switch (currentView) {
@@ -120,7 +120,7 @@ export default function App() {
               </Wallet>
             </div>
           </div>
-          <div>{saveFrameButton}</div>
+          {/* <div>{saveFrameButton}</div> */}
         </header>
 
         <main className="flex-1 min-h-[calc(100vh-200px)]">
@@ -130,7 +130,7 @@ export default function App() {
         <footer className="mt-6 pt-4 flex justify-center">
           <button
             className="text-slate-400 hover:text-slate-300 text-xs transition-colors"
-            onClick={() => openUrl("https://base.org/builders/minikit")}
+            onClick={() => window.open("https://base.org/builders/minikit", "_blank")}
           >
             Built on Base with MiniKit
           </button>

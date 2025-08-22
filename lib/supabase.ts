@@ -26,6 +26,7 @@ export interface Market {
   created_at: string
   creator_address?: string
   contract_address?: string
+  transaction_hash?: string
   yes_pool: number
   no_pool: number
   total_yes_shares: number

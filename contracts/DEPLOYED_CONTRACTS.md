@@ -1,26 +1,24 @@
 # 🚀 BASED Prediction Market - Deployed Contracts
 
-## ✅ Base Sepolia Deployment - August 20, 2024
+## ✅ Base Sepolia ERC-4337 Deployment - August 22, 2025
 
 ### 📋 Contract Addresses
 
 | Contract | Address | Purpose |
 |----------|---------|---------|
-| **MockUSDC** | `0x32dfDC3bB23d294a1b32E0EDDEddB12088112161` | Test USDC token (6 decimals) |
-| **MarketFactory** | `0xAa84401Ef34C0334D4B85259955DE1fa99495B96` | Factory for creating prediction markets |
-| **Demo Market** | `0xC1f3f3528AD71348AC4683CAde6e5988019735D8` | "Will ETH be above $4000 on Dec 31, 2024?" |
+| **MarketFactory** | `0xfE7440a0C61aE1156E9B759Bb6C7E8BEFa0BCC3C` | ERC-4337 compatible factory for creating prediction markets |
+| **Demo Market** | `0x688B4b38b8f73878Cd19ef7250FA63D6b36361d1` | "Will ETH be above $4000 on Dec 31, 2024?" |
 
 ### 🔗 Basescan Links
 
-- **MockUSDC**: https://sepolia.basescan.org/address/0x32dfDC3bB23d294a1b32E0EDDEddB12088112161
-- **MarketFactory**: https://sepolia.basescan.org/address/0xAa84401Ef34C0334D4B85259955DE1fa99495B96  
-- **Demo Market**: https://sepolia.basescan.org/address/0xC1f3f3528AD71348AC4683CAde6e5988019735D8
+- **MarketFactory**: https://sepolia.basescan.org/address/0xfE7440a0C61aE1156E9B759Bb6C7E8BEFa0BCC3C
+- **Demo Market**: https://sepolia.basescan.org/address/0x688B4b38b8f73878Cd19ef7250FA63D6b36361d1
 
 ### 📊 Deployment Details
 
 - **Network**: Base Sepolia (Chain ID: 84532)
 - **Deployer**: `0x817ADecF13045578BDbA571eA204b6B0a1C90Ab8`
-- **Block**: ~1755702144
+- **Block**: ~1755846388
 - **Gas Used**: ~7M gas total
 - **Initial Market State**: 50% YES / 50% NO (balanced liquidity)
 
@@ -32,22 +30,13 @@
 - **Initial NO Price**: 0.5 (50%)
 - **Total Liquidity**: 1,000 USDC
 
-### 💰 Test USDC Features
-
-The MockUSDC contract includes:
-- ✅ **Faucet**: Get 1,000 USDC per address (24h cooldown)
-- ✅ **Owner Mint**: Unlimited minting for testing
-- ✅ **6 Decimals**: Matches real USDC format
-- ✅ **1M Initial Supply**: Minted to deployer
-
 ### 🎯 Frontend Integration
 
 ```typescript
 // Add to your frontend config
 export const BASE_SEPOLIA_CONTRACTS = {
-  USDC: "0x32dfDC3bB23d294a1b32E0EDDEddB12088112161",
-  FACTORY: "0xAa84401Ef34C0334D4B85259955DE1fa99495B96",
-  DEMO_MARKET: "0xC1f3f3528AD71348AC4683CAde6e5988019735D8",
+  FACTORY: "0xfE7440a0C61aE1156E9B759Bb6C7E8BEFa0BCC3C",
+  DEMO_MARKET: "0x688B4b38b8f73878Cd19ef7250FA63D6b36361d1",
   CHAIN_ID: 84532,
   RPC_URL: "https://sepolia.base.org"
 }
@@ -56,39 +45,18 @@ export const BASE_SEPOLIA_CONTRACTS = {
 ### 🔧 Quick Start Commands
 
 ```bash
-# Get test USDC (1,000 tokens)
-cast send 0x32dfDC3bB23d294a1b32E0EDDEddB12088112161 "faucet()" \
-  --rpc-url https://sepolia.base.org --private-key YOUR_KEY
-
 # Create a new market
-cast send 0xAa84401Ef34C0334D4B85259955DE1fa99495B96 \
+cast send 0xfE7440a0C61aE1156E9B759Bb6C7E8BEFa0BCC3C \
   "createMarket(string,uint256,address)" \
   "Your question here" \
   $(($(date +%s) + 86400 * 30)) \
   0x0000000000000000000000000000000000000000 \
   --rpc-url https://sepolia.base.org --private-key YOUR_KEY
 
-# Buy YES shares (approve first)
-cast send 0x32dfDC3bB23d294a1b32E0EDDEddB12088112161 \
-  "approve(address,uint256)" 0xYOUR_MARKET_ADDRESS 100000000 \
-  --rpc-url https://sepolia.base.org --private-key YOUR_KEY
-
+# Buy YES shares on a market
 cast send 0xYOUR_MARKET_ADDRESS \
   "buyShares(bool,uint256)" true 10000000 \
   --rpc-url https://sepolia.base.org --private-key YOUR_KEY
-```
-
-### ✅ Verification Status
-
-**Contract verification on Basescan is in progress.** The contracts were just deployed and may take a few minutes to appear in the explorer.
-
-To manually verify later:
-```bash
-forge verify-contract --chain base-sepolia \
-  --compiler-version v0.8.23 \
-  --etherscan-api-key YOUR_KEY \
-  0x32dfDC3bB23d294a1b32E0EDDEddB12088112161 \
-  src/MockUSDC.sol:MockUSDC
 ```
 
 ### 🔐 Security Notes

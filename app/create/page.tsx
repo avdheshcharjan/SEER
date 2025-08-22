@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, TrendingDown, Calendar, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useComposeCast } from '@coinbase/onchainkit/minikit';
+// import { useComposeCast } from '@coinbase/onchainkit/minikit';
 
 const TICKERS = [
   { value: 'ETH', label: 'Ethereum', symbol: 'ETH' },
@@ -13,7 +13,7 @@ const TICKERS = [
 ];
 
 export default function CreatePage() {
-  const { composeCast } = useComposeCast();
+  // const { composeCast } = useComposeCast();
   const [formData, setFormData] = useState({
     ticker: 'ETH',
     price: '',
@@ -67,15 +67,15 @@ export default function CreatePage() {
       // Simulate market creation
       await new Promise(resolve => setTimeout(resolve, 2000));
 
-      const marketId = `market_${Date.now()}`;
-      const marketUrl = `${process.env.NEXT_PUBLIC_URL}/market/${marketId}`;
-      const question = generateQuestion();
+      // const marketId = `market_${Date.now()}`;
+      // const marketUrl = `${process.env.NEXT_PUBLIC_URL}/market/${marketId}`;
+      // const question = generateQuestion();
 
       // Use OnchainKit's compose cast to share the created market
-      composeCast({
-        text: `${question} 🎯\n\nJust created this prediction market!`,
-        embeds: [marketUrl],
-      });
+      // composeCast({
+      //   text: `${question} 🎯\n\nJust created this prediction market!`,
+      //   embeds: [marketUrl],
+      // });
 
       toast.success('Market created and shared successfully!');
     } catch (error) {
