@@ -60,7 +60,7 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
             );
             const data = await response.json();
             const tokenInfo = data[selectedToken.coinGeckoId];
-            
+
             if (tokenInfo) {
                 setTokenData({
                     currentPrice: tokenInfo.usd,
@@ -85,7 +85,7 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
         if (!formData.ticker || !formData.price || !formData.endDate) {
             return 'Please fill all fields';
         }
-        
+
         const endDate = new Date(formData.endDate).toLocaleDateString();
         const direction = formData.direction === 'above' ? 'above' : 'below';
         return `Will ${formData.ticker} be ${direction} $${formData.price} by ${endDate}?`;
@@ -99,10 +99,10 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
 
         const question = generateQuestion();
         const endTime = new Date(formData.endDate);
-        
+
         setMarketQuestion(question);
         setMarketEndTime(endTime);
-        
+
         // Validate parameters
         const validation = validateMarketParams({
             question,
@@ -110,18 +110,18 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
             endTime,
             creatorAddress: address as Address
         });
-        
+
         if (!validation.valid) {
             toast.error(validation.errors.join(', '));
             return;
         }
-        
+
         setStep('preview');
     };
 
 
     // Handle transaction status updates from OnchainKit
-    const onTransactionStatus = (status: TransactionStatus) => {
+    const onTransactionStatus = (status: any) => {
         handleTransactionStatus(
             status as any,
             async (txHash: string) => {
@@ -213,7 +213,7 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
                         border: '1px solid #ef4444',
                     },
                 });
-                
+
                 setStep('preview');
             }
         );
@@ -229,170 +229,166 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-cyan-600">
-            <div className="container mx-auto px-4 py-6">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-8">
-                    <button 
-                        onClick={onBack}
-                        className="flex items-center gap-2 text-white hover:opacity-80 transition-opacity"
-                    >
-                        <ArrowLeft className="w-5 h-5" />
-                        <span>Back</span>
-                    </button>
-                    <h1 className="text-2xl font-bold text-white">Create Market</h1>
-                    <div className="w-20" />
-                </div>
-
-                {step === 'form' && (
-                    <motion.div 
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="max-w-lg mx-auto"
-                    >
-                        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 space-y-6">
-                            {/* Ticker Selection */}
-                            <div>
-                                <label className="block text-white mb-2">Select Token</label>
-                                <select 
-                                    value={formData.ticker}
-                                    onChange={(e) => setFormData({...formData, ticker: e.target.value})}
-                                    className="w-full px-4 py-3 bg-white/20 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50"
-                                >
-                                    {TICKERS.map(ticker => (
-                                        <option key={ticker.value} value={ticker.value} className="text-black">
-                                            {ticker.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            {/* Token Info */}
-                            {tokenData && !loadingTokenData && (
-                                <div className="bg-white/10 rounded-lg p-4 space-y-2">
-                                    <div className="flex justify-between">
-                                        <span className="text-white/60">Current Price</span>
-                                        <span className="text-white font-bold">${tokenData.currentPrice}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-white/60">24h Change</span>
-                                        <span className={`font-bold ${tokenData.priceChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                                            {tokenData.priceChange >= 0 ? '+' : ''}{tokenData.priceChange.toFixed(2)}%
-                                        </span>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Direction Selection */}
-                            <div>
-                                <label className="block text-white mb-2">Price Direction</label>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <button
-                                        onClick={() => setFormData({...formData, direction: 'above'})}
-                                        className={`py-3 rounded-lg flex items-center justify-center gap-2 transition-all ${
-                                            formData.direction === 'above' 
-                                                ? 'bg-green-500 text-white' 
-                                                : 'bg-white/20 text-white/60 hover:bg-white/30'
-                                        }`}
-                                    >
-                                        <TrendingUp className="w-5 h-5" />
-                                        Above
-                                    </button>
-                                    <button
-                                        onClick={() => setFormData({...formData, direction: 'below'})}
-                                        className={`py-3 rounded-lg flex items-center justify-center gap-2 transition-all ${
-                                            formData.direction === 'below' 
-                                                ? 'bg-red-500 text-white' 
-                                                : 'bg-white/20 text-white/60 hover:bg-white/30'
-                                        }`}
-                                    >
-                                        <TrendingDown className="w-5 h-5" />
-                                        Below
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Target Price */}
-                            <div>
-                                <label className="block text-white mb-2">Target Price ($)</label>
-                                <input 
-                                    type="number"
-                                    value={formData.price}
-                                    onChange={(e) => setFormData({...formData, price: e.target.value})}
-                                    placeholder="Enter target price"
-                                    className="w-full px-4 py-3 bg-white/20 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50"
-                                />
-                            </div>
-
-                            {/* End Date */}
-                            <div>
-                                <label className="block text-white mb-2">End Date</label>
-                                <input 
-                                    type="datetime-local"
-                                    value={formData.endDate}
-                                    onChange={(e) => setFormData({...formData, endDate: e.target.value})}
-                                    min={new Date(Date.now() + 3600000).toISOString().slice(0, 16)}
-                                    className="w-full px-4 py-3 bg-white/20 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50"
-                                />
-                            </div>
-
-                            {/* Preview Button */}
-                            <button
-                                onClick={handlePreview}
-                                className="w-full py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg font-semibold hover:opacity-90 transition-opacity"
-                            >
-                                Preview Market
-                            </button>
-                        </div>
-                    </motion.div>
-                )}
-
-                {step === 'preview' && (
-                    <motion.div 
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="max-w-lg mx-auto"
-                    >
-                        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 space-y-6">
-                            <h2 className="text-xl font-bold text-white">Market Preview</h2>
-                            
-                            <div className="bg-white/10 rounded-lg p-4 space-y-3">
-                                <p className="text-white text-lg font-semibold">{marketQuestion}</p>
-                                <div className="space-y-2 text-white/80">
-                                    <p>End Date: {marketEndTime?.toLocaleString()}</p>
-                                    <p>Initial Liquidity: 10 USDC each side</p>
-                                    <p>Transaction: Gasless (sponsored)</p>
-                                </div>
-                            </div>
-
-                            {/* OnchainKit Transaction - Gasless Market Creation */}
-                            <Transaction
-                                isSponsored={true}
-                                calls={generateCreateMarketCalls(
-                                    generateQuestion(),
-                                    BigInt(Math.floor(new Date(formData.endDate).getTime() / 1000))
-                                )}
-                                onStatus={onTransactionStatus}
-                            >
-                                <TransactionButton 
-                                    className="w-full py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
-                                    text="Create Market"
-                                />
-                                <TransactionSponsor />
-                                <TransactionStatusLabel />
-                                <TransactionStatusAction />
-                            </Transaction>
-
-                            <button
-                                onClick={() => setStep('form')}
-                                className="w-full py-3 bg-white/20 text-white rounded-lg font-semibold hover:bg-white/30 transition-colors"
-                            >
-                                Back to Edit
-                            </button>
-                        </div>
-                    </motion.div>
-                )}
+        <div className="w-full max-w-md mx-auto px-4 py-6">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-8">
+                <button
+                    onClick={onBack}
+                    className="flex items-center gap-2 text-slate-300 hover:text-white transition-colors"
+                >
+                    <ArrowLeft className="w-5 h-5" />
+                    <span>Back</span>
+                </button>
+                <h1 className="text-2xl font-bold text-white">Create Market</h1>
+                <div className="w-20" />
             </div>
+
+            {step === 'form' && (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="max-w-lg mx-auto"
+                >
+                    <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6 space-y-6 text-white">
+                        {/* Ticker Selection */}
+                        <div>
+                            <label className="block text-slate-300 mb-2">Select Token</label>
+                            <select
+                                value={formData.ticker}
+                                onChange={(e) => setFormData({ ...formData, ticker: e.target.value })}
+                                className="w-full px-4 py-3 bg-slate-900/40 border border-slate-700/50 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-base-500 focus:border-transparent"
+                            >
+                                {TICKERS.map(ticker => (
+                                    <option key={ticker.value} value={ticker.value} className="text-black">
+                                        {ticker.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Token Info */}
+                        {tokenData && !loadingTokenData && (
+                            <div className="bg-slate-800/30 border border-slate-700/50 rounded-lg p-4 space-y-2">
+                                <div className="flex justify-between">
+                                    <span className="text-slate-400">Current Price</span>
+                                    <span className="text-white font-bold">${tokenData.currentPrice}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-slate-400">24h Change</span>
+                                    <span className={`font-bold ${tokenData.priceChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                        {tokenData.priceChange >= 0 ? '+' : ''}{tokenData.priceChange.toFixed(2)}%
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Direction Selection */}
+                        <div>
+                            <label className="block text-slate-300 mb-2">Price Direction</label>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    onClick={() => setFormData({ ...formData, direction: 'above' })}
+                                    className={`py-3 rounded-lg flex items-center justify-center gap-2 transition-all border ${formData.direction === 'above'
+                                        ? 'bg-green-500/20 border-green-500 text-green-400'
+                                        : 'bg-slate-800/30 border-slate-700/50 text-slate-300 hover:bg-slate-700/50'
+                                        }`}
+                                >
+                                    <TrendingUp className="w-5 h-5" />
+                                    Above
+                                </button>
+                                <button
+                                    onClick={() => setFormData({ ...formData, direction: 'below' })}
+                                    className={`py-3 rounded-lg flex items-center justify-center gap-2 transition-all border ${formData.direction === 'below'
+                                        ? 'bg-red-500/20 border-red-500 text-red-400'
+                                        : 'bg-slate-800/30 border-slate-700/50 text-slate-300 hover:bg-slate-700/50'
+                                        }`}
+                                >
+                                    <TrendingDown className="w-5 h-5" />
+                                    Below
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Target Price */}
+                        <div>
+                            <label className="block text-slate-300 mb-2">Target Price ($)</label>
+                            <input
+                                type="number"
+                                value={formData.price}
+                                onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                                placeholder="Enter target price"
+                                className="w-full px-4 py-3 bg-slate-900/40 border border-slate-700/50 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-base-500 focus:border-transparent"
+                            />
+                        </div>
+
+                        {/* End Date */}
+                        <div>
+                            <label className="block text-slate-300 mb-2">End Date</label>
+                            <input
+                                type="datetime-local"
+                                value={formData.endDate}
+                                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                                min={new Date(Date.now() + 3600000).toISOString().slice(0, 16)}
+                                className="w-full px-4 py-3 bg-slate-900/40 border border-slate-700/50 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-base-500 focus:border-transparent"
+                            />
+                        </div>
+
+                        {/* Preview Button */}
+                        <button
+                            onClick={handlePreview}
+                            className="w-full py-3 bg-gradient-to-r from-base-500 to-base-600 hover:from-base-600 hover:to-base-700 text-white rounded-lg font-semibold transition-colors shadow-lg hover:shadow-base-500/25"
+                        >
+                            Preview Market
+                        </button>
+                    </div>
+                </motion.div>
+            )}
+
+            {step === 'preview' && (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="max-w-lg mx-auto"
+                >
+                    <div className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-sm border border-slate-700/50 rounded-2xl p-6 space-y-6 text-white">
+                        <h2 className="text-xl font-bold text-white">Market Preview</h2>
+
+                        <div className="bg-base-500/10 border border-base-500/40 rounded-lg p-4 space-y-3">
+                            <p className="text-white text-lg font-semibold">{marketQuestion}</p>
+                            <div className="space-y-2 text-white/80">
+                                <p>End Date: {marketEndTime?.toLocaleString()}</p>
+                                <p>Initial Liquidity: 10 USDC each side</p>
+                                <p>Transaction: Gasless (sponsored)</p>
+                            </div>
+                        </div>
+
+                        {/* OnchainKit Transaction - Gasless Market Creation */}
+                        <Transaction
+                            isSponsored={true}
+                            calls={generateCreateMarketCalls(
+                                generateQuestion(),
+                                BigInt(Math.floor(new Date(formData.endDate).getTime() / 1000))
+                            )}
+                            onStatus={onTransactionStatus}
+                        >
+                            <TransactionButton
+                                className="w-full py-3 bg-gradient-to-r from-base-500 to-base-600 hover:from-base-600 hover:to-base-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 shadow-lg hover:shadow-base-500/25"
+                                text="Create Market"
+                            />
+                            <TransactionSponsor />
+                            <TransactionStatusLabel />
+                            <TransactionStatusAction />
+                        </Transaction>
+
+                        <button
+                            onClick={() => setStep('form')}
+                            className="w-full py-3 bg-slate-800/30 border border-slate-700/50 text-white rounded-lg font-semibold hover:bg-slate-700/50 transition-colors"
+                        >
+                            Back to Edit
+                        </button>
+                    </div>
+                </motion.div>
+            )}
         </div>
     );
 }
