@@ -104,6 +104,62 @@ To get started building your own frame, follow these steps:
    - Cast your frame to see it in action
    - Share your frame with others to start building your community
 
+## Testing & Development
+
+### Local Testing Workflow
+
+When testing the prediction market functionality locally, follow these steps to avoid database conflicts and duplicate entries:
+
+#### 1. Reset Test Data (Before Testing)
+```bash
+# Option A: Use the test workflow script
+./scripts/test-workflow.sh reset
+
+# Option B: Run SQL reset script manually
+# Execute scripts/reset-test-data.sql in Supabase SQL editor
+```
+
+#### 2. Start Development Server
+```bash
+npm run dev
+```
+
+#### 3. Testing Best Practices
+- **Clear browser cache/localStorage** before testing
+- **Use different wallet addresses** for different test scenarios
+- **Reset data between test sessions** to avoid duplicates
+- **Monitor console logs** for duplicate warnings and database errors
+
+#### 4. Test Data Management Scripts
+
+**Reset Script** (`scripts/reset-test-data.sql`):
+- Clears all test wallet predictions and positions
+- Removes entries with invalid/short transaction hashes
+- Provides cleanup summary
+
+**Test Workflow Script** (`scripts/test-workflow.sh`):
+```bash
+./scripts/test-workflow.sh reset   # Clear all test data
+./scripts/test-workflow.sh check   # View current data status
+./scripts/test-workflow.sh start   # Start fresh test session
+```
+
+#### 5. Common Issues & Solutions
+
+**Problem**: Infinite loops during batch transactions
+**Solution**: Reset test data and ensure no duplicate predictions exist
+
+**Problem**: Foreign key constraint violations
+**Solution**: Verify market IDs exist before creating predictions
+
+**Problem**: Short/invalid transaction hashes
+**Solution**: Ensure all transactions go through proper blockchain batch system
+
+### Database Schema
+- **user_predictions**: Individual swipe predictions with blockchain transaction hashes
+- **user_positions**: Aggregated user positions per market
+- **markets**: Prediction market metadata and contract addresses
+
 ## Learn More
 
 - [MiniKit Documentation](https://docs.base.org/builderkits/minikit/overview)

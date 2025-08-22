@@ -17,7 +17,7 @@ interface ProfileProps {
 export function Profile({ onBack, onCreateMarket }: ProfileProps) {
   const { address } = useAccount();
   const userStats = useUserStats();
-  const { userPredictions, createdMarkets, setDefaultBetAmount } = useAppStore();
+  const { createdMarkets, updateUser } = useAppStore();
   const [supabasePredictions, setSupabasePredictions] = useState<Array<{
     id: string;
     market_id: string;
@@ -32,41 +32,43 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
   const [loading, setLoading] = useState(false);
 
   // Load user predictions from Supabase
+  const loadSupabasePredictions = async () => {
+    if (!address) return;
+
+    setLoading(true);
+    try {
+      const predictions = await SupabaseService.getUserPredictions(address);
+      setSupabasePredictions(predictions || []);
+    } catch (error) {
+      console.error('Error loading user predictions:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const loadSupabasePredictions = async () => {
-      if (!address) return;
-
-      setLoading(true);
-      try {
-        const predictions = await SupabaseService.getUserPredictions(address);
-        setSupabasePredictions(predictions || []);
-      } catch (error) {
-        console.error('Error loading user predictions:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadSupabasePredictions();
   }, [address]);
 
-  // Combine local and Supabase predictions
-  const allPredictions = [
-    ...userPredictions,
-    ...supabasePredictions.map(p => ({
-      id: p.id,
-      marketId: p.market_id,
-      userId: p.user_id,
-      side: p.side,
-      amount: p.amount,
-      sharesReceived: p.shares_received,
-      transactionHash: p.transaction_hash,
-      createdAt: p.created_at,
-      updatedAt: p.updated_at,
-      resolved: false,
-      correct: false
-    }))
-  ];
+  // Refresh function to reload from database
+  const handleRefresh = async () => {
+    await loadSupabasePredictions();
+  };
+
+  // Use only Supabase predictions (no more local cache conflicts)
+  const allPredictions = supabasePredictions.map(p => ({
+    id: p.id,
+    marketId: p.market_id,
+    userId: p.user_id,
+    side: p.side,
+    amount: p.amount,
+    sharesReceived: p.shares_received,
+    transactionHash: p.transaction_hash,
+    createdAt: p.created_at,
+    updatedAt: p.updated_at,
+    resolved: false,
+    correct: false
+  }));
 
   if (!address || !userStats) {
     return (
@@ -146,7 +148,18 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
 
         <h1 className="text-xl font-bold text-white">Profile</h1>
 
-        <div className="w-8 h-8" />
+        <motion.button
+          onClick={handleRefresh}
+          disabled={loading}
+          className="p-2 hover:bg-slate-800 rounded-lg transition-colors disabled:opacity-50"
+          whileHover={{ scale: loading ? 1 : 1.1 }}
+          whileTap={{ scale: loading ? 1 : 0.95 }}
+          title="Refresh predictions from database"
+        >
+          <svg className={`w-5 h-5 text-slate-400 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </motion.button>
       </div>
 
       {/* Profile Header */}
@@ -210,7 +223,7 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
             {[1, 5, 10].map((amount) => (
               <motion.button
                 key={amount}
-                onClick={() => setDefaultBetAmount(amount)}
+                onClick={() => updateUser({ defaultBetAmount: amount })}
                 className={`
                   py-3 px-4 rounded-xl border-2 text-center font-semibold transition-all duration-200
                   ${userStats.defaultBetAmount === amount

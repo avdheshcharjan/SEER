@@ -9,7 +9,7 @@ import { baseSepolia } from 'viem/chains';
 import { SwipeStack } from './SwipeStack';
 import { useAppStore } from '@/lib/store';
 // Static markets removed - now using only Supabase data
-import { UnifiedMarket, UnifiedUserPrediction, SchemaTransformer } from '@/lib/types';
+import { UnifiedMarket, SchemaTransformer } from '@/lib/types';
 import { SupabaseService } from '@/lib/supabase';
 import { getMarketContractAddress, validateMarketContract } from '@/lib/blockchain';
 import { 
@@ -20,7 +20,6 @@ import {
     Transaction,
     TransactionButton,
     TransactionSponsor,
-    TransactionStatus,
     TransactionStatusAction,
     TransactionStatusLabel
 } from '@coinbase/onchainkit/transaction';
@@ -34,6 +33,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
     const { address } = useAccount();
     const [selectedCategory, setSelectedCategory] = useState<'all' | 'crypto' | 'tech' | 'celebrity' | 'sports' | 'politics'>('all');
     const [allMarkets, setAllMarkets] = useState<UnifiedMarket[]>([]);
+    const [currentMarkets, setCurrentMarkets] = useState<UnifiedMarket[]>([]);
     const [pendingBatch, setPendingBatch] = useState<{
         marketId: string;
         direction: 'left' | 'right';
@@ -56,21 +56,17 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
         }>;
     } | null>(null);
     const [isProcessingTransaction, setIsProcessingTransaction] = useState(false);
+    const [processedTransactions, setProcessedTransactions] = useState<Set<string>>(new Set());
     const [rawSupabaseMarkets, setRawSupabaseMarkets] = useState<Array<{
         id: string;
         contract_address?: string;
         [key: string]: unknown;
     }>>([]);
     const {
-        currentMarkets,
-        setCurrentMarkets,
-        addPrediction,
         addSwipeHistory,
         user,
         setUser,
-        createdMarkets,
-        setSupabaseMarkets,
-        updateUserPosition
+        createdMarkets
     } = useAppStore();
 
     useEffect(() => {
@@ -79,7 +75,6 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                 // Load markets from Supabase only
                 const supabaseMarkets = await SupabaseService.getActiveMarkets();
                 setRawSupabaseMarkets(supabaseMarkets); // Keep raw for contract mapping
-                setSupabaseMarkets(supabaseMarkets);
 
                 // Use only Supabase markets and user-created markets
                 const unifiedSupabaseMarkets = supabaseMarkets.map(m => SchemaTransformer.supabaseToUnified(m));
@@ -116,7 +111,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                 defaultBetAmount: 1, // Default $1 USDC
             });
         }
-    }, [address, user, setCurrentMarkets, setUser, createdMarkets, setSupabaseMarkets]);
+    }, [address, user, setUser, createdMarkets]);
 
 
     // Filter markets based on selected category
@@ -130,6 +125,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
         }
     }, [selectedCategory, allMarkets, setCurrentMarkets]);
 
+    // Modify the handleSwipe function to validate market exists in Supabase before adding to batch
     const handleSwipe = async (marketId: string, direction: 'left' | 'right' | 'up') => {
         if (!address || !user) {
             toast.error('Please connect your wallet first!');
@@ -168,6 +164,21 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
         });
 
         try {
+            // IMPORTANT FIX: Validate market exists in Supabase before proceeding
+            let marketExists;
+            try {
+                marketExists = await SupabaseService.getMarket(marketId);
+                if (!marketExists) {
+                    console.error(`Market ${marketId} does not exist in database`);
+                    toast.error('Invalid market. Please try another one.');
+                    return;
+                }
+            } catch (error) {
+                console.error('Error validating market:', error);
+                toast.error('Failed to validate market. Please try again.');
+                return;
+            }
+
             // ✅ SECURITY FIX: Get the correct market contract address
             const marketAddress = getMarketContractAddress(marketId, rawSupabaseMarkets);
             
@@ -251,24 +262,28 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
         }
     };
 
-    // Handle batch transaction status from OnchainKit Transaction component
+    // Modify the handleBatchStatus function to improve error handling
     const handleBatchStatus = async (status: LifecycleStatus) => {
         if (!user || !address || pendingBatch.length === 0 || isProcessingTransaction) return;
 
         console.log('🔄 Transaction status update:', status);
 
-        if (status.statusName === 'success' && status.statusData?.transactionReceipts?.length > 0) {
+        if (status.statusName === 'success' && status.statusData && status.statusData.transactionReceipts && status.statusData.transactionReceipts.length > 0) {
             const txHash = status.statusData.transactionReceipts[0].transactionHash;
-            if (txHash) {
+            if (txHash && !processedTransactions.has(txHash)) {
+                // Mark this transaction as processed
+                setProcessedTransactions(prev => new Set(prev).add(txHash));
                 setIsProcessingTransaction(true);
-                // Transaction successful - save all predictions to database
+                
+                // We've already validated markets during handleSwipe, but let's double check
+                // to make sure nothing changed in the database since then
                 try {
                     console.log(`✅ Batch transaction successful: ${txHash}`);
                     
                     // Show success toast
                     toast.success(
                         <div className="flex items-center justify-between">
-                            <span>🎉 ${pendingBatch.length} gasless predictions confirmed!</span>
+                            <span>🎉 {pendingBatch.length} gasless predictions confirmed!</span>
                             <a
                                 href={`https://sepolia.basescan.org/tx/${txHash}`}
                                 target="_blank"
@@ -291,59 +306,77 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
 
                     // Save all predictions to database
                     for (const prediction of pendingBatch) {
-                        const pred: UnifiedUserPrediction = {
-                            id: `pred_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-                            marketId: prediction.marketId,
-                            userId: user.id,
-                            side: prediction.direction === 'right' ? 'yes' : 'no',
-                            amount: prediction.amount,
-                            sharesReceived: prediction.amount,
-                            transactionHash: txHash,
-                            createdAt: new Date().toISOString(),
-                            updatedAt: new Date().toISOString(),
-                        };
-                        
-                        // Add prediction to store
-                        addPrediction(pred);
-                        
-                        // Save prediction to Supabase
-                        await SupabaseService.createPrediction({
-                            market_id: prediction.marketId,
-                            user_id: user.id,
-                            side: prediction.direction === 'right' ? 'yes' : 'no',
-                            amount: prediction.amount,
-                            shares_received: prediction.amount,
-                            transaction_hash: txHash
-                        });
-
-                        // Update user position in Supabase
-                        const existingPosition = await SupabaseService.getUserPosition(user.id, prediction.marketId);
-                        const currentYesShares = existingPosition?.yes_shares || 0;
-                        const currentNoShares = existingPosition?.no_shares || 0;
-                        const currentInvested = existingPosition?.total_invested || 0;
-
-                        const updatedPosition = await SupabaseService.updateUserPosition({
-                            user_id: user.id,
-                            market_id: prediction.marketId,
-                            yes_shares: prediction.direction === 'right' ? currentYesShares + prediction.amount : currentYesShares,
-                            no_shares: prediction.direction === 'left' ? currentNoShares + prediction.amount : currentNoShares,
-                            total_invested: currentInvested + prediction.amount
-                        });
-
-                        // Update store with new position
-                        updateUserPosition(updatedPosition);
+                        try {
+                            // Verify market still exists before saving prediction
+                            const marketExists = await SupabaseService.getMarket(prediction.marketId);
+                            if (!marketExists) {
+                                console.error(`Market ${prediction.marketId} no longer exists in database, skipping`);
+                                continue;
+                            }
+                            
+                            // Save prediction to Supabase (with duplicate check for development)
+                            const existingPrediction = await SupabaseService.getUserPredictions(user.id);
+                            const isDuplicate = existingPrediction?.some(p => 
+                                p.market_id === prediction.marketId && 
+                                p.transaction_hash === txHash
+                            );
+                            
+                            if (!isDuplicate) {
+                                await SupabaseService.createPrediction({
+                                    market_id: prediction.marketId,
+                                    user_id: user.id,
+                                    side: prediction.direction === 'right' ? 'yes' : 'no',
+                                    amount: prediction.amount,
+                                    shares_received: prediction.amount,
+                                    transaction_hash: txHash
+                                });
+                                
+                                // Update user position in Supabase
+                                const existingPosition = await SupabaseService.getUserPosition(user.id, prediction.marketId);
+                                const currentYesShares = existingPosition?.yes_shares || 0;
+                                const currentNoShares = existingPosition?.no_shares || 0;
+                                const currentInvested = existingPosition?.total_invested || 0;
+                                
+                                await SupabaseService.updateUserPosition({
+                                    user_id: user.id,
+                                    market_id: prediction.marketId,
+                                    yes_shares: prediction.direction === 'right' ? currentYesShares + prediction.amount : currentYesShares,
+                                    no_shares: prediction.direction === 'left' ? currentNoShares + prediction.amount : currentNoShares,
+                                    total_invested: currentInvested + prediction.amount
+                                });
+                            } else {
+                                console.log('🚫 Duplicate prediction detected, skipping database save');
+                            }
+                        } catch (err) {
+                            console.error(`Error saving prediction for market ${prediction.marketId}:`, err);
+                            // Continue with other predictions even if one fails
+                        }
                     }
 
                     // Clear batch and current prediction
                     setPendingBatch([]);
                     setCurrentPrediction(null);
-                    setIsProcessingTransaction(false);
+                    
+                    // Add a small delay before allowing new transactions
+                    setTimeout(() => {
+                        setIsProcessingTransaction(false);
+                    }, 1000);
 
                 } catch (error) {
                     console.error('Database save error:', error);
                     toast.error('Predictions successful but failed to save. Contact support.');
-                    setIsProcessingTransaction(false);
+                    
+                    // Clean up state even on error
+                    setPendingBatch([]);
+                    setCurrentPrediction(null);
+                    setTimeout(() => {
+                        setIsProcessingTransaction(false);
+                    }, 1000);
                 }
+            } else if (txHash && processedTransactions.has(txHash)) {
+                // Transaction already processed, ignore
+                console.log(`Transaction ${txHash} already processed, ignoring`);
+                return;
             }
         } else if (status.statusName === 'error') {
             // Transaction failed
@@ -487,10 +520,10 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                             className="w-full mb-2"
                         />
                         <TransactionSponsor />
-                        <TransactionStatus>
-                            <TransactionStatusLabel />
-                            <TransactionStatusAction />
-                        </TransactionStatus>
+                                            <div className="mt-4">
+                        <TransactionStatusLabel />
+                        <TransactionStatusAction />
+                    </div>
                     </Transaction>
                 </div>
             )}
