@@ -1,3 +1,6 @@
+# YT link: https://www.youtube.com/watch?v=wV99Tz0V4mw
+# Presentation link: https://www.canva.com/design/DAGwlbBLWzI/Ru1rJTdUy-ZaxJMhKvzZ6g/edit?utm_content=DAGwlbBLWzI&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
+
 # MiniKit Template
 
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-onchain --mini`](), configured with:
