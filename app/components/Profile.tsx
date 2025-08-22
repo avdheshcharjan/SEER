@@ -8,6 +8,7 @@ import { getMarketById } from '@/lib/prediction-markets';
 import { SupabaseService } from '@/lib/supabase';
 import { TrendingUp, TrendingDown, Clock, ExternalLink, Trophy, Target, DollarSign, Settings, Plus, Share } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useBasename } from '@/lib/hooks/useBasename';
 
 interface ProfileProps {
   onBack?: () => void;
@@ -18,6 +19,7 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
   const { address } = useAccount();
   const userStats = useUserStats();
   const { userPredictions, createdMarkets, setDefaultBetAmount } = useAppStore();
+  const { basename, avatar, description, twitter, loading: basenameLoading } = useBasename(address);
   const [supabasePredictions, setSupabasePredictions] = useState<Array<{
     id: string;
     market_id: string;
@@ -153,15 +155,37 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
       <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm rounded-2xl p-6 mb-6 border border-slate-700/50">
         <div className="flex items-center space-x-4 mb-4">
           <div className="w-16 h-16 bg-gradient-to-br from-base-500 to-base-600 rounded-full flex items-center justify-center">
-            <span className="text-2xl font-bold text-white">
-              {userStats.username?.charAt(0).toUpperCase() || address.charAt(2).toUpperCase()}
-            </span>
+            {avatar ? (
+              <img
+                src={avatar}
+                alt={basename || 'Profile'}
+                className="w-full h-full rounded-full object-cover"
+              />
+            ) : (
+              <span className="text-2xl font-bold text-white">
+                {userStats.username?.charAt(0).toUpperCase() || address.charAt(2).toUpperCase()}
+              </span>
+            )}
           </div>
           <div>
             <h2 className="text-xl font-bold text-white mb-1">
-              {userStats.username || formatAddress(address)}
+              {userStats.username || basename || formatAddress(address)}
             </h2>
-            <p className="text-slate-400 text-sm">{formatAddress(address)}</p>
+            <p className="text-slate-400 text-sm">
+              {basenameLoading ? (
+                <span className="inline-flex items-center">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-base-400 mr-2"></div>
+                  <span className="text-xs">Resolving Basename...</span>
+                </span>
+              ) : basename ? (
+                <span className="inline-flex items-center">
+                  <span className="mr-2">✨</span>
+                  <span className="text-base-400 font-medium">{basename}.base</span>
+                </span>
+              ) : (
+                formatAddress(address)
+              )}
+            </p>
             <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-2 ${rankBadge.bg} ${rankBadge.color} ${rankBadge.border} border`}>
               <Trophy className="w-3 h-3 mr-1" />
               Rank #{userStats.rank || 'Unranked'}
@@ -193,6 +217,33 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
             <div className="text-xs text-slate-400">Win Rate</div>
           </div>
         </div>
+
+        {/* Basename Metadata */}
+        {(description || twitter) && (
+          <div className="mt-4 pt-4 border-t border-slate-700/50">
+            {description && (
+              <div className="mb-2">
+                <p className="text-slate-300 text-sm">{description}</p>
+              </div>
+            )}
+            <div className="flex flex-wrap gap-3">
+              {twitter && (
+                <div className="flex items-center">
+                  <span className="text-slate-400 text-xs mr-2">Twitter:</span>
+                  <a
+                    href={`https://twitter.com/${twitter.replace('@', '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-base-400 hover:text-base-300 text-xs transition-colors flex items-center"
+                  >
+                    {twitter}
+                    <ExternalLink className="w-3 h-3 ml-1" />
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Settings Section */}
@@ -439,10 +490,10 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
                           <span>{formatDate(prediction.createdAt)}</span>
                           <span>•</span>
                           <span className={`px-2 py-1 rounded-full ${market.category === 'crypto' ? 'bg-prediction-crypto/20 text-prediction-crypto' :
-                              market.category === 'tech' ? 'bg-prediction-tech/20 text-prediction-tech' :
-                                market.category === 'celebrity' ? 'bg-prediction-celebrity/20 text-prediction-celebrity' :
-                                  market.category === 'sports' ? 'bg-prediction-sports/20 text-prediction-sports' :
-                                    'bg-prediction-politics/20 text-prediction-politics'
+                            market.category === 'tech' ? 'bg-prediction-tech/20 text-prediction-tech' :
+                              market.category === 'celebrity' ? 'bg-prediction-celebrity/20 text-prediction-celebrity' :
+                                market.category === 'sports' ? 'bg-prediction-sports/20 text-prediction-sports' :
+                                  'bg-prediction-politics/20 text-prediction-politics'
                             }`}>
                             {market.category}
                           </span>

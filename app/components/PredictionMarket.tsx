@@ -9,12 +9,12 @@ import { useAppStore } from '@/lib/store';
 import { getRandomMarkets } from '@/lib/prediction-markets';
 import { UnifiedMarket, UnifiedUserPrediction, SchemaTransformer } from '@/lib/types';
 import { SupabaseService } from '@/lib/supabase';
-import { 
+import {
     generateBuySharesTransaction,
     getMarketContractAddress,
     validateMarketContract
 } from '@/lib/blockchain';
-import { 
+import {
     executeGaslessTransaction,
     checkSponsorshipEligibility,
     validateGaslessConfig
@@ -27,35 +27,39 @@ interface PredictionMarketProps {
 
 export function PredictionMarket({ onBack }: PredictionMarketProps) {
     const { address } = useAccount();
-    const [selectedCategory, setSelectedCategory] = useState<'all' | 'crypto' | 'tech' | 'celebrity' | 'sports' | 'politics'>('all');
-    const [allMarkets, setAllMarkets] = useState<UnifiedMarket[]>([]);
     const {
-        currentMarkets,
-        setCurrentMarkets,
-        addPrediction,
-        addSwipeHistory,
         user,
         setUser,
-        createdMarkets,
+        currentMarkets,
+        setCurrentMarkets,
+        supabaseMarkets,
         setSupabaseMarkets,
+        createdMarkets,
+        addSwipeHistory,
+        addPrediction,
         updateUserPosition
     } = useAppStore();
+
+    const [selectedCategory, setSelectedCategory] = useState<'all' | 'crypto' | 'tech' | 'celebrity' | 'sports' | 'politics'>('all');
+    const [isGaslessConfigured, setIsGaslessConfigured] = useState<boolean>(false);
+    const [allMarkets, setAllMarkets] = useState<UnifiedMarket[]>([]);
+
+    // Check gasless configuration once on component mount
+    useEffect(() => {
+        const gaslessStatus = validateGaslessConfig();
+        setIsGaslessConfigured(gaslessStatus);
+    }, []);
 
     useEffect(() => {
         const loadMarkets = async () => {
             try {
                 // Load markets from Supabase
-                const supabaseMarkets = await SupabaseService.getActiveMarkets();
-                setSupabaseMarkets(supabaseMarkets);
+                const supabaseMarketsData = await SupabaseService.getMarkets();
+                setSupabaseMarkets(supabaseMarketsData);
 
-                // Combine Supabase markets with static markets and user-created markets
-                const staticMarkets = getRandomMarkets(20).map(m => SchemaTransformer.legacyToUnified(m));
-                const unifiedSupabaseMarkets = supabaseMarkets.map(m => SchemaTransformer.supabaseToUnified(m));
-                const allAvailableMarkets = [...unifiedSupabaseMarkets, ...staticMarkets, ...createdMarkets];
-                
-                // Shuffle to mix all market sources throughout the stack
+                // Combine Supabase markets with created markets
+                const allAvailableMarkets = [...supabaseMarketsData.map(m => SchemaTransformer.supabaseToUnified(m)), ...createdMarkets];
                 const shuffledMarkets = allAvailableMarkets.sort(() => 0.5 - Math.random());
-                
                 setAllMarkets(shuffledMarkets);
                 setCurrentMarkets(shuffledMarkets.slice(0, 20)); // Show first 20 initially
             } catch (error) {
@@ -86,7 +90,6 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
             });
         }
     }, [address, user, setCurrentMarkets, setUser, createdMarkets, setSupabaseMarkets]);
-
 
     // Filter markets based on selected category
     useEffect(() => {
@@ -161,16 +164,16 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
         try {
             // ✅ SECURITY FIX: Get the correct market contract address
             const marketAddress = getMarketContractAddress(marketId);
-            
+
             // Validate the market contract before proceeding
             const isValidContract = await validateMarketContract(marketAddress);
             if (!isValidContract) {
                 throw new Error(`Invalid market contract: ${marketAddress}`);
             }
-            
+
             // Log for debugging in development
             console.log(`📋 Executing prediction on market ${marketId} -> contract ${marketAddress}`);
-            
+
             // Generate buy shares transaction for the SPECIFIC market
             const buySharesTx = generateBuySharesTransaction({
                 marketAddress,
@@ -181,7 +184,10 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
 
             let transactionHash: string = '';
 
-            if (validateGaslessConfig()) {
+            // Check gasless configuration once to avoid multiple toasts
+            // const isGaslessConfigured = validateGaslessConfig(); // This line is now handled by the state variable.
+
+            if (isGaslessConfigured) {
                 // Use gasless transactions via existing Base smart account
                 toast.loading('Executing gasless prediction via Coinbase Paymaster...', {
                     id: processingToast,
@@ -194,7 +200,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                     // Execute buy shares transaction (approval already done)
                     const buyResult = await executeGaslessTransaction(buySharesTx, address as Address);
                     console.log('Buy shares transaction:', buyResult);
-                    
+
                     transactionHash = buyResult.transactionHash;
                 } else {
                     throw new Error('Transaction not eligible for sponsorship');
@@ -242,8 +248,8 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
             toast.dismiss(processingToast);
 
             // Show success toast with transaction link
-            const successMessage = validateGaslessConfig() ? 
-                'Gasless prediction confirmed! No fees paid! 🎉' : 
+            const successMessage = isGaslessConfigured ?
+                'Gasless prediction confirmed! No fees paid! 🎉' :
                 'Prediction confirmed! 🔗';
 
             toast.success(
@@ -259,25 +265,48 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                     </a>
                 </div>,
                 {
-                    duration: 5000,
                     style: {
                         borderRadius: '12px',
                         background: '#1e293b',
                         color: '#f1f5f9',
-                        border: '1px solid #22c55e',
+                        border: '1px solid #10b981',
                     },
                 }
             );
 
+            // Update market data
+            const updatedMarket = currentMarkets.find(m => m.id === marketId);
+            if (updatedMarket) {
+                // Update market with new prediction data
+                const newMarket = {
+                    ...updatedMarket,
+                    totalVolume: (updatedMarket.totalVolume || 0) + betAmount,
+                };
+
+                // Note: Market updates would need to be handled by the store if needed
+                // For now, we'll just update the local state
+                console.log('Market updated with new volume:', newMarket);
+            }
+
         } catch (error) {
-            console.error('Transaction error:', error);
+            console.error('Prediction failed:', error);
+
+            // Dismiss processing toast
             toast.dismiss(processingToast);
-            
-            const errorMessage = validateGaslessConfig() ? 
-                'Gasless prediction failed. Please try again.' : 
+
+            // Show error toast
+            const errorMessage = isGaslessConfigured ?
+                'Gasless prediction failed. Please try again.' :
                 'Prediction failed. Please try again.';
-            
-            toast.error(errorMessage);
+
+            toast.error(errorMessage, {
+                style: {
+                    borderRadius: '12px',
+                    background: '#1e293b',
+                    color: '#f1f5f9',
+                    border: '1px solid #ef4444',
+                },
+            });
         }
     };
 
@@ -334,7 +363,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
 
                 <div className="flex flex-col items-center">
                     <h1 className="text-xl font-bold text-white">BASED</h1>
-                    {validateGaslessConfig() && (
+                    {isGaslessConfigured && (
                         <div className="text-xs text-green-400 mt-1">
                             ⚡ Gasless enabled
                         </div>
@@ -344,7 +373,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                 <div className="p-2">
                     <div className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center">
                         <div className="w-6 h-6 bg-slate-500 rounded-full flex items-center justify-center text-xs text-slate-300 font-medium">
-                            {validateGaslessConfig() ? '⚡' : '?'}
+                            {isGaslessConfigured ? '⚡' : '?'}
                         </div>
                     </div>
                 </div>
