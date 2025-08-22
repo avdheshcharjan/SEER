@@ -126,7 +126,7 @@ export function CelebrityCard({ market, style, className, isActive }: CelebrityC
             </div>
 
             {/* Social Stats - Compact */}
-            <div className="bg-black/20 backdrop-blur-sm rounded-xl p-3 mb-4 flex-shrink-0">
+            <div className="bg-black rounded-xl p-3 mb-4 flex-shrink-0">
                 <div className="grid grid-cols-2 gap-3">
                     <div className="text-center">
                         <div className="text-white/60 text-xs mb-1">Followers</div>
@@ -144,17 +144,17 @@ export function CelebrityCard({ market, style, className, isActive }: CelebrityC
             </div>
 
             {/* Achievement/Status - Compact */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 flex-shrink-0">
+            <div className="bg-white/20 rounded-lg p-2 flex-shrink-0">
                 <div className="text-center">
                     <div className="text-white/70 text-xs mb-1">Event</div>
                     <div className="text-white font-medium text-xs">
                         {market.question.toLowerCase().includes('engagement') ? '💍 Relationship' :
-                         market.question.toLowerCase().includes('album') || market.question.toLowerCase().includes('song') ? '🎵 Music' :
-                         market.question.toLowerCase().includes('movie') || market.question.toLowerCase().includes('film') ? '🎬 Movie' :
-                         market.question.toLowerCase().includes('award') || market.question.toLowerCase().includes('oscar') || market.question.toLowerCase().includes('grammy') ? '🏆 Awards' :
-                         market.question.toLowerCase().includes('business') || market.question.toLowerCase().includes('company') ? '💼 Business' :
-                         market.question.toLowerCase().includes('comeback') || market.question.toLowerCase().includes('return') ? '🔄 Career' :
-                         '⭐ Event'}
+                            market.question.toLowerCase().includes('album') || market.question.toLowerCase().includes('song') ? '🎵 Music' :
+                                market.question.toLowerCase().includes('movie') || market.question.toLowerCase().includes('film') ? '🎬 Movie' :
+                                    market.question.toLowerCase().includes('award') || market.question.toLowerCase().includes('oscar') || market.question.toLowerCase().includes('grammy') ? '🏆 Awards' :
+                                        market.question.toLowerCase().includes('business') || market.question.toLowerCase().includes('company') ? '💼 Business' :
+                                            market.question.toLowerCase().includes('comeback') || market.question.toLowerCase().includes('return') ? '🔄 Career' :
+                                                '⭐ Event'}
                     </div>
                 </div>
             </div>

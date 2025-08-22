@@ -12,7 +12,7 @@ interface SwipeStackProps {
     forceMarketCard?: boolean; // New prop to force using MarketCard
 }
 
-const SWIPE_THRESHOLD = 100;
+const SWIPE_THRESHOLD = 80; // Reduced for mobile
 
 export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }: SwipeStackProps) {
     const [currentIndex, setCurrentIndex] = useState(0);
@@ -52,7 +52,7 @@ export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }
 
         return () => {
             if (timerRef.current) {
-                clearInterval(timerRef.current);
+                clearTimeout(timerRef.current);
             }
         };
     }, [currentIndex, isTimerActive, isAnimating, markets, onSwipe]);
@@ -67,7 +67,7 @@ export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }
     useEffect(() => {
         return () => {
             if (timerRef.current) {
-                clearInterval(timerRef.current);
+                clearTimeout(timerRef.current);
             }
         };
     }, []);
@@ -77,7 +77,7 @@ export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }
 
         const { offset, velocity } = info;
         const swipeThreshold = SWIPE_THRESHOLD;
-        const swipeVelocityThreshold = 500;
+        const swipeVelocityThreshold = 400; // Reduced for mobile
 
         const currentMarket = markets[currentIndex];
         if (!currentMarket) return;
@@ -121,82 +121,50 @@ export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }
         }, 400);
     };
 
-
-
     // Show message when no more markets
     if (currentIndex >= markets.length) {
         return (
-            <div className={`flex items-center justify-center h-[600px] ${className}`}>
-                <div className="text-center">
-                    <div className="text-6xl mb-4">🎉</div>
-                    <h3 className="text-2xl font-bold text-white mb-2">All done!</h3>
-                    <p className="text-slate-400">You&apos;ve swiped through all available markets.</p>
+            <div className={`flex items-center justify-center h-[500px] sm:h-[600px] ${className}`}>
+                <div className="text-center px-4">
+                    <div className="text-5xl sm:text-6xl mb-4">🎉</div>
+                    <h3 className="mobile-text-2xl font-bold text-white mb-2">All done!</h3>
+                    <p className="text-slate-400 mobile-text-sm">You&apos;ve swiped through all available markets.</p>
                 </div>
             </div>
         );
     }
 
-    const visibleMarkets = markets.slice(currentIndex, currentIndex + 3);
+    const visibleMarkets = markets.slice(currentIndex, currentIndex + 1);
 
     return (
-        <div className={`relative w-full h-[600px] ${className}`}>
-
-
+        <div className={`relative w-full h-[500px] sm:h-[600px] ${className}`}>
             {/* Card Stack */}
             <div className="relative w-full h-full">
-                {visibleMarkets.map((market, index) => {
-                    const isTopCard = index === 0;
-                    const zIndex = visibleMarkets.length - index;
-                    const scale = 1 - (index * 0.05);
-                    const yOffset = index * 10;
-
-                    if (isTopCard) {
-                        return (
-                            <motion.div
-                                key={market.id}
-                                className="absolute inset-0"
-                                style={{
-                                    x,
-                                    y,
-                                    rotate,
-                                    opacity,
-                                    zIndex,
-                                }}
-                                drag
-                                dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-                                dragElastic={0.2}
-                                onDragEnd={handleDragEnd}
-                                whileDrag={{ scale: 1.05 }}
-                                transition={{ duration: 0.3, ease: "easeOut" }}
-                            >
-                                <SmartPredictionCard market={market} isActive={true} forceMarketCard={forceMarketCard} />
-                            </motion.div>
-                        );
-                    }
-
-                    return (
-                        <motion.div
-                            key={market.id}
-                            className="absolute inset-0"
-                            style={{
-                                zIndex,
-                                scale,
-                                y: yOffset,
-                            }}
-                            initial={{ scale, y: yOffset }}
-                            animate={{ scale, y: yOffset }}
-                            transition={{ duration: 0.3, ease: "easeOut" }}
-                        >
-                            <SmartPredictionCard market={market} className="opacity-60" isActive={false} forceMarketCard={forceMarketCard} />
-                        </motion.div>
-                    );
-                })}
+                {visibleMarkets.map((market) => (
+                    <motion.div
+                        key={market.id}
+                        className="absolute inset-0"
+                        style={{
+                            x,
+                            y,
+                            rotate,
+                            opacity,
+                            zIndex: 1,
+                        }}
+                        drag
+                        dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+                        dragElastic={0.2}
+                        onDragEnd={handleDragEnd}
+                        whileDrag={{ scale: 1.05 }}
+                        transition={{ duration: 0.3, ease: "easeOut" }}
+                    >
+                        <SmartPredictionCard market={market} isActive={true} forceMarketCard={forceMarketCard} />
+                    </motion.div>
+                ))}
             </div>
 
-
-
             {/* Progress Indicator */}
-            <div className="absolute top-4 right-4 bg-slate-800/90 backdrop-blur-sm rounded-full px-3 py-1 text-sm text-slate-300">
+            <div className="absolute top-4 right-4 bg-slate-800/90 backdrop-blur-sm rounded-full px-3 py-1.5 text-sm text-slate-300 mobile-text-xs">
                 {currentIndex + 1} / {markets.length}
             </div>
         </div>

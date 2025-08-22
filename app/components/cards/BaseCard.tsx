@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { getCategoryGradient } from '@/lib/prediction-markets';
 import { UnifiedMarket, SchemaTransformer } from '@/lib/types';
 import { Clock } from 'lucide-react';
-import { memo, useRef, useEffect } from 'react';
+import { memo, useRef, useEffect, useState } from 'react';
 
 interface BaseCardProps {
     market: UnifiedMarket;
@@ -16,39 +16,42 @@ interface BaseCardProps {
 
 function BaseCardComponent({ market, style, className = '', isActive = false, children }: BaseCardProps) {
     const baseGradientClass = getCategoryGradient(market.category);
-    const timerDisplayRef = useRef<HTMLSpanElement>(null);
+
     const cardRef = useRef<HTMLDivElement>(null);
-    const timerStartTime = useRef<number>(Date.now());
-    const timerDuration = 60000; // 60 seconds in milliseconds
-    
-    // Self-contained timer that updates display and CSS progress without causing re-renders
+    const progressBarRef = useRef<HTMLDivElement>(null);
+    const [progressBarWidth, setProgressBarWidth] = useState(100); // Progress bar width percentage
+    const [timeLeft, setTimeLeft] = useState(60); // Time left in seconds
+
+    // Timer that updates every 100ms for smooth progressive decline
     useEffect(() => {
-        if (!isActive || !timerDisplayRef.current || !cardRef.current) return;
-        
-        timerStartTime.current = Date.now();
-        const updateTimer = () => {
-            if (!timerDisplayRef.current || !cardRef.current) return;
-            
-            const elapsed = Date.now() - timerStartTime.current;
-            const remaining = Math.max(0, timerDuration - elapsed);
-            const secondsLeft = Math.ceil(remaining / 1000);
-            const progress = remaining / timerDuration;
-            
-            // Update timer display
-            timerDisplayRef.current.textContent = `${secondsLeft}s left`;
-            
-            // Update CSS custom property for gradient animation
-            cardRef.current.style.setProperty('--timer-progress', progress.toString());
-            
-            if (remaining > 0) {
-                requestAnimationFrame(updateTimer);
-            }
-        };
-        
-        updateTimer();
-        
-        // Clean up is handled by the effect dependency
-    }, [isActive, timerDuration]);
+        if (!isActive) {
+            setProgressBarWidth(100);
+            setTimeLeft(60);
+            return;
+        }
+
+        // Reset timer when card becomes active
+        setProgressBarWidth(100);
+        setTimeLeft(60);
+
+        const timer = setInterval(() => {
+            setTimeLeft(prevTime => {
+                const newTime = prevTime - 0.1; // Decrease by 0.1 seconds every 100ms
+                if (newTime <= 0) {
+                    setProgressBarWidth(0);
+                    return 0;
+                }
+
+                // Calculate progress bar width (100% to 0%)
+                const progressPercentage = (newTime / 60) * 100;
+                setProgressBarWidth(progressPercentage);
+
+                return newTime;
+            });
+        }, 100); // Update every 100ms instead of 1000ms
+
+        return () => clearInterval(timer);
+    }, [isActive]);
 
     const getTimeRemaining = () => {
         // Generate a random time remaining between 1-24 hours for each market
@@ -83,19 +86,15 @@ function BaseCardComponent({ market, style, className = '', isActive = false, ch
     };
 
     return (
-        <div className="relative">            
+        <div className="relative">
             <motion.div
                 ref={cardRef}
                 className={`
-                    relative w-full h-[600px] rounded-3xl shadow-2xl overflow-hidden
-                    ${isActive ? 'backdrop-blur-sm' : 'backdrop-blur-md'} border border-white/10
+                    relative w-full h-[500px] sm:h-[600px] rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden
+                    border border-white/10
                     ${isActive ? `timer-gradient-active ${baseGradientClass}` : `bg-${baseGradientClass}`} ${className}
                 `}
-                style={{
-                    ...style,
-                    '--timer-progress': isActive ? '1' : '1',
-                    opacity: isActive ? 1 : style?.opacity || 0.4
-                } as React.CSSProperties}
+                style={style}
                 initial={{ opacity: 0, scale: 0.8, rotateY: -15 }}
                 animate={{ opacity: 1, scale: 1, rotateY: 0 }}
                 exit={{ opacity: 0, scale: 0.8, rotateY: 15 }}
@@ -109,55 +108,66 @@ function BaseCardComponent({ market, style, className = '', isActive = false, ch
                     transition: { duration: 0.2 }
                 }}
             >
+                {/* 60-Second Progress Bar Timer */}
+                {isActive && (
+                    <div className="absolute top-0 left-0 right-0 h-2 bg-black z-30">
+                        <motion.div
+                            ref={progressBarRef}
+                            className="h-full bg-gradient-to-r from-green-400 via-yellow-400 to-red-400 rounded-r-full transition-all duration-1000 ease-linear"
+                            style={{ width: `${progressBarWidth}%` }}
+                        />
+                    </div>
+                )}
+
                 {/* Category Badge */}
-                <div className="absolute top-4 left-4 z-20">
+                <div className="absolute top-4 sm:top-5 left-3 sm:left-4 z-20">
                     <div className={`
-                        px-3 py-1.5 rounded-full text-xs font-semibold text-white backdrop-blur-sm
+                        px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs font-semibold text-white
                         ${getCategoryColor(market.category)}
                     `}>
                         {market.category.toUpperCase()}
                     </div>
                 </div>
 
-                {/* Time Badge */}
-                <div className="absolute top-4 right-4 z-20">
-                    <div className="bg-black/30 backdrop-blur-sm px-3 py-1.5 rounded-full">
+                {/* Time Badge - Market Expiration Time */}
+                <div className="absolute top-4 sm:top-5 right-3 sm:right-4 z-20">
+                    <div className="bg-black px-2 sm:px-3 py-1 sm:py-1.5 rounded-full">
                         <div className="flex items-center space-x-1 text-white text-xs">
                             <Clock className="w-3 h-3" />
-                            <span ref={timerDisplayRef}>
-                                {isActive ? '60s left' : getTimeRemaining()}
+                            <span className="mobile-text-xs">
+                                {getTimeRemaining()}
                             </span>
                         </div>
                     </div>
                 </div>
 
                 {/* Main Content - Passed as children */}
-                <div className="relative flex flex-col p-4 pt-16 max-h-[520px] overflow-hidden">
+                <div className="relative flex flex-col p-3 sm:p-4 pt-16 sm:pt-20 max-h-[420px] sm:max-h-[520px] overflow-hidden">
                     {children}
                 </div>
 
-                {/* YES/NO Progress Bar */}
-                <div className="absolute bottom-0 left-0 right-0 p-4">
+                {/* NO/YES Progress Bar - Swapped positions */}
+                <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4">
                     <div className="grid grid-cols-2 gap-2 mb-3">
-                        <div className="bg-green-500/20 backdrop-blur-sm border border-green-500/30 rounded-xl p-2 text-center">
-                            <div className="text-green-400 font-bold text-lg">
-                                {SchemaTransformer.getYesPercentage(market)}%
-                            </div>
-                            <div className="text-green-300 text-sm font-medium">YES</div>
-                        </div>
-                        <div className="bg-red-500/20 backdrop-blur-sm border border-red-500/30 rounded-xl p-2 text-center">
-                            <div className="text-red-400 font-bold text-lg">
+                        <div className="bg-red-500 border border-red-600 rounded-xl p-3 text-center shadow-lg">
+                            <div className="text-white font-bold text-2xl mb-1">
                                 {SchemaTransformer.getNoPercentage(market)}%
                             </div>
-                            <div className="text-red-300 text-sm font-medium">NO</div>
+                            <div className="text-white font-bold text-lg">NO</div>
+                        </div>
+                        <div className="bg-green-500 border border-green-600 rounded-xl p-3 text-center shadow-lg">
+                            <div className="text-white font-bold text-2xl mb-1">
+                                {SchemaTransformer.getYesPercentage(market)}%
+                            </div>
+                            <div className="text-white font-bold text-lg">YES</div>
                         </div>
                     </div>
 
-                    {/* Swipe Instructions */}
-                    <div className="text-center">
-                        <div className="text-white/80 text-xs">
-                            Swipe <span className="text-green-400 font-semibold">→</span> for YES • 
-                            <span className="text-red-400 font-semibold"> ←</span> for NO • 
+                    {/* Swipe Instructions - Hidden on mobile since we show them in SwipeStack */}
+                    <div className="text-center hidden sm:block">
+                        <div className="text-white/80 mobile-text-xs">
+                            Swipe <span className="text-green-400 font-semibold">→</span> for YES •
+                            <span className="text-red-400 font-semibold"> ←</span> for NO •
                             <span className="text-blue-400 font-semibold"> ↑</span> to skip
                         </div>
                     </div>

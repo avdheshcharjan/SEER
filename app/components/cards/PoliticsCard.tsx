@@ -122,7 +122,7 @@ export function PoliticsCard({ market, style, className, isActive }: PoliticsCar
             </div>
 
             {/* Political Metrics - Compact */}
-            <div className="bg-black/20 backdrop-blur-sm rounded-xl p-3 mb-4 flex-shrink-0">
+            <div className="bg-black rounded-xl p-3 mb-4 flex-shrink-0">
                 <div className="grid grid-cols-2 gap-3">
                     <div className="text-center">
                         <div className="text-white/60 text-xs mb-1">Polling</div>
@@ -140,17 +140,17 @@ export function PoliticsCard({ market, style, className, isActive }: PoliticsCar
             </div>
 
             {/* Event Classification - Simplified */}
-            <div className="bg-gradient-to-r from-red-500/20 to-blue-500/20 backdrop-blur-sm rounded-lg p-2 flex-shrink-0">
+            <div className="bg-gradient-to-r from-red-500/30 to-blue-500/30 rounded-lg p-2 flex-shrink-0">
                 <div className="text-center">
                     <div className="text-white/70 text-xs mb-1">Event</div>
                     <div className="text-white font-medium text-xs">
                         {market.question.toLowerCase().includes('election') ? '🗳️ Election' :
-                         market.question.toLowerCase().includes('court') || market.question.toLowerCase().includes('legal') ? '⚖️ Legal' :
-                         market.question.toLowerCase().includes('war') || market.question.toLowerCase().includes('military') ? '⚔️ Military' :
-                         market.question.toLowerCase().includes('treaty') || market.question.toLowerCase().includes('nato') ? '🤝 Treaty' :
-                         market.question.toLowerCase().includes('ban') || market.question.toLowerCase().includes('regulation') ? '📋 Policy' :
-                         market.question.toLowerCase().includes('climate') || market.question.toLowerCase().includes('refugee') ? '🌍 Crisis' :
-                         '🏛️ Political'}
+                            market.question.toLowerCase().includes('court') || market.question.toLowerCase().includes('legal') ? '⚖️ Legal' :
+                                market.question.toLowerCase().includes('war') || market.question.toLowerCase().includes('military') ? '⚔️ Military' :
+                                    market.question.toLowerCase().includes('treaty') || market.question.toLowerCase().includes('nato') ? '🤝 Treaty' :
+                                        market.question.toLowerCase().includes('ban') || market.question.toLowerCase().includes('regulation') ? '📋 Policy' :
+                                            market.question.toLowerCase().includes('climate') || market.question.toLowerCase().includes('refugee') ? '🌍 Crisis' :
+                                                '🏛️ Political'}
                     </div>
                 </div>
             </div>

@@ -126,7 +126,7 @@ export function SportsCard({ market, style, className, isActive }: SportsCardPro
             </div>
 
             {/* Current Stats */}
-            <div className="bg-black/20 backdrop-blur-sm rounded-xl p-4 mb-6">
+            <div className="bg-black rounded-xl p-4 mb-6">
                 <div className="grid grid-cols-2 gap-4">
                     <div className="text-center">
                         <div className="flex items-center justify-center mb-1">
@@ -150,18 +150,18 @@ export function SportsCard({ market, style, className, isActive }: SportsCardPro
             </div>
 
             {/* Event Status - Simplified */}
-            <div className="bg-gradient-to-r from-red-500/20 to-blue-500/20 backdrop-blur-sm rounded-lg p-2 flex-shrink-0">
+            <div className="bg-gradient-to-r from-red-500/30 to-blue-500/30 rounded-lg p-2 flex-shrink-0">
                 <div className="text-center">
                     <div className="text-white/70 text-xs mb-1">Event</div>
                     <div className="text-white font-medium text-xs">
                         {market.question.toLowerCase().includes('superbowl') ? '🏆 Super Bowl' :
-                         market.question.toLowerCase().includes('olympics') ? '🥇 Olympics' :
-                         market.question.toLowerCase().includes('world cup') ? '🌍 World Cup' :
-                         market.question.toLowerCase().includes('champions league') ? '⚽ Champions' :
-                         market.question.toLowerCase().includes('championship') ? '🏆 Championship' :
-                         market.question.toLowerCase().includes('mvp') ? '👑 MVP' :
-                         market.question.toLowerCase().includes('record') ? '📊 Record' :
-                         '🎯 Event'}
+                            market.question.toLowerCase().includes('olympics') ? '🥇 Olympics' :
+                                market.question.toLowerCase().includes('world cup') ? '🌍 World Cup' :
+                                    market.question.toLowerCase().includes('champions league') ? '⚽ Champions' :
+                                        market.question.toLowerCase().includes('championship') ? '🏆 Championship' :
+                                            market.question.toLowerCase().includes('mvp') ? '👑 MVP' :
+                                                market.question.toLowerCase().includes('record') ? '📊 Record' :
+                                                    '🎯 Event'}
                     </div>
                 </div>
             </div>

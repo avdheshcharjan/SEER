@@ -1,137 +1,341 @@
-@import url("https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap");
+/* Mobile-first theme styles */
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-:root {
-  --app-background: #ffffff;
-  --app-foreground: #111111;
-  --app-foreground-muted: #58585c;
-  --app-accent: #0052ff;
-  --app-accent-hover: #0047e1;
-  --app-accent-active: #003db8;
-  --app-accent-light: #e6edff;
-  --app-gray: #f5f5f5;
-  --app-gray-dark: #e0e0e0;
-  --app-card-bg: rgba(255, 255, 255, 0.4);
-  --app-card-border: rgba(0, 0, 0, 0.1);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --app-background: #111111;
-    --app-foreground: #ffffff;
-    --app-foreground-muted: #c8c8d1;
-    --app-accent: #0052ff;
-    --app-accent-hover: #0047e1;
-    --app-accent-active: #003db8;
-    --app-accent-light: #1e293b;
-    --app-gray: #1e1e1e;
-    --app-gray-dark: #2e2e2e;
-    --app-card-bg: rgba(17, 17, 17, 0.4);
-    --app-card-border: rgba(115, 115, 115, 0.5);
-  }
-}
-
-.mini-app-theme {
-  --ock-font-family: "Geist", sans-serif;
-  --ock-border-radius: 0.75rem;
-  --ock-border-radius-inner: 0.5rem;
-
-  /* Text colors */
-  --ock-text-inverse: var(--app-background);
-  --ock-text-foreground: var(--app-foreground);
-  --ock-text-foreground-muted: var(--app-foreground-muted);
-  --ock-text-error: #ef4444;
-  --ock-text-primary: var(--app-accent);
-  --ock-text-success: #22c55e;
-  --ock-text-warning: #f59e0b;
-  --ock-text-disabled: #a1a1aa;
-
-  /* Background colors */
-  --ock-bg-default: var(--app-background);
-  --ock-bg-default-hover: var(--app-gray);
-  --ock-bg-default-active: var(--app-gray-dark);
-  --ock-bg-alternate: var(--app-gray);
-  --ock-bg-alternate-hover: var(--app-gray-dark);
-  --ock-bg-alternate-active: var(--app-gray-dark);
-  --ock-bg-inverse: var(--app-foreground);
-  --ock-bg-inverse-hover: #2a2a2a;
-  --ock-bg-inverse-active: #3a3a3a;
-  --ock-bg-primary: var(--app-accent);
-  --ock-bg-primary-hover: var(--app-accent-hover);
-  --ock-bg-primary-active: var(--app-accent-active);
-  --ock-bg-primary-washed: var(--app-accent-light);
-  --ock-bg-primary-disabled: #80a8ff;
-  --ock-bg-secondary: var(--app-gray);
-  --ock-bg-secondary-hover: var(--app-gray-dark);
-  --ock-bg-secondary-active: #d1d1d1;
-  --ock-bg-error: #fee2e2;
-  --ock-bg-warning: #fef3c7;
-  --ock-bg-success: #dcfce7;
-  --ock-bg-default-reverse: var(--app-foreground);
-
-  /* Icon colors */
-  --ock-icon-color-primary: var(--app-accent);
-  --ock-icon-color-foreground: var(--app-foreground);
-  --ock-icon-color-foreground-muted: #71717a;
-  --ock-icon-color-inverse: var(--app-background);
-  --ock-icon-color-error: #ef4444;
-  --ock-icon-color-success: #22c55e;
-  --ock-icon-color-warning: #f59e0b;
-
-  /* Line colors */
-  --ock-line-primary: var(--app-accent);
-  --ock-line-default: var(--app-gray-dark);
-  --ock-line-heavy: #a1a1aa;
-  --ock-line-inverse: #d4d4d8;
-}
-
+/* Base mobile optimizations */
 * {
-  touch-action: manipulation;
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
 }
 
 body {
-  color: var(--app-foreground);
-  background: var(--app-background);
-  font-family: var(--font-geist-sans), sans-serif;
-  font-optical-sizing: auto;
-  font-weight: 400;
-  font-style: normal;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+/* Mobile touch optimizations */
+button, 
+input, 
+select, 
+textarea {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  border: none;
+  outline: none;
+  background: none;
+  font-family: inherit;
+}
+
+/* iOS-specific optimizations */
+@supports (-webkit-touch-callout: none) {
+  /* iOS momentum scrolling */
+  .ios-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* iOS button optimizations */
+  .ios-button {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+  
+  /* iOS safe area handling */
+  .ios-safe-area {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
   }
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.5s ease-in-out;
-}
-
-.animate-fade-out {
-  animation: fadeOut 3s forwards;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
+/* Android-specific optimizations */
+@supports not (-webkit-touch-callout: none) {
+  /* Android touch feedback */
+  .android-touch {
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
   }
 }
 
-@keyframes fadeOut {
-  0% {
-    opacity: 1;
+/* Mobile-first responsive utilities */
+.mobile-container {
+  width: 100%;
+  max-width: 28rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.mobile-padding {
+  padding: 1rem;
+}
+
+.mobile-margin {
+  margin: 1rem;
+}
+
+/* Mobile typography scale */
+.mobile-text-xs {
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+.mobile-text-sm {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.mobile-text-base {
+  font-size: 1rem;
+  line-height: 1.5rem;
+}
+
+.mobile-text-lg {
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+
+.mobile-text-xl {
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+}
+
+.mobile-text-2xl {
+  font-size: 1.5rem;
+  line-height: 2rem;
+}
+
+.mobile-text-3xl {
+  font-size: 1.875rem;
+  line-height: 2.25rem;
+}
+
+.mobile-text-4xl {
+  font-size: 2.25rem;
+  line-height: 2.5rem;
+}
+
+/* Mobile spacing utilities */
+.mobile-spacing-xs { gap: 0.5rem; }
+.mobile-spacing-sm { gap: 0.75rem; }
+.mobile-spacing-md { gap: 1rem; }
+.mobile-spacing-lg { gap: 1.5rem; }
+.mobile-spacing-xl { gap: 2rem; }
+
+/* Mobile card optimizations */
+.mobile-card {
+  border-radius: 1rem;
+  margin: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Mobile button optimizations */
+.mobile-button {
+  min-height: 44px;
+  min-width: 44px;
+  border-radius: 0.75rem;
+  font-weight: 500;
+  transition: all 0.2s ease-in-out;
+}
+
+.mobile-button:active {
+  transform: scale(0.98);
+}
+
+/* Mobile form optimizations */
+.mobile-input {
+  min-height: 44px;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: inherit;
+  font-size: 1rem;
+}
+
+.mobile-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+/* Mobile navigation optimizations */
+.mobile-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.75rem 1rem;
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  z-index: 50;
+}
+
+/* Mobile modal optimizations */
+.mobile-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 100;
+}
+
+.mobile-modal-content {
+  background: #1e293b;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Mobile toast optimizations */
+.mobile-toast {
+  position: fixed;
+  top: max(1rem, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1e293b;
+  color: #f1f5f9;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  max-width: 90vw;
+  text-align: center;
+}
+
+/* Mobile swipe optimizations */
+.mobile-swipe-area {
+  touch-action: pan-x pan-y;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Mobile loading states */
+.mobile-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.mobile-loading-spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-top: 2px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Mobile responsive breakpoints */
+@media (min-width: 640px) {
+  .mobile-container {
+    max-width: 32rem;
   }
-  50% {
-    opacity: 1;
+  
+  .mobile-padding {
+    padding: 1.5rem;
   }
-  100% {
-    opacity: 0;
+  
+  .mobile-margin {
+    margin: 1.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .mobile-container {
+    max-width: 36rem;
+  }
+  
+  .mobile-padding {
+    padding: 2rem;
+  }
+  
+  .mobile-margin {
+    margin: 2rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .mobile-container {
+    max-width: 42rem;
+  }
+}
+
+/* Mobile accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Mobile high contrast mode support */
+@media (prefers-contrast: high) {
+  .mobile-card {
+    border: 2px solid currentColor;
+  }
+  
+  .mobile-button {
+    border: 2px solid currentColor;
+  }
+}
+
+/* Mobile dark mode optimizations */
+@media (prefers-color-scheme: dark) {
+  .mobile-card {
+    background: rgba(30, 41, 59, 0.8);
+  }
+  
+  .mobile-input {
+    background: rgba(30, 41, 59, 0.8);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+}
+
+/* Mobile landscape optimizations */
+@media (orientation: landscape) and (max-height: 500px) {
+  .mobile-container {
+    padding: 0.5rem 1rem;
+  }
+  
+  .mobile-padding {
+    padding: 0.5rem;
+  }
+  
+  .mobile-margin {
+    margin: 0.5rem;
   }
 }

@@ -7,6 +7,9 @@ import { Providers } from "./providers";
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
 };
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -53,9 +56,13 @@ export default function RootLayout({
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#0052FF" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="BASED" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="format-detection" content="telephone=no" />
+        <meta name="msapplication-tap-highlight" content="no" />
         <link rel="apple-touch-icon" href="/icon.png" />
+        <link rel="apple-touch-startup-image" href="/splash.png" />
       </head>
       <body className="bg-background">
         <Providers>{children}</Providers>

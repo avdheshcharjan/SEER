@@ -64,7 +64,7 @@ export function MarketCard({ market, style, className, isActive }: MarketCardPro
             </div>
 
             {/* Market Stats */}
-            <div className="bg-black/20 backdrop-blur-sm rounded-xl p-3 mb-4 flex-shrink-0">
+            <div className="bg-black rounded-xl p-3 mb-4 flex-shrink-0">
                 <div className="text-center mb-3">
                     <div className="text-white/60 text-xs mb-1">Total Volume</div>
                     <div className="text-2xl font-bold text-white mb-1">
@@ -94,7 +94,7 @@ export function MarketCard({ market, style, className, isActive }: MarketCardPro
 
             {/* Target Price Info - For crypto markets */}
             {market.targetPrice && market.direction && (
-                <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 flex-shrink-0">
+                <div className="bg-white/20 rounded-lg p-2 flex-shrink-0">
                     <div className="text-center">
                         <div className="text-white/70 text-xs mb-1">Target</div>
                         <div className="flex items-center justify-center space-x-1">
@@ -127,7 +127,7 @@ export function MarketCard({ market, style, className, isActive }: MarketCardPro
                             console.error('Failed to copy link:', error);
                         }
                     }}
-                    className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors"
+                    className="p-2 bg-white/20 hover:bg-white/30 rounded-full transition-colors"
                     title="Copy share link"
                 >
                     <Share className="w-4 h-4 text-white/70" />

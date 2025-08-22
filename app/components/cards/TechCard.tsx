@@ -75,17 +75,16 @@ export function TechCard({ market, style, className, isActive }: TechCardProps) 
 
             {/* Stock Price (if available) */}
             {market.currentPrice && market.currentPrice > 0 && (
-                <div className="bg-black/20 backdrop-blur-sm rounded-xl p-4 mb-6">
+                <div className="bg-black rounded-xl p-4 mb-6">
                     <div className="text-center mb-4">
                         <div className="text-white/60 text-sm mb-1">Stock Price</div>
                         <div className="text-3xl font-bold text-white mb-1">
                             {formatPrice(market.currentPrice)}
                         </div>
-                        <div className={`flex items-center justify-center space-x-1 text-sm font-medium ${
-                            (market.priceChange || 0) >= 0 ? 'text-green-400' : 'text-red-400'
-                        }`}>
-                            {(market.priceChange || 0) >= 0 ? 
-                                <TrendingUp className="w-4 h-4" /> : 
+                        <div className={`flex items-center justify-center space-x-1 text-sm font-medium ${(market.priceChange || 0) >= 0 ? 'text-green-400' : 'text-red-400'
+                            }`}>
+                            {(market.priceChange || 0) >= 0 ?
+                                <TrendingUp className="w-4 h-4" /> :
                                 <TrendingDown className="w-4 h-4" />
                             }
                             <span>
@@ -121,7 +120,7 @@ export function TechCard({ market, style, className, isActive }: TechCardProps) 
 
             {/* Tech Metrics (for non-price questions) */}
             {(!market.currentPrice || market.currentPrice === 0) && (
-                <div className="bg-black/20 backdrop-blur-sm rounded-xl p-4 mb-6">
+                <div className="bg-black rounded-xl p-4 mb-6">
                     <div className="grid grid-cols-2 gap-4">
                         <div className="text-center">
                             <div className="flex items-center justify-center mb-1">
@@ -130,9 +129,9 @@ export function TechCard({ market, style, className, isActive }: TechCardProps) 
                             </div>
                             <div className="text-white font-semibold text-sm">
                                 {market.question.toLowerCase().includes('chatgpt') ? '100M+' :
-                                 market.question.toLowerCase().includes('netflix') ? '260M+' :
-                                 market.question.toLowerCase().includes('meta') ? '3.9B+' : 
-                                 'N/A'}
+                                    market.question.toLowerCase().includes('netflix') ? '260M+' :
+                                        market.question.toLowerCase().includes('meta') ? '260M+' :
+                                            'N/A'}
                             </div>
                         </div>
                         <div className="text-center">
@@ -142,8 +141,8 @@ export function TechCard({ market, style, className, isActive }: TechCardProps) 
                             </div>
                             <div className="text-white font-semibold text-sm">
                                 {market.question.toLowerCase().includes('ai') || market.question.toLowerCase().includes('quantum') ? 'High' :
-                                 market.question.toLowerCase().includes('ar') || market.question.toLowerCase().includes('vr') ? 'High' :
-                                 'Medium'}
+                                    market.question.toLowerCase().includes('ar') || market.question.toLowerCase().includes('vr') ? 'High' :
+                                        'Medium'}
                             </div>
                         </div>
                     </div>
@@ -151,15 +150,15 @@ export function TechCard({ market, style, className, isActive }: TechCardProps) 
             )}
 
             {/* Key Milestone - More compact */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg p-2 flex-shrink-0">
+            <div className="bg-white/20 rounded-lg p-2 flex-shrink-0">
                 <div className="text-center">
                     <div className="text-white/70 text-xs mb-1">Event</div>
                     <div className="text-white font-medium text-xs">
                         {market.question.toLowerCase().includes('release') ? '🚀 Launch' :
-                         market.question.toLowerCase().includes('acquire') ? '🤝 Acquisition' :
-                         market.question.toLowerCase().includes('ipo') ? '📈 IPO' :
-                         market.question.toLowerCase().includes('reach') ? '📊 Milestone' :
-                         '⭐ Event'}
+                            market.question.toLowerCase().includes('acquire') ? '🤝 Acquisition' :
+                                market.question.toLowerCase().includes('ipo') ? '📈 IPO' :
+                                    market.question.toLowerCase().includes('reach') ? '📊 Milestone' :
+                                        '⭐ Event'}
                     </div>
                 </div>
             </div>

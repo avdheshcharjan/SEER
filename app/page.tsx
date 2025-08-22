@@ -65,7 +65,7 @@ export default function App() {
   //   if (frameAdded) {
   //     return (
   //       <div className="flex items-center space-x-1 text-sm font-medium text-green-400 animate-fade-out">
-  //         <Check className="w-4 h-4" />
+  //         <Plus className="w-4 h-4" />
   //         <span>Saved</span>
   //       </div>
   //     );
@@ -97,16 +97,29 @@ export default function App() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen font-geist bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
-      <Toaster position="top-center" />
+    <div className="flex flex-col min-h-screen font-geist bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white ios-safe-area">
+      <Toaster 
+        position="top-center" 
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#1e293b',
+            color: '#f1f5f9',
+            border: '1px solid #475569',
+            borderRadius: '12px',
+            fontSize: '14px',
+            maxWidth: '90vw',
+          },
+        }}
+      />
 
-      <div className="w-full max-w-md mx-auto px-4 py-3">
+      <div className="w-full max-w-md mx-auto px-4 py-3 safe-area-padding">
         <header className="flex justify-between items-center mb-6 h-11">
           <div>
             <div className="flex items-center space-x-2">
               <Wallet className="z-10">
                 <ConnectWallet>
-                  <Name className="text-inherit" />
+                  <Name className="text-inherit mobile-text-sm" />
                 </ConnectWallet>
                 <WalletDropdown>
                   <Identity className="px-4 pt-3 pb-2" hasCopyAddressOnClick>
@@ -129,7 +142,7 @@ export default function App() {
 
         <footer className="mt-6 pt-4 flex justify-center">
           <button
-            className="text-slate-400 hover:text-slate-300 text-xs transition-colors"
+            className="text-slate-400 hover:text-slate-300 mobile-text-xs transition-colors ios-button"
             onClick={() => window.open("https://base.org/builders/minikit", "_blank")}
           >
             Built on Base with MiniKit
