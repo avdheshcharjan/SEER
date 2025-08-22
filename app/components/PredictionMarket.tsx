@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { useAccount } from 'wagmi';
@@ -9,12 +9,12 @@ import { useAppStore } from '@/lib/store';
 import { getRandomMarkets } from '@/lib/prediction-markets';
 import { UnifiedMarket, UnifiedUserPrediction, SchemaTransformer } from '@/lib/types';
 import { SupabaseService } from '@/lib/supabase';
-import { 
+import {
     generateBuySharesTransaction,
     getMarketContractAddress,
     validateMarketContract
 } from '@/lib/blockchain';
-import { 
+import {
     executeGaslessTransaction,
     checkSponsorshipEligibility,
     validateGaslessConfig
@@ -31,6 +31,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
     const [selectedCategory, setSelectedCategory] = useState<'all' | 'crypto' | 'tech' | 'celebrity' | 'sports' | 'politics'>('all');
     const [allMarkets, setAllMarkets] = useState<UnifiedMarket[]>([]);
     const [usdcApproved, setUsdcApproved] = useState(false);
+    const legacyToSupabaseIdRef = useRef<Record<string, string>>({});
     const {
         currentMarkets,
         setCurrentMarkets,
@@ -54,10 +55,55 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                 const staticMarkets = getRandomMarkets(20).map(m => SchemaTransformer.legacyToUnified(m));
                 const unifiedSupabaseMarkets = supabaseMarkets.map(m => SchemaTransformer.supabaseToUnified(m));
                 const allAvailableMarkets = [...unifiedSupabaseMarkets, ...staticMarkets, ...createdMarkets];
-                
+
+                // Migrate legacy markets to Supabase to get UUIDs
+                const migratedMarkets = await Promise.all(
+                    allAvailableMarkets.map(async (market) => {
+                        if (isUuid(market.id)) {
+                            return market; // Already a Supabase market
+                        }
+
+                        // Check if we already migrated this market
+                        const cached = legacyToSupabaseIdRef.current[market.id];
+                        if (cached && isUuid(cached)) {
+                            // Update the market ID to use the cached UUID
+                            return { ...market, id: cached };
+                        }
+
+                        try {
+                            // Insert legacy market into Supabase
+                            const created = await SupabaseService.createMarket({
+                                question: market.question,
+                                category: market.category,
+                                end_time: market.endTime,
+                                creator_address: market.creatorAddress,
+                                contract_address: market.contractAddress,
+                                yes_pool: market.yesPool ?? 0,
+                                no_pool: market.noPool ?? 0,
+                                total_yes_shares: market.totalYesShares ?? 0,
+                                total_no_shares: market.totalNoShares ?? 0,
+                                resolved: market.resolved ?? false,
+                                outcome: market.outcome ?? undefined,
+                                resolution_time: market.resolutionTime,
+                            });
+
+                            if (created?.id && isUuid(created.id)) {
+                                // Cache the mapping and update the market ID
+                                legacyToSupabaseIdRef.current[market.id] = created.id;
+                                persistLegacyMapping();
+                                return { ...market, id: created.id };
+                            }
+                        } catch (error) {
+                            console.warn(`Failed to migrate market ${market.id} to Supabase:`, error);
+                        }
+
+                        return market; // Return original if migration failed
+                    })
+                );
+
                 // Shuffle to mix all market sources throughout the stack
-                const shuffledMarkets = allAvailableMarkets.sort(() => 0.5 - Math.random());
-                
+                const shuffledMarkets = migratedMarkets.sort(() => 0.5 - Math.random());
+
                 setAllMarkets(shuffledMarkets);
                 setCurrentMarkets(shuffledMarkets.slice(0, 20)); // Show first 20 initially
             } catch (error) {
@@ -100,6 +146,33 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
             setCurrentMarkets(filteredMarkets.slice(0, 20));
         }
     }, [selectedCategory, allMarkets, setCurrentMarkets]);
+
+    // Helper to detect UUIDs (Supabase market IDs are UUID v4)
+    const isUuid = (value: string): boolean => {
+        const uuidRegex = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i;
+        return uuidRegex.test(value);
+    };
+
+    // Load legacy->Supabase ID mapping from localStorage once
+    useEffect(() => {
+        try {
+            const raw = localStorage.getItem('legacyToSupabaseId');
+            if (raw) {
+                const parsed = JSON.parse(raw) as Record<string, string>;
+                legacyToSupabaseIdRef.current = parsed || {};
+            }
+        } catch (e) {
+            console.warn('Failed to load legacyToSupabaseId mapping from storage', e);
+        }
+    }, []);
+
+    const persistLegacyMapping = () => {
+        try {
+            localStorage.setItem('legacyToSupabaseId', JSON.stringify(legacyToSupabaseIdRef.current));
+        } catch (e) {
+            console.warn('Failed to persist legacyToSupabaseId mapping', e);
+        }
+    };
 
     const handleSwipe = async (marketId: string, direction: 'left' | 'right' | 'up') => {
         if (!address || !user) {
@@ -163,16 +236,16 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
         try {
             // ✅ SECURITY FIX: Get the correct market contract address
             const marketAddress = getMarketContractAddress(marketId);
-            
+
             // Validate the market contract before proceeding
             const isValidContract = await validateMarketContract(marketAddress);
             if (!isValidContract) {
                 throw new Error(`Invalid market contract: ${marketAddress}`);
             }
-            
+
             // Log for debugging in development
             console.log(`📋 Executing prediction on market ${marketId} -> contract ${marketAddress}`);
-            
+
             // Generate buy shares transaction for the SPECIFIC market
             const buySharesTx = generateBuySharesTransaction({
                 marketAddress,
@@ -196,7 +269,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                     // Execute buy shares transaction (approval already done)
                     const buyResult = await executeGaslessTransaction(buySharesTx, address as Address);
                     console.log('Buy shares transaction:', buyResult);
-                    
+
                     transactionHash = buyResult.transactionHash;
                 } else {
                     throw new Error('Transaction not eligible for sponsorship');
@@ -213,39 +286,45 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
             // Add prediction to store
             addPrediction(prediction);
 
-            // Save prediction to Supabase
-            await SupabaseService.createPrediction({
-                market_id: marketId,
-                user_id: user.id,
-                side: direction === 'right' ? 'yes' : 'no',
-                amount: betAmount,
-                shares_received: betAmount,
-                transaction_hash: transactionHash
-            });
+            // Persist to Supabase - all markets should now have UUIDs after migration
+            const supabaseMarketId = isUuid(marketId) ? marketId : legacyToSupabaseIdRef.current[marketId];
+            if (supabaseMarketId) {
+                // Save prediction to Supabase
+                await SupabaseService.createPrediction({
+                    market_id: supabaseMarketId,
+                    user_id: user.id,
+                    side: direction === 'right' ? 'yes' : 'no',
+                    amount: betAmount,
+                    shares_received: betAmount,
+                    transaction_hash: transactionHash
+                });
 
-            // Update user position in Supabase
-            const existingPosition = await SupabaseService.getUserPosition(user.id, marketId);
-            const currentYesShares = existingPosition?.yes_shares || 0;
-            const currentNoShares = existingPosition?.no_shares || 0;
-            const currentInvested = existingPosition?.total_invested || 0;
+                // Update user position in Supabase
+                const existingPosition = await SupabaseService.getUserPosition(user.id, supabaseMarketId);
+                const currentYesShares = existingPosition?.yes_shares || 0;
+                const currentNoShares = existingPosition?.no_shares || 0;
+                const currentInvested = existingPosition?.total_invested || 0;
 
-            const updatedPosition = await SupabaseService.updateUserPosition({
-                user_id: user.id,
-                market_id: marketId,
-                yes_shares: direction === 'right' ? currentYesShares + betAmount : currentYesShares,
-                no_shares: direction === 'left' ? currentNoShares + betAmount : currentNoShares,
-                total_invested: currentInvested + betAmount
-            });
+                const updatedPosition = await SupabaseService.updateUserPosition({
+                    user_id: user.id,
+                    market_id: supabaseMarketId,
+                    yes_shares: direction === 'right' ? currentYesShares + betAmount : currentYesShares,
+                    no_shares: direction === 'left' ? currentNoShares + betAmount : currentNoShares,
+                    total_invested: currentInvested + betAmount
+                });
 
-            // Update store with new position
-            updateUserPosition(updatedPosition);
+                // Update store with new position
+                updateUserPosition(updatedPosition);
+            } else {
+                console.warn(`Skipping Supabase persistence for marketId: ${marketId} - no UUID available`);
+            }
 
             // Dismiss processing toast
             toast.dismiss(processingToast);
 
             // Show success toast with transaction link
-            const successMessage = usdcApproved && validateGaslessConfig() ? 
-                'Gasless prediction confirmed! No fees paid! 🎉' : 
+            const successMessage = usdcApproved && validateGaslessConfig() ?
+                'Gasless prediction confirmed! No fees paid! 🎉' :
                 'Prediction confirmed! 🔗';
 
             toast.success(
@@ -274,12 +353,39 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
         } catch (error) {
             console.error('Transaction error:', error);
             toast.dismiss(processingToast);
-            
-            const errorMessage = usdcApproved && validateGaslessConfig() ? 
-                'Gasless prediction failed. Please try again.' : 
-                'Prediction failed. Please try again.';
-            
-            toast.error(errorMessage);
+
+            let errorMessage = 'Prediction failed. Please try again.';
+
+            if (usdcApproved && validateGaslessConfig()) {
+                // Enhanced error handling for gasless transactions
+                if (error instanceof Error) {
+                    if (error.message.includes('AA23')) {
+                        errorMessage = 'Gasless transaction failed due to insufficient gas or invalid signature. Please ensure your smart account has sufficient ETH for gas.';
+                    } else if (error.message.includes('AA21')) {
+                        errorMessage = 'Gasless transaction failed because the account didn\'t pay prefund. Please ensure your smart account has sufficient ETH.';
+                    } else if (error.message.includes('AA20')) {
+                        errorMessage = 'Smart account not deployed. Please ensure you have a valid Base smart account.';
+                    } else if (error.message.includes('Smart account validation failed')) {
+                        errorMessage = 'Smart account validation failed. Please check your wallet configuration.';
+                    } else if (error.message.includes('Transaction not eligible for sponsorship')) {
+                        errorMessage = 'Transaction not eligible for gasless sponsorship. This may be due to gas limits or paymaster configuration.';
+                    } else if (error.message.includes('Gas estimation failed')) {
+                        errorMessage = 'Gas estimation failed. Please try again or contact support.';
+                    } else {
+                        errorMessage = `Gasless prediction failed: ${error.message}`;
+                    }
+                }
+            }
+
+            toast.error(errorMessage, {
+                duration: 8000,
+                style: {
+                    borderRadius: '12px',
+                    background: '#1e293b',
+                    color: '#f1f5f9',
+                    border: '1px solid #ef4444',
+                },
+            });
         }
     };
 
