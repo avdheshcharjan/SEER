@@ -9,10 +9,10 @@ import { baseSepolia } from 'viem/chains';
 import L2ResolverAbi from '@/abis/L2ResolverAbi';
 
 // Constants - Updated for Base Sepolia
-// Note: The actual Basename resolver contract might not be deployed on Base Sepolia yet
-// For now, we'll use mock data and provide a fallback mechanism
-// TODO: Update this address when the actual Basename resolver is deployed on Base Sepolia
-const BASENAME_L2_RESOLVER_ADDRESS = '0x0000000000000000000000000000000000000000'; // Placeholder address
+// Basename resolver contract address on Base Sepolia
+// TODO: Update this address with the actual deployed Basename resolver contract address on Base Sepolia
+// This should be the L2 resolver contract that handles basename resolution
+const BASENAME_L2_RESOLVER_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 // Create public client for Base Sepolia network
 const baseSepoliaClient = createPublicClient({
@@ -43,18 +43,7 @@ export async function getBasename(address: Address): Promise<BaseName | null> {
   try {
     // Check if the resolver contract exists and is accessible
     if (BASENAME_L2_RESOLVER_ADDRESS === '0x0000000000000000000000000000000000000000') {
-      console.log('Basename resolver contract not deployed on Base Sepolia, using mock data');
-      // Fall back to mock data immediately
-      const mockBasenames: Record<string, string> = {
-        '0x1234567890123456789012345678901234567890': 'alice.basename',
-        '0x0987654321098765432109876543210987654321': 'bob.basename',
-      };
-
-      const mockBasename = mockBasenames[address.toLowerCase()];
-      if (mockBasename) {
-        console.log('Using mock Basename for testing:', mockBasename);
-        return mockBasename;
-      }
+      console.error('Basename resolver contract address not configured. Please update BASENAME_L2_RESOLVER_ADDRESS with the actual contract address on Base Sepolia.');
       return null;
     }
 
@@ -72,19 +61,6 @@ export async function getBasename(address: Address): Promise<BaseName | null> {
     return null;
   } catch (error) {
     console.error('Error resolving Basename:', error);
-    // Fallback to mock data for testing purposes
-    // In production, you'd want to handle this differently
-    const mockBasenames: Record<string, string> = {
-      '0x1234567890123456789012345678901234567890': 'alice.basename',
-      '0x0987654321098765432109876543210987654321': 'bob.basename',
-    };
-
-    const mockBasename = mockBasenames[address.toLowerCase()];
-    if (mockBasename) {
-      console.log('Using mock Basename for testing:', mockBasename);
-      return mockBasename;
-    }
-
     return null;
   }
 }
@@ -94,18 +70,7 @@ export async function getBasenameAvatar(basename: BaseName): Promise<Avatar | nu
   try {
     // Check if the resolver contract exists and is accessible
     if (BASENAME_L2_RESOLVER_ADDRESS === '0x0000000000000000000000000000000000000000') {
-      console.log('Basename resolver contract not deployed on Base Sepolia, using mock data');
-      // Fall back to mock data immediately
-      const mockAvatars: Record<string, string> = {
-        'alice.basename': 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face',
-        'bob.basename': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
-      };
-
-      const mockAvatar = mockAvatars[basename];
-      if (mockAvatar) {
-        console.log('Using mock avatar for testing:', mockAvatar);
-        return mockAvatar;
-      }
+      console.error('Basename resolver contract address not configured. Please update BASENAME_L2_RESOLVER_ADDRESS with the actual contract address on Base Sepolia.');
       return null;
     }
 
@@ -123,18 +88,6 @@ export async function getBasenameAvatar(basename: BaseName): Promise<Avatar | nu
     return null;
   } catch (error) {
     console.error('Error getting Basename avatar:', error);
-    // Fallback to mock data for testing purposes
-    const mockAvatars: Record<string, string> = {
-      'alice.basename': 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face',
-      'bob.basename': 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
-    };
-
-    const mockAvatar = mockAvatars[basename];
-    if (mockAvatar) {
-      console.log('Using mock avatar for testing:', mockAvatar);
-      return mockAvatar;
-    }
-
     return null;
   }
 }
@@ -147,30 +100,7 @@ export async function getBasenameTextRecord(
   try {
     // Check if the resolver contract exists and is accessible
     if (BASENAME_L2_RESOLVER_ADDRESS === '0x0000000000000000000000000000000000000000') {
-      console.log('Basename resolver contract not deployed on Base Sepolia, using mock data');
-      // Fall back to mock data immediately
-      const mockTextRecords: Record<string, Record<string, string>> = {
-        'alice.basename': {
-          'description': 'Crypto enthusiast and prediction market expert',
-          'com.twitter': '@alice_crypto',
-          'com.github': 'alice-dev',
-          'url': 'https://alice.dev',
-          'email': 'alice@example.com',
-        },
-        'bob.basename': {
-          'description': 'DeFi developer and market maker',
-          'com.twitter': '@bob_defi',
-          'com.github': 'bob-coder',
-          'url': 'https://bob.defi',
-          'email': 'bob@example.com',
-        },
-      };
-
-      const mockRecord = mockTextRecords[basename]?.[key];
-      if (mockRecord) {
-        console.log(`Using mock text record for ${key}:`, mockRecord);
-        return mockRecord;
-      }
+      console.error('Basename resolver contract address not configured. Please update BASENAME_L2_RESOLVER_ADDRESS with the actual contract address on Base Sepolia.');
       return null;
     }
 
@@ -188,30 +118,6 @@ export async function getBasenameTextRecord(
     return null;
   } catch (error) {
     console.error(`Error getting Basename text record for ${key}:`, error);
-    // Fallback to mock data for testing purposes
-    const mockTextRecords: Record<string, Record<string, string>> = {
-      'alice.basename': {
-        'description': 'Crypto enthusiast and prediction market expert',
-        'com.twitter': '@alice_crypto',
-        'com.github': 'alice-dev',
-        'url': 'https://alice.dev',
-        'email': 'alice@example.com',
-      },
-      'bob.basename': {
-        'description': 'DeFi developer and market maker',
-        'com.twitter': '@bob_defi',
-        'com.github': 'bob-coder',
-        'url': 'https://bob.defi',
-        'email': 'bob@example.com',
-      },
-    };
-
-    const mockRecord = mockTextRecords[basename]?.[key];
-    if (mockRecord) {
-      console.log(`Using mock text record for ${key}:`, mockRecord);
-      return mockRecord;
-    }
-
     return null;
   }
 }
