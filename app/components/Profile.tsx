@@ -136,16 +136,34 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
     <div className="w-full max-w-md mx-auto px-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
-        <motion.button
-          onClick={onBack}
-          className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </motion.button>
+        <div className="flex items-center space-x-3">
+          <motion.button
+            onClick={onBack}
+            className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </motion.button>
+          
+          {/* Basename Display */}
+          {basenameLoading ? (
+            <div className="flex items-center">
+              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-base-400 mr-2"></div>
+              <span className="text-sm text-slate-400">Resolving...</span>
+            </div>
+          ) : basename ? (
+            <div className="flex items-center px-3 py-2 bg-base-500/20 rounded-lg border border-base-500/30">
+              <span className="text-base-400 font-medium text-sm">{basename}.base</span>
+            </div>
+          ) : (
+            <div className="px-3 py-2 bg-slate-700/50 rounded-lg border border-slate-600/50">
+              <span className="text-slate-400 text-sm">{formatAddress(address)}</span>
+            </div>
+          )}
+        </div>
 
         <h1 className="text-xl font-bold text-white">Profile</h1>
 
@@ -166,13 +184,13 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
               />
             ) : (
               <span className="text-2xl font-bold text-white">
-                {userStats.username?.charAt(0).toUpperCase() || address.charAt(2).toUpperCase()}
+                {basename?.charAt(0).toUpperCase() || userStats.username?.charAt(0).toUpperCase() || address.charAt(2).toUpperCase()}
               </span>
             )}
           </div>
           <div>
             <h2 className="text-xl font-bold text-white mb-1">
-              {userStats.username || basename || formatAddress(address)}
+              {basename || userStats.username || formatAddress(address)}
             </h2>
             <p className="text-slate-400 text-sm">
               {basenameLoading ? (
@@ -183,10 +201,10 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
               ) : basename ? (
                 <span className="inline-flex items-center">
                   <span className="mr-2">✨</span>
-                  <span className="text-base-400 font-medium">{basename}.base</span>
+                  <span className="text-base-400 font-medium">Verified Basename</span>
                 </span>
               ) : (
-                formatAddress(address)
+                <span className="text-slate-500">No Basename</span>
               )}
             </p>
             <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-2 ${rankBadge.bg} ${rankBadge.color} ${rankBadge.border} border`}>
