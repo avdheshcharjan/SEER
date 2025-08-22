@@ -47,11 +47,21 @@ export function generateCreateMarketCalls(
     args: [question, endTime, resolver]
   });
 
-  return [{
+  const calls = [{
     to: MARKET_FACTORY_ADDRESS,
     data: data as `0x${string}`,
     value: BigInt(0)
   }];
+
+  console.log('🏭 Generated market creation call:', {
+    to: MARKET_FACTORY_ADDRESS,
+    data: data,
+    question,
+    endTime: endTime.toString(),
+    resolver
+  });
+
+  return calls;
 }
 
 

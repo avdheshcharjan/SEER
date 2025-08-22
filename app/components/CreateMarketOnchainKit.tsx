@@ -6,8 +6,8 @@ import { ArrowLeft, TrendingUp, TrendingDown } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { UnifiedMarket } from '@/lib/types';
 import { SupabaseService } from '@/lib/supabase';
-import { validateMarketParams } from '@/lib/market-factory';
 import { generateCreateMarketCalls, handleTransactionStatus } from '@/lib/gasless-onchainkit';
+import { processMarketCreation, validateMarketCreation } from '@/lib/market-factory-onchainkit';
 import { Address } from 'viem';
 import toast from 'react-hot-toast';
 import { useAccount } from 'wagmi';
@@ -104,9 +104,8 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
         setMarketEndTime(endTime);
         
         // Validate parameters
-        const validation = validateMarketParams({
+        const validation = validateMarketCreation({
             question,
-            category: 'crypto',
             endTime,
             creatorAddress: address as Address
         });
@@ -125,21 +124,23 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
         handleTransactionStatus(
             status as any,
             async (txHash: string) => {
-                // On success, create database entry and add to store
+                // On success, process market creation with proper contract address parsing
                 try {
-                    // Parse the market address from transaction receipt
-                    const supabaseMarket = await SupabaseService.createMarket({
+                    // Use the existing processMarketCreation function to handle contract address extraction
+                    const result = await processMarketCreation({
                         question: generateQuestion(),
                         category: 'crypto',
-                        end_time: new Date(formData.endDate).toISOString(),
-                        creator_address: address as Address,
-                        contract_address: '0x0', // Will be updated once we parse the event
-                        yes_pool: 10,
-                        no_pool: 10,
-                        total_yes_shares: 0,
-                        total_no_shares: 0,
-                        resolved: false
+                        endTime: new Date(formData.endDate),
+                        creatorAddress: address as Address,
+                        transactionHash: txHash
                     });
+
+                    if (!result.success) {
+                        throw new Error(result.error || 'Failed to process market creation');
+                    }
+
+                    // Get the created market from database (now has proper contract address)
+                    const supabaseMarket = await SupabaseService.getMarket(result.marketId!);
 
                     const newMarket: UnifiedMarket = {
                         id: supabaseMarket.id,
@@ -159,7 +160,7 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
                         yesShares: 0,
                         noShares: 0,
                         creatorAddress: supabaseMarket.creator_address,
-                        contractAddress: '0x0',
+                        contractAddress: result.contractAddress!, // Now has the real contract address
                         createdAt: supabaseMarket.created_at,
                         resolved: false,
                         outcome: null,

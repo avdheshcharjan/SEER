@@ -1,6 +1,7 @@
 import { Address, encodeFunctionData, type Hex, decodeEventLog, createPublicClient, http } from 'viem';
 import { baseSepolia } from 'viem/chains';
-import { MARKET_FACTORY_ADDRESS } from './blockchain';
+// Updated MarketFactory contract address (deployed with real USDC)
+const MARKET_FACTORY_ADDRESS = '0xB788385cf679A69C43CfD9cB35045BBd4c2843f2' as const;
 import { SupabaseService } from './supabase';
 
 // MarketFactory ABI for contract interaction
@@ -19,11 +20,13 @@ export const MARKET_FACTORY_ABI = [
     {
         name: 'MarketCreated',
         type: 'event',
+        anonymous: false,
         inputs: [
             { name: 'market', type: 'address', indexed: true },
             { name: 'creator', type: 'address', indexed: true },
             { name: 'question', type: 'string', indexed: false },
-            { name: 'endTime', type: 'uint256', indexed: false }
+            { name: 'endTime', type: 'uint256', indexed: false },
+            { name: 'marketIndex', type: 'uint256', indexed: false }
         ]
     }
 ] as const;
@@ -76,8 +79,27 @@ async function parseMarketCreatedEvent(transactionHash: string): Promise<Address
         
         console.log('📋 Transaction receipt logs:', receipt.logs.length, 'logs found');
         
-        // Find MarketCreated event in logs
+        // Debug: log all topics to understand what events are actually emitted
+        receipt.logs.forEach((log, index) => {
+            console.log(`Log ${index}:`, {
+                address: log.address,
+                topics: log.topics,
+                data: log.data
+            });
+            
+            // Check if this log is from the MarketFactory contract
+            if (log.address.toLowerCase() === MARKET_FACTORY_ADDRESS.toLowerCase()) {
+                console.log(`🎯 Found log from MarketFactory contract!`);
+            }
+        });
+        
+        // Find MarketCreated event in logs - only from our contract
         for (const log of receipt.logs) {
+            // Skip logs that aren't from our MarketFactory contract
+            if (log.address.toLowerCase() !== MARKET_FACTORY_ADDRESS.toLowerCase()) {
+                continue;
+            }
+            
             try {
                 const decoded = decodeEventLog({
                     abi: MARKET_FACTORY_ABI,
@@ -92,13 +114,15 @@ async function parseMarketCreatedEvent(transactionHash: string): Promise<Address
                         market: marketAddress,
                         creator: decoded.args.creator,
                         question: decoded.args.question,
-                        endTime: decoded.args.endTime
+                        endTime: decoded.args.endTime,
+                        marketIndex: decoded.args.marketIndex
                     });
                     
                     return marketAddress;
                 }
-            } catch {
-                // Not a MarketCreated event, continue
+            } catch (decodeError) {
+                // Only log errors for logs from our contract
+                console.log(`Failed to decode log from MarketFactory as MarketCreated:`, decodeError);
                 continue;
             }
         }
@@ -135,13 +159,14 @@ export async function processMarketCreation(params: {
         
         console.log('📍 Market deployed at:', marketAddress);
         
-        // Create database entry with contract address
+        // Create database entry with contract address and transaction hash
         const supabaseMarket = await SupabaseService.createMarket({
             question: params.question,
             category: params.category,
             end_time: params.endTime.toISOString(),
             creator_address: params.creatorAddress,
             contract_address: marketAddress,
+            transaction_hash: params.transactionHash, // Save the transaction hash
             yes_pool: 10, // Initial liquidity from contract
             no_pool: 10,  // Initial liquidity from contract
             total_yes_shares: 0,
@@ -216,7 +241,9 @@ export function validateMarketCreation(params: {
 const marketFactoryOnchainKit = {
     generateCreateMarketCalls,
     processMarketCreation,
-    validateMarketCreation
+    validateMarketCreation,
+    MARKET_FACTORY_ADDRESS
 };
 
+export { MARKET_FACTORY_ADDRESS };
 export default marketFactoryOnchainKit;

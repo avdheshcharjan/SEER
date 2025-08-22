@@ -1,0 +1,30 @@
+{
+  "network": "Base Sepolia",
+  "chainId": "84532",
+  "deployer": "0x817ADecF13045578BDbA571eA204b6B0a1C90Ab8",
+  "usdc": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+  "factory": "0xB788385cf679A69C43CfD9cB35045BBd4c2843f2",
+  "demoMarket": "0x86F3108947dA0a88170A7AE8E967dAE8ce0a41F9",
+  "deployedAt": "1755857872",
+  "deployedAtReadable": "August 22, 2025",
+  "status": "DEPLOYED AND VERIFIED - REAL USDC",
+  "transactions": {
+    "factory": "Contract successfully deployed with real Base Sepolia USDC integration",
+    "demoMarket": "Demo market created with minimal liquidity"
+  },
+  "verification": {
+    "factory": {
+      "usdc": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      "owner": "0x817ADecF13045578BDbA571eA204b6B0a1C90Ab8",
+      "marketCount": 1
+    },
+    "demoMarket": {
+      "question": "Will ETH be above $4000 on December 31, 2024?",
+      "usdc": "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
+    }
+  },
+  "notes": {
+    "mockUSDC": "REMOVED - Now using real Base Sepolia USDC",
+    "liquidity": "Demo market has minimal liquidity - requires USDC balance to add more"
+  }
+}

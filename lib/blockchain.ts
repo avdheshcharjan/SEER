@@ -1,9 +1,13 @@
 import { base, baseSepolia } from 'wagmi/chains';
 import { encodeFunctionData, parseUnits, Address } from 'viem';
 
-// Real deployed contract addresses on Base Sepolia
-export const MARKET_FACTORY_ADDRESS = '0xfE7440a0C61aE1156E9B759Bb6C7E8BEFa0BCC3C' as Address;
-export const DEMO_MARKET_ADDRESS = '0x688B4b38b8f73878Cd19ef7250FA63D6b36361d1' as Address;
+// Real deployed contract addresses on Base Sepolia (with real USDC integration)
+export const MARKET_FACTORY_ADDRESS = '0xB788385cf679A69C43CfD9cB35045BBd4c2843f2' as Address;
+export const DEMO_MARKET_ADDRESS = '0x86F3108947dA0a88170A7AE8E967dAE8ce0a41F9' as Address;
+
+// Legacy addresses (replaced with new deployment)
+// OLD: Factory: 0xfE7440a0C61aE1156E9B759Bb6C7E8BEFa0BCC3C (used MockUSDC)
+// OLD: Demo: 0x688B4b38b8f73878Cd19ef7250FA63D6b36361d1
 
 
 // MarketFactory ABI for creating markets
@@ -29,6 +33,7 @@ export const MARKET_FACTORY_ABI = [
     {
         name: 'MarketCreated',
         type: 'event',
+        anonymous: false,
         inputs: [
             { name: 'market', type: 'address', indexed: true },
             { name: 'creator', type: 'address', indexed: true },

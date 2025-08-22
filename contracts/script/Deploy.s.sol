@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "forge-std/Script.sol";
-import "../src/MockUSDC.sol";
+// Using real Base Sepolia USDC contract
 import "../src/SimplePredictionMarket.sol";
 import "../src/MarketFactory.sol";
 
@@ -12,6 +12,9 @@ contract DeployScript is Script {
     
     // Base Sepolia Chain ID
     uint256 constant BASE_SEPOLIA_CHAIN_ID = 84532;
+    
+    // Real Base Sepolia USDC contract
+    address constant BASE_SEPOLIA_USDC = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
     
     function run() external {
         // Ensure we're deploying to the correct network
@@ -26,14 +29,14 @@ contract DeployScript is Script {
         
         vm.startBroadcast(deployerPrivateKey);
         
-        // Deploy Mock USDC
-        console.log("Deploying MockUSDC...");
-        MockUSDC usdc = new MockUSDC();
-        console.log("MockUSDC deployed at:", address(usdc));
+        // Use real Base Sepolia USDC
+        console.log("Using real Base Sepolia USDC...");
+        address usdc = BASE_SEPOLIA_USDC;
+        console.log("USDC address:", usdc);
         
         // Deploy Market Factory
         console.log("Deploying MarketFactory...");
-        MarketFactory factory = new MarketFactory(address(usdc), deployer);
+        MarketFactory factory = new MarketFactory(usdc, deployer);
         console.log("MarketFactory deployed at:", address(factory));
         
         // Create a demo prediction market through factory
@@ -45,39 +48,30 @@ contract DeployScript is Script {
         );
         console.log("Demo market created at:", address(demoMarket));
         
-        // Fund the demo market with initial liquidity (it starts with MINIMUM_LIQUIDITY already)
-        // Mint some USDC for testing
-        console.log("Minting test USDC...");
-        usdc.mint(deployer, 100000e6); // 100,000 USDC for testing
-        
-        // Approve and add some initial liquidity to make the market more realistic
-        usdc.approve(address(demoMarket), 1000e6);
-        demoMarket.buyShares(true, 500e6);  // Buy 500 USDC worth of YES shares
-        demoMarket.buyShares(false, 500e6); // Buy 500 USDC worth of NO shares
+        // Note: Demo market starts with MINIMUM_LIQUIDITY
+        // Real USDC requires actual balance to add liquidity
+        console.log("Demo market created with minimal liquidity");
+        console.log("To add liquidity, ensure deployer has USDC balance");
         
         vm.stopBroadcast();
         
         // Log deployment info
         console.log("=== DEPLOYMENT COMPLETE ===");
-        console.log("MockUSDC address:", address(usdc));
+        console.log("USDC address:", usdc);
         console.log("Demo market address:", address(demoMarket));
         console.log("Market question:", demoMarket.question());
         console.log("Market end time:", demoMarket.endTime());
         console.log("YES price:", demoMarket.getYesPrice());
         console.log("NO price:", demoMarket.getNoPrice());
         
-        // Save deployment info to JSON file
-        string memory json = '{\n';
-        json = string.concat(json, '  "network": "Base Sepolia",\n');
-        json = string.concat(json, '  "chainId": "84532",\n');
-        json = string.concat(json, '  "deployer": "', vm.toString(deployer), '",\n');
-        json = string.concat(json, '  "mockUSDC": "', vm.toString(address(usdc)), '",\n');
-        json = string.concat(json, '  "factory": "', vm.toString(address(factory)), '",\n');
-        json = string.concat(json, '  "demoMarket": "', vm.toString(address(demoMarket)), '",\n');
-        json = string.concat(json, '  "deployedAt": "', vm.toString(block.timestamp), '"\n');
-        json = string.concat(json, '}');
-        
-        vm.writeFile("deployments/base-sepolia.json", json);
-        console.log("Deployment info saved to deployments/base-sepolia.json");
+        // Log final addresses for manual saving
+        console.log("=== SAVE THESE ADDRESSES ===");
+        console.log("Network: Base Sepolia");
+        console.log("Chain ID: 84532");
+        console.log("Deployer: %s", deployer);
+        console.log("USDC: %s", usdc);
+        console.log("MarketFactory: %s", address(factory));
+        console.log("Demo Market: %s", address(demoMarket));
+        console.log("Deployed At: %s", block.timestamp);
     }
 }
