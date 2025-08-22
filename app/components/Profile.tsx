@@ -8,6 +8,8 @@ import { getMarketById } from '@/lib/prediction-markets';
 import { SupabaseService } from '@/lib/supabase';
 import { TrendingUp, TrendingDown, Clock, ExternalLink, Trophy, Target, DollarSign, Settings, Plus, Share } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
+import { Avatar, Identity, Name, Badge, Address } from '@coinbase/onchainkit/identity';
+import { base } from 'viem/chains';
 
 interface ProfileProps {
   onBack?: () => void;
@@ -164,21 +166,21 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
 
       {/* Profile Header */}
       <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm rounded-2xl p-6 mb-6 border border-slate-700/50">
-        <div className="flex items-center space-x-4 mb-4">
-          <div className="w-16 h-16 bg-gradient-to-br from-base-500 to-base-600 rounded-full flex items-center justify-center">
-            <span className="text-2xl font-bold text-white">
-              {userStats.username?.charAt(0).toUpperCase() || address.charAt(2).toUpperCase()}
-            </span>
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-white mb-1">
-              {userStats.username || formatAddress(address)}
-            </h2>
-            <p className="text-slate-400 text-sm">{formatAddress(address)}</p>
-            <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-2 ${rankBadge.bg} ${rankBadge.color} ${rankBadge.border} border`}>
-              <Trophy className="w-3 h-3 mr-1" />
-              Rank #{userStats.rank || 'Unranked'}
-            </div>
+        <div className="mb-4">
+          <Identity
+            address={address as `0x${string}`}
+            chain={base}
+            schemaId="0xf8b05c79f090979bf4a80270aba232dff11a10d9ca55c4f88de95317970f0de9"
+          >
+            <Avatar />
+            <Name className="text-white">
+              <Badge />
+            </Name>
+            <Address />
+          </Identity>
+          <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-2 ${rankBadge.bg} ${rankBadge.color} ${rankBadge.border} border`} style={{ alignSelf: 'flex-start' }}>
+            <Trophy className="w-3 h-3 mr-1" />
+            Rank #{userStats.rank || 'Unranked'}
           </div>
         </div>
 

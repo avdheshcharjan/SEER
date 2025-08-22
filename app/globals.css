@@ -288,6 +288,40 @@ body {
   }
 }
 
+/* OnchainKit Identity component overrides */
+[data-testid="ockIdentity"] {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+[data-testid="ockAvatar"] {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+[data-testid="ockName"] {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  color: white !important;
+}
+
+[data-testid="ockAddress"] {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+/* Generic override for any OnchainKit containers */
+.ock-bg-default {
+  background: transparent !important;
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
