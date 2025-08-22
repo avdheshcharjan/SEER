@@ -65,8 +65,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
     const {
         addSwipeHistory,
         user,
-        setUser,
-        createdMarkets
+        setUser
     } = useAppStore();
 
     useEffect(() => {
@@ -76,9 +75,8 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                 const supabaseMarkets = await SupabaseService.getActiveMarkets();
                 setRawSupabaseMarkets(supabaseMarkets); // Keep raw for contract mapping
 
-                // Use only Supabase markets and user-created markets
-                const unifiedSupabaseMarkets = supabaseMarkets.map(m => SchemaTransformer.supabaseToUnified(m));
-                const allAvailableMarkets = [...unifiedSupabaseMarkets, ...createdMarkets];
+                // Use only Supabase markets (single source of truth)
+                const allAvailableMarkets = supabaseMarkets.map(m => SchemaTransformer.supabaseToUnified(m));
                 
                 // Shuffle markets
                 const shuffledMarkets = allAvailableMarkets.sort(() => 0.5 - Math.random());
@@ -87,8 +85,8 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                 setCurrentMarkets(shuffledMarkets.slice(0, 20)); // Show first 20 initially
             } catch (error) {
                 console.error('Error loading markets:', error);
-                // Fallback to user-created markets only if Supabase fails
-                const allAvailableMarkets = [...createdMarkets];
+                // Fallback to empty array if Supabase fails
+                const allAvailableMarkets: UnifiedMarket[] = [];
                 const shuffledMarkets = allAvailableMarkets.sort(() => 0.5 - Math.random());
                 setAllMarkets(shuffledMarkets);
                 setCurrentMarkets(shuffledMarkets.slice(0, 20));
@@ -111,7 +109,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                 defaultBetAmount: 1, // Default $1 USDC
             });
         }
-    }, [address, user, setUser, createdMarkets]);
+    }, [address, user, setUser]);
 
 
     // Filter markets based on selected category
