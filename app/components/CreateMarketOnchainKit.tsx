@@ -13,11 +13,8 @@ import toast from 'react-hot-toast';
 import { useAccount } from 'wagmi';
 import { Transaction, TransactionButton, TransactionSponsor, TransactionStatusLabel, TransactionStatusAction } from '@coinbase/onchainkit/transaction';
 
-// Define a compatible type for OnchainKit transaction status
-type OnchainKitStatus = {
-    statusName: string;
-    statusData: unknown;
-};
+// Import the TransactionStatus type from our local types
+import type { TransactionStatus } from '@/lib/types/onchainkit';
 
 
 
@@ -124,10 +121,9 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
     };
 
     // Handle transaction status updates from OnchainKit
-    const onTransactionStatus = (status: OnchainKitStatus) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const onTransactionStatus = (status: any) => {
         handleTransactionStatus(
-            status as any, // eslint-disable-line @typescript-eslint/no-explicit-any
+            status,
             async (txHash: string) => {
                 // On success, process market creation with proper contract address parsing
                 try {
