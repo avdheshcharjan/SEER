@@ -1,6 +1,6 @@
 "use client";
 
-import { notFound } from 'next/navigation';
+
 import { SupabaseService } from '@/lib/supabase';
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';

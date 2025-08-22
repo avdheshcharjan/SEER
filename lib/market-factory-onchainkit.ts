@@ -42,22 +42,22 @@ export function generateCreateMarketCalls(params: {
 }) {
     // Default resolver to zero address
     const resolverAddress = params.resolverAddress || '0x0000000000000000000000000000000000000000';
-    
+
     // Convert endTime to timestamp
     const endTimeTimestamp = Math.floor(params.endTime.getTime() / 1000);
-    
+
     // Encode the createMarket function call
     const data = encodeFunctionData({
         abi: MARKET_FACTORY_ABI,
         functionName: 'createMarket',
         args: [params.question, BigInt(endTimeTimestamp), resolverAddress]
     });
-    
+
     // Return the call in OnchainKit format
     return [{
         to: MARKET_FACTORY_ADDRESS as Hex,
         data: data as Hex,
-        value: 0n // No ETH required for market creation
+        value: BigInt(0) // No ETH required for market creation
     }];
 }
 
@@ -73,12 +73,12 @@ const publicClient = createPublicClient({
 async function parseMarketCreatedEvent(transactionHash: string): Promise<Address | null> {
     try {
         // Get transaction receipt
-        const receipt = await publicClient.getTransactionReceipt({ 
-            hash: transactionHash as `0x${string}` 
+        const receipt = await publicClient.getTransactionReceipt({
+            hash: transactionHash as `0x${string}`
         });
-        
+
         console.log('📋 Transaction receipt logs:', receipt.logs.length, 'logs found');
-        
+
         // Debug: log all topics to understand what events are actually emitted
         receipt.logs.forEach((log, index) => {
             console.log(`Log ${index}:`, {
@@ -86,20 +86,20 @@ async function parseMarketCreatedEvent(transactionHash: string): Promise<Address
                 topics: log.topics,
                 data: log.data
             });
-            
+
             // Check if this log is from the MarketFactory contract
             if (log.address.toLowerCase() === MARKET_FACTORY_ADDRESS.toLowerCase()) {
                 console.log(`🎯 Found log from MarketFactory contract!`);
             }
         });
-        
+
         // Find MarketCreated event in logs - only from our contract
         for (const log of receipt.logs) {
             // Skip logs that aren't from our MarketFactory contract
             if (log.address.toLowerCase() !== MARKET_FACTORY_ADDRESS.toLowerCase()) {
                 continue;
             }
-            
+
             try {
                 const decoded = decodeEventLog({
                     abi: MARKET_FACTORY_ABI,
@@ -107,7 +107,7 @@ async function parseMarketCreatedEvent(transactionHash: string): Promise<Address
                     data: log.data,
                     topics: log.topics,
                 });
-                
+
                 if (decoded.eventName === 'MarketCreated') {
                     const marketAddress = decoded.args.market as Address;
                     console.log(`✅ Parsed MarketCreated event:`, {
@@ -117,7 +117,7 @@ async function parseMarketCreatedEvent(transactionHash: string): Promise<Address
                         endTime: decoded.args.endTime,
                         marketIndex: decoded.args.marketIndex
                     });
-                    
+
                     return marketAddress;
                 }
             } catch (decodeError) {
@@ -126,10 +126,10 @@ async function parseMarketCreatedEvent(transactionHash: string): Promise<Address
                 continue;
             }
         }
-        
+
         console.warn('⚠️ No MarketCreated event found in transaction receipt');
         return null;
-        
+
     } catch (error) {
         console.error('Failed to parse MarketCreated event:', error);
         return null;
@@ -149,16 +149,16 @@ export async function processMarketCreation(params: {
 }) {
     try {
         console.log('🔍 Processing market creation transaction:', params.transactionHash);
-        
+
         // Parse the transaction receipt to get the deployed market address
         const marketAddress = await parseMarketCreatedEvent(params.transactionHash);
-        
+
         if (!marketAddress) {
             throw new Error('Failed to extract market address from transaction');
         }
-        
+
         console.log('📍 Market deployed at:', marketAddress);
-        
+
         // Create database entry with contract address and transaction hash
         const supabaseMarket = await SupabaseService.createMarket({
             question: params.question,
@@ -173,20 +173,20 @@ export async function processMarketCreation(params: {
             total_no_shares: 0,
             resolved: false
         });
-        
+
         console.log('✅ Market created successfully:', {
             marketId: supabaseMarket.id,
             contractAddress: marketAddress,
             transactionHash: params.transactionHash
         });
-        
+
         return {
             success: true,
             marketId: supabaseMarket.id,
             contractAddress: marketAddress,
             transactionHash: params.transactionHash
         };
-        
+
     } catch (error) {
         console.error('❌ Failed to process market creation:', error);
         return {
@@ -205,33 +205,33 @@ export function validateMarketCreation(params: {
     creatorAddress: Address;
 }): { valid: boolean; errors: string[] } {
     const errors: string[] = [];
-    
+
     // Validate question
     if (!params.question || params.question.trim().length < 10) {
         errors.push('Question must be at least 10 characters long');
     }
-    
+
     if (params.question.length > 256) {
         errors.push('Question must be less than 256 characters');
     }
-    
+
     // Validate end time
     const now = new Date();
     const minEndTime = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour from now
-    
+
     if (params.endTime <= now) {
         errors.push('End time must be in the future');
     }
-    
+
     if (params.endTime <= minEndTime) {
         errors.push('End time must be at least 1 hour from now');
     }
-    
+
     // Validate creator address
     if (!params.creatorAddress || params.creatorAddress === '0x0000000000000000000000000000000000000000') {
         errors.push('Valid creator address required');
     }
-    
+
     return {
         valid: errors.length === 0,
         errors

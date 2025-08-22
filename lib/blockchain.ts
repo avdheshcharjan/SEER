@@ -5,6 +5,9 @@ import { encodeFunctionData, parseUnits, Address } from 'viem';
 export const MARKET_FACTORY_ADDRESS = '0xB788385cf679A69C43CfD9cB35045BBd4c2843f2' as Address;
 export const DEMO_MARKET_ADDRESS = '0x86F3108947dA0a88170A7AE8E967dAE8ce0a41F9' as Address;
 
+// USDC contract address on Base Sepolia
+export const USDC_CONTRACT_ADDRESS = '0x5dEaC602762362FE5f135FA5904351916053cF70' as Address;
+
 // Legacy addresses (replaced with new deployment)
 // OLD: Factory: 0xfE7440a0C61aE1156E9B759Bb6C7E8BEFa0BCC3C (used MockUSDC)
 // OLD: Demo: 0x688B4b38b8f73878Cd19ef7250FA63D6b36361d1
@@ -164,13 +167,13 @@ export function getMarketContractAddress(marketId: string): Address {
     if (supabaseMarkets[marketId]) {
         return supabaseMarkets[marketId];
     }
-    
+
     // Check if it's a static/legacy market ID
     const staticMarkets = getStaticMarketMapping();
     if (staticMarkets[marketId]) {
         return staticMarkets[marketId];
     }
-    
+
     // Fallback to demo market for development (with warning)
     console.warn(`⚠️  Market ${marketId} not found, using demo contract. This should not happen in production!`);
     return DEMO_MARKET_ADDRESS;

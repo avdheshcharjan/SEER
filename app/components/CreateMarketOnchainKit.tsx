@@ -11,8 +11,15 @@ import { processMarketCreation, validateMarketCreation } from '@/lib/market-fact
 import { Address } from 'viem';
 import toast from 'react-hot-toast';
 import { useAccount } from 'wagmi';
-// @ts-ignore - OnchainKit types not available in development
-import { Transaction, TransactionButton, TransactionSponsor, TransactionStatus, TransactionStatusLabel, TransactionStatusAction } from '@coinbase/onchainkit/transaction';
+import { Transaction, TransactionButton, TransactionSponsor, TransactionStatusLabel, TransactionStatusAction } from '@coinbase/onchainkit/transaction';
+
+// Define a compatible type for OnchainKit transaction status
+type OnchainKitStatus = {
+    statusName: string;
+    statusData: unknown;
+};
+
+
 
 interface CreateMarketProps {
     onBack: () => void;
@@ -117,9 +124,10 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
     };
 
     // Handle transaction status updates from OnchainKit
-    const onTransactionStatus = (status: any) => {
+    const onTransactionStatus = (status: OnchainKitStatus) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         handleTransactionStatus(
-            status as any,
+            status as any, // eslint-disable-line @typescript-eslint/no-explicit-any
             async (txHash: string) => {
                 // On success, process market creation with proper contract address parsing
                 try {
