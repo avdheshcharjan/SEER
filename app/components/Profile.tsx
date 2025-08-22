@@ -72,15 +72,15 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
 
   if (!address || !userStats) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[600px] text-center px-6">
-        <div className="text-6xl mb-6">👤</div>
-        <h2 className="text-2xl font-bold text-white mb-4">No Profile Found</h2>
-        <p className="text-slate-400 mb-6">
+      <div className="flex flex-col items-center justify-center min-h-[500px] sm:min-h-[600px] text-center px-6">
+        <div className="text-5xl sm:text-6xl mb-6">👤</div>
+        <h2 className="mobile-text-2xl font-bold text-white mb-4">No Profile Found</h2>
+        <p className="text-slate-400 mb-6 mobile-text-sm">
           Connect your wallet to view your prediction history and stats.
         </p>
         <motion.button
           onClick={onBack}
-          className="px-6 py-3 bg-base-500 hover:bg-base-600 text-white rounded-xl font-semibold transition-colors"
+          className="px-6 py-3 bg-base-500 hover:bg-base-600 text-white rounded-xl font-semibold transition-colors ios-button min-h-[48px]"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
@@ -132,12 +132,12 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto px-4">
+    <div className="w-full mobile-container">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <motion.button
           onClick={onBack}
-          className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+          className="p-2 hover:bg-slate-800 rounded-lg transition-colors ios-button min-h-[44px] min-w-[44px]"
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
         >
@@ -146,7 +146,7 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
           </svg>
         </motion.button>
 
-        <h1 className="text-xl font-bold text-white">Profile</h1>
+        <h1 className="mobile-text-xl font-bold text-white">Profile</h1>
 
         <motion.button
           onClick={handleRefresh}
