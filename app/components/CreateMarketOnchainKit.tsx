@@ -46,8 +46,6 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
     const [marketQuestion, setMarketQuestion] = useState('');
     const [marketEndTime, setMarketEndTime] = useState<Date | null>(null);
 
-
-
     // Fetch token data from CoinGecko
     const fetchTokenData = async (ticker: string) => {
         const selectedToken = TICKERS.find(t => t.value === ticker);
@@ -60,7 +58,7 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
             );
             const data = await response.json();
             const tokenInfo = data[selectedToken.coinGeckoId];
-            
+
             if (tokenInfo) {
                 setTokenData({
                     currentPrice: tokenInfo.usd,
@@ -85,7 +83,7 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
         if (!formData.ticker || !formData.price || !formData.endDate) {
             return 'Please fill all fields';
         }
-        
+
         const endDate = new Date(formData.endDate).toLocaleDateString();
         const direction = formData.direction === 'above' ? 'above' : 'below';
         return `Will ${formData.ticker} be ${direction} $${formData.price} by ${endDate}?`;
@@ -99,28 +97,27 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
 
         const question = generateQuestion();
         const endTime = new Date(formData.endDate);
-        
+
         setMarketQuestion(question);
         setMarketEndTime(endTime);
-        
+
         // Validate parameters
         const validation = validateMarketCreation({
             question,
             endTime,
             creatorAddress: address as Address
         });
-        
+
         if (!validation.valid) {
             toast.error(validation.errors.join(', '));
             return;
         }
-        
+
         setStep('preview');
     };
 
-
     // Handle transaction status updates from OnchainKit
-    const onTransactionStatus = (status: TransactionStatus) => {
+    const onTransactionStatus = (status: any) => {
         handleTransactionStatus(
             status as any,
             async (txHash: string) => {
@@ -214,29 +211,28 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
                         border: '1px solid #ef4444',
                     },
                 });
-                
+
                 setStep('preview');
             }
         );
     };
 
-
     if (!address) {
         return (
             <div className="flex items-center justify-center h-screen">
-                <p>Please connect your wallet to create a market</p>
+                <p className="text-white text-lg">Please connect your wallet to create a market</p>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-purple-600 via-blue-600 to-cyan-600">
+        <div className="min-h-screen bg-slate-900">
             <div className="container mx-auto px-4 py-6">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8">
-                    <button 
+                    <button
                         onClick={onBack}
-                        className="flex items-center gap-2 text-white hover:opacity-80 transition-opacity"
+                        className="flex items-center gap-2 text-white hover:text-slate-300 transition-colors"
                     >
                         <ArrowLeft className="w-5 h-5" />
                         <span>Back</span>
@@ -246,19 +242,19 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
                 </div>
 
                 {step === 'form' && (
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="max-w-lg mx-auto"
                     >
-                        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 space-y-6">
+                        <div className="bg-slate-800/30 backdrop-blur-sm rounded-2xl p-6 space-y-6 border border-slate-700/50">
                             {/* Ticker Selection */}
                             <div>
-                                <label className="block text-white mb-2">Select Token</label>
-                                <select 
+                                <label className="block text-white mb-2 font-medium">Select Token</label>
+                                <select
                                     value={formData.ticker}
-                                    onChange={(e) => setFormData({...formData, ticker: e.target.value})}
-                                    className="w-full px-4 py-3 bg-white/20 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50"
+                                    onChange={(e) => setFormData({ ...formData, ticker: e.target.value })}
+                                    className="w-full px-4 py-3 bg-slate-700/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-base-500/50 border border-slate-600/50"
                                 >
                                     {TICKERS.map(ticker => (
                                         <option key={ticker.value} value={ticker.value} className="text-black">
@@ -270,13 +266,13 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
 
                             {/* Token Info */}
                             {tokenData && !loadingTokenData && (
-                                <div className="bg-white/10 rounded-lg p-4 space-y-2">
+                                <div className="bg-slate-700/30 rounded-xl p-4 space-y-2 border border-slate-600/50">
                                     <div className="flex justify-between">
-                                        <span className="text-white/60">Current Price</span>
+                                        <span className="text-slate-400">Current Price</span>
                                         <span className="text-white font-bold">${tokenData.currentPrice}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span className="text-white/60">24h Change</span>
+                                        <span className="text-slate-400">24h Change</span>
                                         <span className={`font-bold ${tokenData.priceChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                                             {tokenData.priceChange >= 0 ? '+' : ''}{tokenData.priceChange.toFixed(2)}%
                                         </span>
@@ -286,26 +282,24 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
 
                             {/* Direction Selection */}
                             <div>
-                                <label className="block text-white mb-2">Price Direction</label>
+                                <label className="block text-white mb-2 font-medium">Price Direction</label>
                                 <div className="grid grid-cols-2 gap-3">
                                     <button
-                                        onClick={() => setFormData({...formData, direction: 'above'})}
-                                        className={`py-3 rounded-lg flex items-center justify-center gap-2 transition-all ${
-                                            formData.direction === 'above' 
-                                                ? 'bg-green-500 text-white' 
-                                                : 'bg-white/20 text-white/60 hover:bg-white/30'
-                                        }`}
+                                        onClick={() => setFormData({ ...formData, direction: 'above' })}
+                                        className={`py-3 rounded-xl flex items-center justify-center gap-2 transition-all ${formData.direction === 'above'
+                                            ? 'bg-green-500 text-white shadow-lg'
+                                            : 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 border border-slate-600/50'
+                                            }`}
                                     >
                                         <TrendingUp className="w-5 h-5" />
                                         Above
                                     </button>
                                     <button
-                                        onClick={() => setFormData({...formData, direction: 'below'})}
-                                        className={`py-3 rounded-lg flex items-center justify-center gap-2 transition-all ${
-                                            formData.direction === 'below' 
-                                                ? 'bg-red-500 text-white' 
-                                                : 'bg-white/20 text-white/60 hover:bg-white/30'
-                                        }`}
+                                        onClick={() => setFormData({ ...formData, direction: 'below' })}
+                                        className={`py-3 rounded-xl flex items-center justify-center gap-2 transition-all ${formData.direction === 'below'
+                                            ? 'bg-red-500 text-white shadow-lg'
+                                            : 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 border border-slate-600/50'
+                                            }`}
                                     >
                                         <TrendingDown className="w-5 h-5" />
                                         Below
@@ -315,32 +309,32 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
 
                             {/* Target Price */}
                             <div>
-                                <label className="block text-white mb-2">Target Price ($)</label>
-                                <input 
+                                <label className="block text-white mb-2 font-medium">Target Price ($)</label>
+                                <input
                                     type="number"
                                     value={formData.price}
-                                    onChange={(e) => setFormData({...formData, price: e.target.value})}
+                                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                                     placeholder="Enter target price"
-                                    className="w-full px-4 py-3 bg-white/20 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50"
+                                    className="w-full px-4 py-3 bg-slate-700/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-base-500/50 border border-slate-600/50"
                                 />
                             </div>
 
                             {/* End Date */}
                             <div>
-                                <label className="block text-white mb-2">End Date</label>
-                                <input 
+                                <label className="block text-white mb-2 font-medium">End Date</label>
+                                <input
                                     type="datetime-local"
                                     value={formData.endDate}
-                                    onChange={(e) => setFormData({...formData, endDate: e.target.value})}
+                                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                                     min={new Date(Date.now() + 3600000).toISOString().slice(0, 16)}
-                                    className="w-full px-4 py-3 bg-white/20 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/50"
+                                    className="w-full px-4 py-3 bg-slate-700/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-base-500/50 border border-slate-600/50"
                                 />
                             </div>
 
                             {/* Preview Button */}
                             <button
                                 onClick={handlePreview}
-                                className="w-full py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg font-semibold hover:opacity-90 transition-opacity"
+                                className="w-full py-3 bg-gradient-to-r from-base-500 to-base-600 hover:from-base-600 hover:to-base-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-base-500/25"
                             >
                                 Preview Market
                             </button>
@@ -349,17 +343,17 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
                 )}
 
                 {step === 'preview' && (
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         className="max-w-lg mx-auto"
                     >
-                        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 space-y-6">
+                        <div className="bg-slate-800/30 backdrop-blur-sm rounded-2xl p-6 space-y-6 border border-slate-700/50">
                             <h2 className="text-xl font-bold text-white">Market Preview</h2>
-                            
-                            <div className="bg-white/10 rounded-lg p-4 space-y-3">
+
+                            <div className="bg-slate-700/30 rounded-xl p-4 space-y-3 border border-slate-600/50">
                                 <p className="text-white text-lg font-semibold">{marketQuestion}</p>
-                                <div className="space-y-2 text-white/80">
+                                <div className="space-y-2 text-slate-300">
                                     <p>End Date: {marketEndTime?.toLocaleString()}</p>
                                     <p>Initial Liquidity: 10 USDC each side</p>
                                     <p>Transaction: Gasless (sponsored)</p>
@@ -375,8 +369,8 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
                                 )}
                                 onStatus={onTransactionStatus}
                             >
-                                <TransactionButton 
-                                    className="w-full py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+                                <TransactionButton
+                                    className="w-full py-3 bg-gradient-to-r from-base-500 to-base-600 hover:from-base-600 hover:to-base-700 text-white rounded-xl font-semibold transition-all duration-300 shadow-lg hover:shadow-base-500/25 disabled:opacity-50"
                                     text="Create Market"
                                 />
                                 <TransactionSponsor />
@@ -386,7 +380,7 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
 
                             <button
                                 onClick={() => setStep('form')}
-                                className="w-full py-3 bg-white/20 text-white rounded-lg font-semibold hover:bg-white/30 transition-colors"
+                                className="w-full py-3 bg-slate-700/50 text-white rounded-xl font-semibold hover:bg-slate-600/50 transition-colors border border-slate-600/50"
                             >
                                 Back to Edit
                             </button>
