@@ -15,7 +15,16 @@ interface CryptoCardProps {
 }
 
 export function CryptoCard({ market, style, className, isActive }: CryptoCardProps) {
-    const [coinGeckoData, setCoinGeckoData] = useState<any>(null);
+    const [coinGeckoData, setCoinGeckoData] = useState<{
+        currentPrice: number;
+        priceChange: number;
+        marketCap: string;
+        volume: string;
+        chartData: {
+            timestamps: number[];
+            prices: number[];
+        };
+    } | null>(null);
     const [loading, setLoading] = useState(false);
 
     // Fetch CoinGecko data when component mounts or market changes

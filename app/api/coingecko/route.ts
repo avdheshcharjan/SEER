@@ -4,7 +4,18 @@ const COINGECKO_BASE_URL = 'https://api.coingecko.com/api/v3';
 const CACHE_DURATION = 60 * 1000; // 1 minute cache
 
 // In-memory cache for API responses
-const cache = new Map<string, { data: any; timestamp: number }>();
+interface CachedData {
+  currentPrice: number;
+  priceChange: number;
+  marketCap: string;
+  volume: string;
+  chartData: {
+    timestamps: number[];
+    prices: number[];
+  };
+}
+
+const cache = new Map<string, { data: CachedData; timestamp: number }>();
 
 // Mapping of tickers to CoinGecko IDs
 const TICKER_TO_COINGECKO_ID: Record<string, string> = {
@@ -60,7 +71,7 @@ function getCachedData(key: string) {
   return null;
 }
 
-function setCachedData(key: string, data: any) {
+function setCachedData(key: string, data: CachedData) {
   cache.set(key, {
     data,
     timestamp: Date.now()

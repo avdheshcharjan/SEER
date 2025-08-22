@@ -7,7 +7,7 @@ import { useAppStore, useUserStats } from '@/lib/store';
 import { getMarketById } from '@/lib/prediction-markets';
 import { SupabaseService } from '@/lib/supabase';
 import { TrendingUp, TrendingDown, Clock, ExternalLink, Trophy, Target, DollarSign, Settings, Plus, Share } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 interface ProfileProps {
   onBack?: () => void;
@@ -32,7 +32,7 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
   const [loading, setLoading] = useState(false);
 
   // Load user predictions from Supabase
-  const loadSupabasePredictions = async () => {
+  const loadSupabasePredictions = useCallback(async () => {
     if (!address) return;
 
     setLoading(true);
@@ -44,11 +44,11 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [address]);
 
   useEffect(() => {
     loadSupabasePredictions();
-  }, [address]);
+  }, [loadSupabasePredictions]);
 
   // Refresh function to reload from database
   const handleRefresh = async () => {

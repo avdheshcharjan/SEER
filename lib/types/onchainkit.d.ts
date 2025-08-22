@@ -1,5 +1,3 @@
-import { Address } from 'viem';
-
 export type TransactionStatus = 
   | { statusName: 'init'; statusData: null }
   | { statusName: 'error'; statusData: { message: string } }

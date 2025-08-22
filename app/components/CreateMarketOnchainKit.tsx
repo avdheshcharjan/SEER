@@ -6,15 +6,14 @@ import { ArrowLeft, TrendingUp, TrendingDown } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { UnifiedMarket } from '@/lib/types';
 import { SupabaseService } from '@/lib/supabase';
-import { generateCreateMarketCalls, handleTransactionStatus } from '@/lib/gasless-onchainkit';
+import { generateCreateMarketCalls } from '@/lib/gasless-onchainkit';
 import { processMarketCreation, validateMarketCreation } from '@/lib/market-factory-onchainkit';
 import { Address } from 'viem';
 import toast from 'react-hot-toast';
 import { useAccount } from 'wagmi';
 import { Transaction, TransactionButton, TransactionSponsor, TransactionStatusLabel, TransactionStatusAction } from '@coinbase/onchainkit/transaction';
+import type { LifecycleStatus } from '@coinbase/onchainkit/transaction';
 
-// Import the TransactionStatus type from our local types
-import type { TransactionStatus } from '@/lib/types/onchainkit';
 
 
 
@@ -121,12 +120,14 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
     };
 
     // Handle transaction status updates from OnchainKit
-    const onTransactionStatus = (status: any) => {
-        handleTransactionStatus(
-            status,
-            async (txHash: string) => {
+    const onTransactionStatus = (status: LifecycleStatus) => {
+        // Convert LifecycleStatus to our expected format and handle it directly
+        if (status.statusName === 'success' && status.statusData && 'transactionReceipts' in status.statusData) {
+            const txHash = status.statusData.transactionReceipts?.[0]?.transactionHash;
+            if (txHash) {
                 // On success, process market creation with proper contract address parsing
-                try {
+                (async () => {
+                    try {
                     // Use the existing processMarketCreation function to handle contract address extraction
                     const result = await processMarketCreation({
                         question: generateQuestion(),
@@ -203,22 +204,23 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
                             border: '1px solid #ef4444',
                         },
                     });
-                }
-            },
-            (error: string) => {
-                // On error
-                toast.error(`Market creation failed: ${error}`, {
-                    style: {
-                        borderRadius: '12px',
-                        background: '#1e293b',
-                        color: '#f1f5f9',
-                        border: '1px solid #ef4444',
-                    },
-                });
-
-                setStep('preview');
+                    }
+                })();
             }
-        );
+        }
+        
+        // Handle error status
+        if (status.statusName === 'error' && status.statusData && 'message' in status.statusData) {
+            toast.error(`Market creation failed: ${status.statusData.message}`, {
+                style: {
+                    borderRadius: '12px',
+                    background: '#1e293b',
+                    color: '#f1f5f9',
+                    border: '1px solid #ef4444',
+                },
+            });
+            setStep('preview');
+        }
     };
 
     if (!address) {
