@@ -397,15 +397,15 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
 
     if (!address) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[600px] text-center px-6">
-                <div className="text-6xl mb-6">🔗</div>
-                <h2 className="text-2xl font-bold text-white mb-4">Connect Your Wallet</h2>
-                <p className="text-slate-400 mb-6 max-w-md">
+            <div className="flex flex-col items-center justify-center min-h-[500px] sm:min-h-[600px] text-center px-6">
+                <div className="text-5xl sm:text-6xl mb-6">🔗</div>
+                <h2 className="mobile-text-2xl font-bold text-white mb-4">Connect Your Wallet</h2>
+                <p className="text-slate-400 mb-6 max-w-md mobile-text-sm">
                     Connect your wallet to start making predictions and earning rewards on the Base network.
                 </p>
                 <motion.button
                     onClick={onBack}
-                    className="px-6 py-3 bg-base-500 hover:bg-base-600 text-white rounded-xl font-semibold transition-colors"
+                    className="px-6 py-3 bg-base-500 hover:bg-base-600 text-white rounded-xl font-semibold transition-colors ios-button min-h-[48px]"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                 >
@@ -416,12 +416,12 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
     }
 
     return (
-        <div className="w-full max-w-md mx-auto px-4">
+        <div className="w-full mobile-container">
             {/* Header */}
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center justify-between mb-6">
                 <motion.button
                     onClick={onBack}
-                    className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                    className="p-2 hover:bg-slate-800 rounded-lg transition-colors ios-button min-h-[44px] min-w-[44px]"
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.95 }}
                 >
@@ -431,7 +431,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                 </motion.button>
 
                 <div className="flex flex-col items-center">
-                    <h1 className="text-xl font-bold text-white">Seer</h1>
+                    <h1 className="mobile-text-xl font-bold text-white">Seer</h1>
                     {isPaymasterConfigured() && (
                         <div className="text-xs text-green-400 mt-1">
                             ⚡ Gasless enabled
@@ -455,13 +455,13 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
 
 
             {/* Category Tab Bar */}
-            <div className="flex items-center space-x-1 mb-6 p-1 bg-slate-800/50 rounded-xl border border-slate-700/50">
+            <div className="flex items-center space-x-1 mb-6 p-1 bg-slate-800/50 rounded-xl border border-slate-700/50 overflow-x-auto">
                 {['all', 'crypto', 'tech', 'celebrity', 'sports', 'politics'].map((category) => (
                     <motion.button
                         key={category}
                         onClick={() => setSelectedCategory(category as typeof selectedCategory)}
                         className={`
-                            px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex-1 text-center
+                            px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex-shrink-0 text-center min-w-[60px]
                             ${selectedCategory === category
                                 ? 'bg-base-500 text-white shadow-lg'
                                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
@@ -487,22 +487,22 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                 <div className="fixed top-20 right-4 z-50 bg-blue-500/90 backdrop-blur-sm text-white px-4 py-2 rounded-full border border-blue-400/50">
                     <div className="flex items-center space-x-2">
                         <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                        <span className="text-sm font-medium">{pendingBatch.length} pending</span>
+                        <span className="mobile-text-sm font-medium">{pendingBatch.length} pending</span>
                     </div>
                 </div>
             )}
 
             {/* OnchainKit Transaction component for batch gasless predictions */}
             {currentPrediction && (
-                <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 bg-slate-800/95 backdrop-blur-sm p-6 rounded-xl border border-slate-600 min-w-[300px]">
+                <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 bg-slate-800/95 backdrop-blur-sm p-4 sm:p-6 rounded-xl border border-slate-600 min-w-[280px] sm:min-w-[300px] max-w-[90vw]">
                     <div className="text-center mb-4">
-                        <h3 className="text-white font-semibold mb-2">
+                        <h3 className="text-white font-semibold mb-2 mobile-text-lg">
                             {pendingBatch.length > 0 ? 
                                 `Confirming ${pendingBatch.length} Predictions` : 
                                 'Confirming Prediction'
                             }
                         </h3>
-                        <p className="text-slate-400 text-sm">Gasless transaction in progress...</p>
+                        <p className="text-slate-400 mobile-text-sm">Gasless transaction in progress...</p>
                     </div>
                     <Transaction
                         chainId={baseSepolia.id}
@@ -515,7 +515,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                                 `Confirm ${pendingBatch.length} Predictions` : 
                                 'Confirm Prediction'
                             }
-                            className="w-full mb-2"
+                            className="w-full mb-2 ios-button min-h-[48px]"
                         />
                         <TransactionSponsor />
                                             <div className="mt-4">
