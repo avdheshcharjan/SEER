@@ -4,33 +4,86 @@
  * This is the recommended approach for Coinbase Paymaster integration
  */
 
-import { Address, encodeFunctionData } from 'viem';
+import { Address, encodeFunctionData, parseUnits } from 'viem';
 import { 
   MARKET_FACTORY_ADDRESS,
   PREDICTION_MARKET_ABI,
   MARKET_FACTORY_ABI
 } from './blockchain';
 
+// USDC contract address on Base Sepolia (must match blockchain.ts)
+const USDC_CONTRACT_ADDRESS = '0x036CbD53842c5426634e7929541eC2318f3dCF7e' as Address;
+
+// ERC20 ABI for approve function
+const ERC20_ABI = [
+  {
+    name: 'approve',
+    type: 'function',
+    inputs: [
+      { name: 'spender', type: 'address' },
+      { name: 'amount', type: 'uint256' }
+    ],
+    outputs: [{ name: '', type: 'bool' }],
+    stateMutability: 'nonpayable'
+  },
+  {
+    name: 'allowance',
+    type: 'function',
+    inputs: [
+      { name: 'owner', type: 'address' },
+      { name: 'spender', type: 'address' }
+    ],
+    outputs: [{ name: '', type: 'uint256' }],
+    stateMutability: 'view'
+  }
+] as const;
+
 
 /**
  * Generate transaction calls for buying shares in a prediction market
+ * Includes USDC approval if needed
  */
 export function generateBuySharesCalls(
   marketAddress: Address,
   prediction: 'yes' | 'no',
-  amount: bigint
+  amount: bigint,
+  needsApproval: boolean = true
 ) {
-  const data = encodeFunctionData({
+  const calls: Array<{
+    to: Address;
+    data: `0x${string}`;
+    value: bigint;
+  }> = [];
+
+  // Add approval call if needed
+  if (needsApproval) {
+    const approvalData = encodeFunctionData({
+      abi: ERC20_ABI,
+      functionName: 'approve',
+      args: [marketAddress, amount]
+    });
+
+    calls.push({
+      to: USDC_CONTRACT_ADDRESS,
+      data: approvalData as `0x${string}`,
+      value: BigInt(0)
+    });
+  }
+
+  // Add buy shares call
+  const buySharesData = encodeFunctionData({
     abi: PREDICTION_MARKET_ABI,
     functionName: 'buyShares',
     args: [prediction === 'yes', amount]
   });
 
-  return [{
+  calls.push({
     to: marketAddress,
-    data: data as `0x${string}`,
+    data: buySharesData as `0x${string}`,
     value: BigInt(0)
-  }];
+  });
+
+  return calls;
 }
 
 /**
@@ -64,6 +117,26 @@ export function generateCreateMarketCalls(
   return calls;
 }
 
+/**
+ * Generate approval call for maximum USDC spending
+ * This allows multiple predictions without repeated approvals
+ */
+export function generateUSDCApprovalCalls(
+  spenderAddress: Address,
+  amount: bigint = parseUnits('1000', 6) // Approve 1000 USDC by default
+) {
+  const data = encodeFunctionData({
+    abi: ERC20_ABI,
+    functionName: 'approve',
+    args: [spenderAddress, amount]
+  });
+
+  return [{
+    to: USDC_CONTRACT_ADDRESS,
+    data: data as `0x${string}`,
+    value: BigInt(0)
+  }];
+}
 
 /**
  * Validate that the paymaster is properly configured
@@ -196,9 +269,11 @@ export function handleTransactionStatus(
 const gaslessOnchainKit = {
   generateBuySharesCalls,
   generateCreateMarketCalls,
+  generateUSDCApprovalCalls,
   validatePaymasterConfig,
   getRequiredAllowlist,
-  handleTransactionStatus
+  handleTransactionStatus,
+  USDC_CONTRACT_ADDRESS
 };
 
 export default gaslessOnchainKit;

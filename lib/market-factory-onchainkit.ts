@@ -1,5 +1,5 @@
-import { Address, encodeFunctionData, type Hex, decodeEventLog, createPublicClient, http } from 'viem';
-import { baseSepolia } from 'viem/chains';
+import { Address, encodeFunctionData, type Hex, decodeEventLog } from 'viem';
+import { publicClient } from './viem-client';
 // Updated MarketFactory contract address (deployed with real USDC)
 const MARKET_FACTORY_ADDRESS = '0xB788385cf679A69C43CfD9cB35045BBd4c2843f2' as const;
 import { SupabaseService } from './supabase';
@@ -61,11 +61,7 @@ export function generateCreateMarketCalls(params: {
     }];
 }
 
-// Create a public client for reading from the blockchain
-const publicClient = createPublicClient({
-    chain: baseSepolia,
-    transport: http('https://sepolia.base.org')
-});
+// Using centralized public client from viem-client.ts
 
 /**
  * Parse MarketCreated event from transaction receipt

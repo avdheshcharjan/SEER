@@ -4,22 +4,27 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { useAccount } from 'wagmi';
+import { parseUnits, Address } from 'viem';
+import { baseSepolia } from 'viem/chains';
 import { SwipeStack } from './SwipeStack';
 import { useAppStore } from '@/lib/store';
-import { getRandomMarkets } from '@/lib/prediction-markets';
+// Static markets removed - now using only Supabase data
 import { UnifiedMarket, UnifiedUserPrediction, SchemaTransformer } from '@/lib/types';
 import { SupabaseService } from '@/lib/supabase';
+import { getMarketContractAddress, validateMarketContract } from '@/lib/blockchain';
 import { 
-    generateBuySharesTransaction,
-    getMarketContractAddress,
-    validateMarketContract
-} from '@/lib/blockchain';
+    generateBuySharesCalls,
+    validatePaymasterConfig
+} from '@/lib/gasless-onchainkit';
 import { 
-    executeGaslessTransaction,
-    checkSponsorshipEligibility,
-    validateGaslessConfig
-} from '@/lib/gasless';
-import { Address } from 'viem';
+    Transaction,
+    TransactionButton,
+    TransactionSponsor,
+    TransactionStatus,
+    TransactionStatusAction,
+    TransactionStatusLabel
+} from '@coinbase/onchainkit/transaction';
+import type { LifecycleStatus } from '@coinbase/onchainkit/transaction';
 
 interface PredictionMarketProps {
     onBack?: () => void;
@@ -29,6 +34,33 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
     const { address } = useAccount();
     const [selectedCategory, setSelectedCategory] = useState<'all' | 'crypto' | 'tech' | 'celebrity' | 'sports' | 'politics'>('all');
     const [allMarkets, setAllMarkets] = useState<UnifiedMarket[]>([]);
+    const [pendingBatch, setPendingBatch] = useState<{
+        marketId: string;
+        direction: 'left' | 'right';
+        amount: number;
+        calls: Array<{
+            to: Address;
+            data: `0x${string}`;
+            value: bigint;
+        }>;
+    }[]>([]);
+    const [batchTimer, setBatchTimer] = useState<NodeJS.Timeout | null>(null);
+    const [currentPrediction, setCurrentPrediction] = useState<{
+        marketId: string;
+        direction: 'left' | 'right';
+        amount: number;
+        calls: Array<{
+            to: Address;
+            data: `0x${string}`;
+            value: bigint;
+        }>;
+    } | null>(null);
+    const [isProcessingTransaction, setIsProcessingTransaction] = useState(false);
+    const [rawSupabaseMarkets, setRawSupabaseMarkets] = useState<Array<{
+        id: string;
+        contract_address?: string;
+        [key: string]: unknown;
+    }>>([]);
     const {
         currentMarkets,
         setCurrentMarkets,
@@ -44,25 +76,24 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
     useEffect(() => {
         const loadMarkets = async () => {
             try {
-                // Load markets from Supabase
+                // Load markets from Supabase only
                 const supabaseMarkets = await SupabaseService.getActiveMarkets();
+                setRawSupabaseMarkets(supabaseMarkets); // Keep raw for contract mapping
                 setSupabaseMarkets(supabaseMarkets);
 
-                // Combine Supabase markets with static markets and user-created markets
-                const staticMarkets = getRandomMarkets(20).map(m => SchemaTransformer.legacyToUnified(m));
+                // Use only Supabase markets and user-created markets
                 const unifiedSupabaseMarkets = supabaseMarkets.map(m => SchemaTransformer.supabaseToUnified(m));
-                const allAvailableMarkets = [...unifiedSupabaseMarkets, ...staticMarkets, ...createdMarkets];
+                const allAvailableMarkets = [...unifiedSupabaseMarkets, ...createdMarkets];
                 
-                // Shuffle to mix all market sources throughout the stack
+                // Shuffle markets
                 const shuffledMarkets = allAvailableMarkets.sort(() => 0.5 - Math.random());
                 
                 setAllMarkets(shuffledMarkets);
                 setCurrentMarkets(shuffledMarkets.slice(0, 20)); // Show first 20 initially
             } catch (error) {
                 console.error('Error loading markets:', error);
-                // Fallback to static markets only
-                const staticMarkets = getRandomMarkets(50).map(m => SchemaTransformer.legacyToUnified(m));
-                const allAvailableMarkets = [...staticMarkets, ...createdMarkets];
+                // Fallback to user-created markets only if Supabase fails
+                const allAvailableMarkets = [...createdMarkets];
                 const shuffledMarkets = allAvailableMarkets.sort(() => 0.5 - Math.random());
                 setAllMarkets(shuffledMarkets);
                 setCurrentMarkets(shuffledMarkets.slice(0, 20));
@@ -111,7 +142,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
         // Handle skip - no blockchain transaction needed
         if (direction === 'up') {
             toast('Market skipped! 📊', {
-                icon: '⏭️',
+                icon: '⭐️',
                 style: {
                     borderRadius: '12px',
                     background: '#1e293b',
@@ -122,45 +153,23 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
             return;
         }
 
-        // Create prediction using user's default bet amount (fallback to 1)
         const betAmount = user.defaultBetAmount ?? 1;
-        const prediction: UnifiedUserPrediction = {
-            id: `pred_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-            marketId,
-            userId: user.id,
-            side: direction === 'right' ? 'yes' : 'no',
-            amount: betAmount,
-            sharesReceived: betAmount, // Will be updated after transaction
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-        };
-
-        // Show initial toast
-        const predictionText = direction === 'right' ? 'YES' : 'NO';
-        const emoji = direction === 'right' ? '✅' : '❌';
-
-        toast.success(`Predicting ${predictionText} for $${betAmount} USDC! ${emoji}`, {
+        const predictionSide = direction === 'right' ? 'yes' : 'no';
+        
+        // INSTANT FEEDBACK - no blockchain interaction yet
+        toast.success(`${direction === 'right' ? '✅ YES' : '❌ NO'} added to batch!`, {
+            duration: 2000,
             style: {
                 borderRadius: '12px',
                 background: '#1e293b',
                 color: '#f1f5f9',
-                border: '1px solid #475569',
-            },
-        });
-
-        // Show processing toast
-        const processingToast = toast.loading('Processing gasless prediction...', {
-            style: {
-                borderRadius: '12px',
-                background: '#1e293b',
-                color: '#f1f5f9',
-                border: '1px solid #475569',
+                border: '1px solid #22c55e',
             },
         });
 
         try {
             // ✅ SECURITY FIX: Get the correct market contract address
-            const marketAddress = getMarketContractAddress(marketId);
+            const marketAddress = getMarketContractAddress(marketId, rawSupabaseMarkets);
             
             // Validate the market contract before proceeding
             const isValidContract = await validateMarketContract(marketAddress);
@@ -169,130 +178,188 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
             }
             
             // Log for debugging in development
-            console.log(`📋 Executing prediction on market ${marketId} -> contract ${marketAddress}`);
+            console.log(`📋 Adding prediction to batch: market ${marketId} -> contract ${marketAddress}`);
             
-            // Generate buy shares transaction for the SPECIFIC market
-            const buySharesTx = generateBuySharesTransaction({
-                marketAddress,
-                prediction: direction === 'right' ? 'yes' : 'no',
-                amount: betAmount,
-                userAddress: address as Address,
-            });
-
-            let transactionHash: string = '';
-
-            if (validateGaslessConfig()) {
-                // Use gasless transactions via existing Base smart account
-                toast.loading('Executing gasless prediction via Coinbase Paymaster...', {
-                    id: processingToast,
-                });
-
-                // Check sponsorship eligibility for buy shares transaction
-                const buySharesEligible = await checkSponsorshipEligibility(buySharesTx, address as Address);
-
-                if (buySharesEligible.eligible) {
-                    // Execute buy shares transaction (approval already done)
-                    const buyResult = await executeGaslessTransaction(buySharesTx, address as Address);
-                    console.log('Buy shares transaction:', buyResult);
-                    
-                    transactionHash = buyResult.transactionHash;
-                } else {
-                    throw new Error('Transaction not eligible for sponsorship');
-                }
-            } else {
-                // Fallback to simulated transaction if gasless not available
-                await simulateBlockchainTransaction();
-                transactionHash = `0x${Math.random().toString(16).substring(2, 64)}`;
-            }
-
-            // Update prediction with transaction hash
-            prediction.transactionHash = transactionHash;
-
-            // Add prediction to store
-            addPrediction(prediction);
-
-            // Save prediction to Supabase
-            await SupabaseService.createPrediction({
-                market_id: marketId,
-                user_id: user.id,
-                side: direction === 'right' ? 'yes' : 'no',
-                amount: betAmount,
-                shares_received: betAmount,
-                transaction_hash: transactionHash
-            });
-
-            // Update user position in Supabase
-            const existingPosition = await SupabaseService.getUserPosition(user.id, marketId);
-            const currentYesShares = existingPosition?.yes_shares || 0;
-            const currentNoShares = existingPosition?.no_shares || 0;
-            const currentInvested = existingPosition?.total_invested || 0;
-
-            const updatedPosition = await SupabaseService.updateUserPosition({
-                user_id: user.id,
-                market_id: marketId,
-                yes_shares: direction === 'right' ? currentYesShares + betAmount : currentYesShares,
-                no_shares: direction === 'left' ? currentNoShares + betAmount : currentNoShares,
-                total_invested: currentInvested + betAmount
-            });
-
-            // Update store with new position
-            updateUserPosition(updatedPosition);
-
-            // Dismiss processing toast
-            toast.dismiss(processingToast);
-
-            // Show success toast with transaction link
-            const successMessage = validateGaslessConfig() ? 
-                'Gasless prediction confirmed! No fees paid! 🎉' : 
-                'Prediction confirmed! 🔗';
-
-            toast.success(
-                <div className="flex items-center justify-between">
-                    <span>{successMessage}</span>
-                    <a
-                        href={`https://sepolia.basescan.org/tx/${transactionHash}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="ml-2 text-base-400 hover:text-base-300 text-xs"
-                    >
-                        View ↗
-                    </a>
-                </div>,
-                {
-                    duration: 5000,
-                    style: {
-                        borderRadius: '12px',
-                        background: '#1e293b',
-                        color: '#f1f5f9',
-                        border: '1px solid #22c55e',
-                    },
-                }
+            // Generate transaction calls for OnchainKit
+            const calls = generateBuySharesCalls(
+                marketAddress as Address,
+                predictionSide,
+                parseUnits(betAmount.toString(), 6) // USDC has 6 decimals
             );
 
+            // Add to batch instead of executing immediately
+            const newPrediction = { marketId, direction, amount: betAmount, calls };
+            setPendingBatch(prev => {
+                const updated = [...prev, newPrediction];
+                
+                // Only auto-execute if we reach max batch size of 5
+                // Otherwise wait for timer or manual trigger
+                if (updated.length >= 5) {
+                    console.log('🚀 Auto-executing batch: reached max size of 5');
+                    setTimeout(() => executeBatch(updated), 500);
+                } else {
+                    console.log(`📦 Added to batch: ${updated.length}/5 predictions`);
+                }
+                
+                return updated;
+            });
+
+            // Clear existing timer and set new one
+            if (batchTimer) {
+                clearTimeout(batchTimer);
+            }
+            
+            const newTimer = setTimeout(() => {
+                // Auto-execute after 8 seconds of no activity (increased from 5)
+                console.log('⏰ Auto-executing batch: 8 seconds of inactivity');
+                setPendingBatch(currentBatch => {
+                    if (currentBatch.length > 0) {
+                        executeBatch(currentBatch);
+                    }
+                    return currentBatch;
+                });
+            }, 8000);
+            
+            setBatchTimer(newTimer);
+
         } catch (error) {
-            console.error('Transaction error:', error);
-            toast.dismiss(processingToast);
-            
-            const errorMessage = validateGaslessConfig() ? 
-                'Gasless prediction failed. Please try again.' : 
-                'Prediction failed. Please try again.';
-            
-            toast.error(errorMessage);
+            console.error('Batch setup error:', error);
+            toast.error('Failed to add prediction to batch');
         }
     };
 
-    const simulateBlockchainTransaction = async (): Promise<void> => {
-        // Simulate network delay
-        return new Promise((resolve, reject) => {
-            setTimeout(() => {
-                // Simulate 95% success rate
-                if (Math.random() > 0.05) {
-                    resolve();
-                } else {
-                    reject(new Error('Transaction failed'));
-                }
-            }, 1000 + Math.random() * 2000); // 1-3 second delay
+    // Execute batch transaction
+    const executeBatch = (batch: typeof pendingBatch) => {
+        if (batch.length === 0) return;
+        
+        console.log(`🚀 Executing batch of ${batch.length} predictions`);
+        
+        // Combine all calls from all predictions in the batch
+        const allCalls = batch.map(p => p.calls).flat();
+        
+        setCurrentPrediction({
+            marketId: 'batch', // Special identifier for batch
+            direction: 'right', // Not used for batch
+            amount: batch.reduce((sum, p) => sum + p.amount, 0),
+            calls: allCalls
         });
+        
+        // Clear the timer
+        if (batchTimer) {
+            clearTimeout(batchTimer);
+            setBatchTimer(null);
+        }
+    };
+
+    // Handle batch transaction status from OnchainKit Transaction component
+    const handleBatchStatus = async (status: LifecycleStatus) => {
+        if (!user || !address || pendingBatch.length === 0 || isProcessingTransaction) return;
+
+        console.log('🔄 Transaction status update:', status);
+
+        if (status.statusName === 'success' && status.statusData?.transactionReceipts?.length > 0) {
+            const txHash = status.statusData.transactionReceipts[0].transactionHash;
+            if (txHash) {
+                setIsProcessingTransaction(true);
+                // Transaction successful - save all predictions to database
+                try {
+                    console.log(`✅ Batch transaction successful: ${txHash}`);
+                    
+                    // Show success toast
+                    toast.success(
+                        <div className="flex items-center justify-between">
+                            <span>🎉 ${pendingBatch.length} gasless predictions confirmed!</span>
+                            <a
+                                href={`https://sepolia.basescan.org/tx/${txHash}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="ml-2 text-base-400 hover:text-base-300 text-xs"
+                            >
+                                View ↗
+                            </a>
+                        </div>,
+                        {
+                            duration: 5000,
+                            style: {
+                                borderRadius: '12px',
+                                background: '#1e293b',
+                                color: '#f1f5f9',
+                                border: '1px solid #22c55e',
+                            },
+                        }
+                    );
+
+                    // Save all predictions to database
+                    for (const prediction of pendingBatch) {
+                        const pred: UnifiedUserPrediction = {
+                            id: `pred_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+                            marketId: prediction.marketId,
+                            userId: user.id,
+                            side: prediction.direction === 'right' ? 'yes' : 'no',
+                            amount: prediction.amount,
+                            sharesReceived: prediction.amount,
+                            transactionHash: txHash,
+                            createdAt: new Date().toISOString(),
+                            updatedAt: new Date().toISOString(),
+                        };
+                        
+                        // Add prediction to store
+                        addPrediction(pred);
+                        
+                        // Save prediction to Supabase
+                        await SupabaseService.createPrediction({
+                            market_id: prediction.marketId,
+                            user_id: user.id,
+                            side: prediction.direction === 'right' ? 'yes' : 'no',
+                            amount: prediction.amount,
+                            shares_received: prediction.amount,
+                            transaction_hash: txHash
+                        });
+
+                        // Update user position in Supabase
+                        const existingPosition = await SupabaseService.getUserPosition(user.id, prediction.marketId);
+                        const currentYesShares = existingPosition?.yes_shares || 0;
+                        const currentNoShares = existingPosition?.no_shares || 0;
+                        const currentInvested = existingPosition?.total_invested || 0;
+
+                        const updatedPosition = await SupabaseService.updateUserPosition({
+                            user_id: user.id,
+                            market_id: prediction.marketId,
+                            yes_shares: prediction.direction === 'right' ? currentYesShares + prediction.amount : currentYesShares,
+                            no_shares: prediction.direction === 'left' ? currentNoShares + prediction.amount : currentNoShares,
+                            total_invested: currentInvested + prediction.amount
+                        });
+
+                        // Update store with new position
+                        updateUserPosition(updatedPosition);
+                    }
+
+                    // Clear batch and current prediction
+                    setPendingBatch([]);
+                    setCurrentPrediction(null);
+                    setIsProcessingTransaction(false);
+
+                } catch (error) {
+                    console.error('Database save error:', error);
+                    toast.error('Predictions successful but failed to save. Contact support.');
+                    setIsProcessingTransaction(false);
+                }
+            }
+        } else if (status.statusName === 'error') {
+            // Transaction failed
+            const errorMessage = status.statusData?.code || 'Unknown error';
+            console.error('Batch transaction failed:', errorMessage);
+            toast.error('Batch prediction failed. Please try again.');
+            setPendingBatch([]);
+            setCurrentPrediction(null);
+            setIsProcessingTransaction(false);
+        }
+    };
+
+    // Check if paymaster is configured
+    const isPaymasterConfigured = () => {
+        const config = validatePaymasterConfig();
+        return config.valid;
     };
 
 
@@ -334,9 +401,14 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
 
                 <div className="flex flex-col items-center">
                     <h1 className="text-xl font-bold text-white">BASED</h1>
-                    {validateGaslessConfig() && (
+                    {isPaymasterConfigured() && (
                         <div className="text-xs text-green-400 mt-1">
                             ⚡ Gasless enabled
+                        </div>
+                    )}
+                    {pendingBatch.length > 0 && (
+                        <div className="text-xs text-blue-400 mt-1">
+                            {pendingBatch.length} queued
                         </div>
                     )}
                 </div>
@@ -344,7 +416,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                 <div className="p-2">
                     <div className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center">
                         <div className="w-6 h-6 bg-slate-500 rounded-full flex items-center justify-center text-xs text-slate-300 font-medium">
-                            {validateGaslessConfig() ? '⚡' : '?'}
+                            {isPaymasterConfigured() ? '⚡' : '?'}
                         </div>
                     </div>
                 </div>
@@ -379,6 +451,49 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                 className="mb-8"
             />
 
+            {/* Batch Indicator */}
+            {pendingBatch.length > 0 && (
+                <div className="fixed top-20 right-4 z-50 bg-blue-500/90 backdrop-blur-sm text-white px-4 py-2 rounded-full border border-blue-400/50">
+                    <div className="flex items-center space-x-2">
+                        <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                        <span className="text-sm font-medium">{pendingBatch.length} pending</span>
+                    </div>
+                </div>
+            )}
+
+            {/* OnchainKit Transaction component for batch gasless predictions */}
+            {currentPrediction && (
+                <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 bg-slate-800/95 backdrop-blur-sm p-6 rounded-xl border border-slate-600 min-w-[300px]">
+                    <div className="text-center mb-4">
+                        <h3 className="text-white font-semibold mb-2">
+                            {pendingBatch.length > 0 ? 
+                                `Confirming ${pendingBatch.length} Predictions` : 
+                                'Confirming Prediction'
+                            }
+                        </h3>
+                        <p className="text-slate-400 text-sm">Gasless transaction in progress...</p>
+                    </div>
+                    <Transaction
+                        chainId={baseSepolia.id}
+                        calls={currentPrediction.calls}
+                        isSponsored={true}
+                        onStatus={handleBatchStatus}
+                    >
+                        <TransactionButton 
+                            text={pendingBatch.length > 0 ? 
+                                `Confirm ${pendingBatch.length} Predictions` : 
+                                'Confirm Prediction'
+                            }
+                            className="w-full mb-2"
+                        />
+                        <TransactionSponsor />
+                        <TransactionStatus>
+                            <TransactionStatusLabel />
+                            <TransactionStatusAction />
+                        </TransactionStatus>
+                    </Transaction>
+                </div>
+            )}
 
         </div>
     );

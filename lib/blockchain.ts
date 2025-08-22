@@ -6,7 +6,7 @@ export const MARKET_FACTORY_ADDRESS = '0xB788385cf679A69C43CfD9cB35045BBd4c2843f
 export const DEMO_MARKET_ADDRESS = '0x86F3108947dA0a88170A7AE8E967dAE8ce0a41F9' as Address;
 
 // USDC contract address on Base Sepolia
-export const USDC_CONTRACT_ADDRESS = '0x5dEaC602762362FE5f135FA5904351916053cF70' as Address;
+export const USDC_CONTRACT_ADDRESS = '0x036CbD53842c5426634e7929541eC2318f3dCF7e' as Address;
 
 // Legacy addresses (replaced with new deployment)
 // OLD: Factory: 0xfE7440a0C61aE1156E9B759Bb6C7E8BEFa0BCC3C (used MockUSDC)
@@ -161,21 +161,28 @@ export function generateBuySharesTransaction(data: PredictionTransaction) {
  * Get market contract address from market ID
  * Maps Supabase market IDs to deployed contract addresses
  */
-export function getMarketContractAddress(marketId: string): Address {
+export function getMarketContractAddress(marketId: string, supabaseMarkets?: Array<{
+    id: string;
+    contract_address?: string;
+    [key: string]: unknown;
+}>): Address {
     // Check if it's a Supabase market with contract address
-    const supabaseMarkets = getSupabaseMarketMapping();
-    if (supabaseMarkets[marketId]) {
-        return supabaseMarkets[marketId];
+    if (supabaseMarkets) {
+        const market = supabaseMarkets.find(m => m.id === marketId);
+        if (market && market.contract_address) {
+            console.log(`✅ Found Supabase market ${marketId} -> ${market.contract_address}`);
+            return market.contract_address as Address;
+        }
     }
-
-    // Check if it's a static/legacy market ID
-    const staticMarkets = getStaticMarketMapping();
-    if (staticMarkets[marketId]) {
-        return staticMarkets[marketId];
+    
+    // Fallback: Check static mapping
+    const supabaseMapping = getSupabaseMarketMapping();
+    if (supabaseMapping[marketId]) {
+        return supabaseMapping[marketId];
     }
 
     // Fallback to demo market for development (with warning)
-    console.warn(`⚠️  Market ${marketId} not found, using demo contract. This should not happen in production!`);
+    console.warn(`⚠️  Market ${marketId} not found in Supabase, using demo contract. This should not happen in production!`);
     return DEMO_MARKET_ADDRESS;
 }
 
@@ -191,16 +198,7 @@ function getSupabaseMarketMapping(): Record<string, Address> {
     };
 }
 
-/**
- * Get static markets that map to the demo contract
- * All static/legacy markets use the demo contract for now
- */
-function getStaticMarketMapping(): Record<string, Address> {
-    return {
-        // All static markets default to demo contract
-        'default': DEMO_MARKET_ADDRESS
-    };
-}
+// Static market mappings removed - now using only Supabase markets with contract addresses
 
 /**
  * Validate that a market address is a legitimate prediction market contract
