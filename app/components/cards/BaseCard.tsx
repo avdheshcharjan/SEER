@@ -20,7 +20,7 @@ function BaseCardComponent({ market, style, className = '', isActive = false, ch
     const cardRef = useRef<HTMLDivElement>(null);
     const progressBarRef = useRef<HTMLDivElement>(null);
     const timerStartTime = useRef<number>(Date.now());
-    const timerDuration = 60000; // retained for CSS progress fallback
+    // removed unused timerDuration (60s) constant
 
     // Self-contained timer that updates the display with time until market end
     useEffect(() => {

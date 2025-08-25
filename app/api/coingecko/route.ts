@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const runtime = 'edge';
+
 const COINGECKO_BASE_URL = 'https://api.coingecko.com/api/v3';
 const CACHE_DURATION = 60 * 1000; // 1 minute cache
+const FETCH_TIMEOUT_MS = 2000; // fail fast and fallback quickly
 
 // In-memory cache for API responses
 interface CachedData {
@@ -78,6 +81,17 @@ function setCachedData(key: string, data: CachedData) {
   });
 }
 
+async function fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit & { timeoutMs?: number }) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), init?.timeoutMs ?? FETCH_TIMEOUT_MS);
+  try {
+    const response = await fetch(input, { ...init, signal: controller.signal });
+    return response;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -106,44 +120,41 @@ export async function GET(request: NextRequest) {
     }
 
     try {
-      // Fetch current price and market data
-      const priceResponse = await fetch(
-        `${COINGECKO_BASE_URL}/simple/price?ids=${coinGeckoId}&vs_currencies=usd&include_market_cap=true&include_24hr_change=true&include_24hr_vol=true`,
-        {
-          headers: {
-            'Accept': 'application/json',
-          },
-        }
-      );
+      // Fetch price and chart in parallel with fast timeouts
+      const [priceRes, chartRes] = await Promise.allSettled([
+        fetchWithTimeout(
+          `${COINGECKO_BASE_URL}/simple/price?ids=${coinGeckoId}&vs_currencies=usd&include_market_cap=true&include_24hr_change=true&include_24hr_vol=true`,
+          {
+            headers: { 'Accept': 'application/json' },
+          }
+        ),
+        fetchWithTimeout(
+          `${COINGECKO_BASE_URL}/coins/${coinGeckoId}/market_chart?vs_currency=usd&days=1`,
+          {
+            headers: { 'Accept': 'application/json' },
+          }
+        )
+      ]);
 
-      if (!priceResponse.ok) {
-        throw new Error(`Price API request failed: ${priceResponse.status}`);
+      if (priceRes.status !== 'fulfilled' || !priceRes.value.ok) {
+        throw new Error(`Price API request failed${priceRes.status === 'fulfilled' ? `: ${priceRes.value.status}` : ''}`);
       }
 
-      const priceData = await priceResponse.json();
+      const priceData = await priceRes.value.json();
       const tokenInfo = priceData[coinGeckoId];
-
       if (!tokenInfo) {
         throw new Error(`No price data found for ${coinGeckoId}`);
       }
 
-      // Try to fetch chart data, but don't fail if it doesn't work
-      let chartData = { prices: [] };
-      try {
-        const chartResponse = await fetch(
-          `${COINGECKO_BASE_URL}/coins/${coinGeckoId}/market_chart?vs_currency=usd&days=1`,
-          {
-            headers: {
-              'Accept': 'application/json',
-            },
-          }
-        );
-
-        if (chartResponse.ok) {
-          chartData = await chartResponse.json();
+      let chartData: { prices?: [number, number][] } = { prices: [] };
+      if (chartRes.status === 'fulfilled' && chartRes.value.ok) {
+        try {
+          chartData = await chartRes.value.json();
+        } catch (chartParseErr) {
+          console.warn('Chart API parse failed, using empty chart data:', chartParseErr);
         }
-      } catch (chartError) {
-        console.warn('Chart API failed, using empty chart data:', chartError);
+      } else if (chartRes.status === 'rejected') {
+        console.warn('Chart API failed, using empty chart data:', chartRes.reason);
       }
 
       const result = {
@@ -164,7 +175,7 @@ export async function GET(request: NextRequest) {
     } catch (apiError) {
       // If API calls fail, return mock data to prevent UI breaks
       console.warn('CoinGecko API failed, returning mock data:', apiError);
-      
+
       const mockData = {
         currentPrice: ticker === 'ETH' ? 2500 : ticker === 'BTC' ? 45000 : ticker === 'FARTCOIN' ? 0.8 : 100,
         priceChange: Math.random() * 10 - 5, // Random change between -5 and 5

@@ -92,9 +92,7 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
     );
   }
 
-  const formatAddress = (addr: string) => {
-    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-  };
+  // removed unused formatAddress
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -454,10 +452,10 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
                           <span>{formatDate(prediction.createdAt)}</span>
                           <span>•</span>
                           <span className={`px-2 py-1 rounded-full ${market.category === 'crypto' ? 'bg-prediction-crypto/20 text-prediction-crypto' :
-                              market.category === 'tech' ? 'bg-prediction-tech/20 text-prediction-tech' :
-                                market.category === 'celebrity' ? 'bg-prediction-celebrity/20 text-prediction-celebrity' :
-                                  market.category === 'sports' ? 'bg-prediction-sports/20 text-prediction-sports' :
-                                    'bg-prediction-politics/20 text-prediction-politics'
+                            market.category === 'tech' ? 'bg-prediction-tech/20 text-prediction-tech' :
+                              market.category === 'celebrity' ? 'bg-prediction-celebrity/20 text-prediction-celebrity' :
+                                market.category === 'sports' ? 'bg-prediction-sports/20 text-prediction-sports' :
+                                  'bg-prediction-politics/20 text-prediction-politics'
                             }`}>
                             {market.category}
                           </span>
