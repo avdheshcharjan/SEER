@@ -17,92 +17,73 @@ body {
   font-weight: 400;
   font-style: normal;
   overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Timer gradient transitions - smooth continuous interpolation, no React re-renders */
 .timer-gradient-active {
   /* Default crypto card: original orange to red transition as timer counts down */
-  background-image: linear-gradient(135deg, 
-    rgba(
-      calc(249 * var(--timer-progress) + 239 * (1 - var(--timer-progress))), 
-      calc(115 * var(--timer-progress) + 68 * (1 - var(--timer-progress))), 
-      calc(22 * var(--timer-progress) + 68 * (1 - var(--timer-progress))), 
-      calc(0.2 * var(--timer-progress) + 0.4 * (1 - var(--timer-progress)))
-    ), 
-    rgba(
-      calc(234 * var(--timer-progress) + 220 * (1 - var(--timer-progress))), 
-      calc(88 * var(--timer-progress) + 38 * (1 - var(--timer-progress))), 
-      calc(12 * var(--timer-progress) + 38 * (1 - var(--timer-progress))), 
-      calc(0.1 * var(--timer-progress) + 0.3 * (1 - var(--timer-progress)))
-    ));
+  background-image: linear-gradient(135deg,
+      rgba(calc(249 * var(--timer-progress) + 239 * (1 - var(--timer-progress))),
+        calc(115 * var(--timer-progress) + 68 * (1 - var(--timer-progress))),
+        calc(22 * var(--timer-progress) + 68 * (1 - var(--timer-progress))),
+        calc(0.2 * var(--timer-progress) + 0.4 * (1 - var(--timer-progress)))),
+      rgba(calc(234 * var(--timer-progress) + 220 * (1 - var(--timer-progress))),
+        calc(88 * var(--timer-progress) + 38 * (1 - var(--timer-progress))),
+        calc(12 * var(--timer-progress) + 38 * (1 - var(--timer-progress))),
+        calc(0.1 * var(--timer-progress) + 0.3 * (1 - var(--timer-progress)))));
   transition: background-image 0.5s ease-in-out;
 }
 
 .timer-gradient-active.tech-card {
-  background-image: linear-gradient(135deg, 
-    rgba(
-      calc(139 * var(--timer-progress) + 239 * (1 - var(--timer-progress))), 
-      calc(92 * var(--timer-progress) + 68 * (1 - var(--timer-progress))), 
-      calc(246 * var(--timer-progress) + 68 * (1 - var(--timer-progress))), 
-      calc(0.2 * var(--timer-progress) + 0.4 * (1 - var(--timer-progress)))
-    ), 
-    rgba(
-      calc(124 * var(--timer-progress) + 220 * (1 - var(--timer-progress))), 
-      calc(58 * var(--timer-progress) + 38 * (1 - var(--timer-progress))), 
-      calc(237 * var(--timer-progress) + 38 * (1 - var(--timer-progress))), 
-      calc(0.1 * var(--timer-progress) + 0.3 * (1 - var(--timer-progress)))
-    ));
+  background-image: linear-gradient(135deg,
+      rgba(calc(139 * var(--timer-progress) + 239 * (1 - var(--timer-progress))),
+        calc(92 * var(--timer-progress) + 68 * (1 - var(--timer-progress))),
+        calc(246 * var(--timer-progress) + 68 * (1 - var(--timer-progress))),
+        calc(0.2 * var(--timer-progress) + 0.4 * (1 - var(--timer-progress)))),
+      rgba(calc(124 * var(--timer-progress) + 220 * (1 - var(--timer-progress))),
+        calc(58 * var(--timer-progress) + 38 * (1 - var(--timer-progress))),
+        calc(237 * var(--timer-progress) + 38 * (1 - var(--timer-progress))),
+        calc(0.1 * var(--timer-progress) + 0.3 * (1 - var(--timer-progress)))));
   transition: background-image 0.5s ease-in-out;
 }
 
 .timer-gradient-active.celebrity-card {
-  background-image: linear-gradient(135deg, 
-    rgba(
-      calc(236 * var(--timer-progress) + 239 * (1 - var(--timer-progress))), 
-      calc(72 * var(--timer-progress) + 68 * (1 - var(--timer-progress))), 
-      calc(153 * var(--timer-progress) + 68 * (1 - var(--timer-progress))), 
-      calc(0.2 * var(--timer-progress) + 0.4 * (1 - var(--timer-progress)))
-    ), 
-    rgba(
-      calc(219 * var(--timer-progress) + 220 * (1 - var(--timer-progress))), 
-      calc(39 * var(--timer-progress) + 38 * (1 - var(--timer-progress))), 
-      calc(119 * var(--timer-progress) + 38 * (1 - var(--timer-progress))), 
-      calc(0.1 * var(--timer-progress) + 0.3 * (1 - var(--timer-progress)))
-    ));
+  background-image: linear-gradient(135deg,
+      rgba(calc(236 * var(--timer-progress) + 239 * (1 - var(--timer-progress))),
+        calc(72 * var(--timer-progress) + 68 * (1 - var(--timer-progress))),
+        calc(153 * var(--timer-progress) + 68 * (1 - var(--timer-progress))),
+        calc(0.2 * var(--timer-progress) + 0.4 * (1 - var(--timer-progress)))),
+      rgba(calc(219 * var(--timer-progress) + 220 * (1 - var(--timer-progress))),
+        calc(39 * var(--timer-progress) + 38 * (1 - var(--timer-progress))),
+        calc(119 * var(--timer-progress) + 38 * (1 - var(--timer-progress))),
+        calc(0.1 * var(--timer-progress) + 0.3 * (1 - var(--timer-progress)))));
   transition: background-image 0.5s ease-in-out;
 }
 
 .timer-gradient-active.sports-card {
-  background-image: linear-gradient(135deg, 
-    rgba(
-      calc(16 * var(--timer-progress) + 239 * (1 - var(--timer-progress))), 
-      calc(185 * var(--timer-progress) + 68 * (1 - var(--timer-progress))), 
-      calc(129 * var(--timer-progress) + 68 * (1 - var(--timer-progress))), 
-      calc(0.2 * var(--timer-progress) + 0.4 * (1 - var(--timer-progress)))
-    ), 
-    rgba(
-      calc(5 * var(--timer-progress) + 220 * (1 - var(--timer-progress))), 
-      calc(150 * var(--timer-progress) + 38 * (1 - var(--timer-progress))), 
-      calc(105 * var(--timer-progress) + 38 * (1 - var(--timer-progress))), 
-      calc(0.1 * var(--timer-progress) + 0.3 * (1 - var(--timer-progress)))
-    ));
+  background-image: linear-gradient(135deg,
+      rgba(calc(16 * var(--timer-progress) + 239 * (1 - var(--timer-progress))),
+        calc(185 * var(--timer-progress) + 68 * (1 - var(--timer-progress))),
+        calc(129 * var(--timer-progress) + 68 * (1 - var(--timer-progress))),
+        calc(0.2 * var(--timer-progress) + 0.4 * (1 - var(--timer-progress)))),
+      rgba(calc(5 * var(--timer-progress) + 220 * (1 - var(--timer-progress))),
+        calc(150 * var(--timer-progress) + 38 * (1 - var(--timer-progress))),
+        calc(105 * var(--timer-progress) + 38 * (1 - var(--timer-progress))),
+        calc(0.1 * var(--timer-progress) + 0.3 * (1 - var(--timer-progress)))));
   transition: background-image 0.5s ease-in-out;
 }
 
 .timer-gradient-active.politics-card {
-  background-image: linear-gradient(135deg, 
-    rgba(
-      calc(99 * var(--timer-progress) + 239 * (1 - var(--timer-progress))), 
-      calc(102 * var(--timer-progress) + 68 * (1 - var(--timer-progress))), 
-      calc(241 * var(--timer-progress) + 68 * (1 - var(--timer-progress))), 
-      calc(0.2 * var(--timer-progress) + 0.4 * (1 - var(--timer-progress)))
-    ), 
-    rgba(
-      calc(79 * var(--timer-progress) + 220 * (1 - var(--timer-progress))), 
-      calc(70 * var(--timer-progress) + 38 * (1 - var(--timer-progress))), 
-      calc(229 * var(--timer-progress) + 38 * (1 - var(--timer-progress))), 
-      calc(0.1 * var(--timer-progress) + 0.3 * (1 - var(--timer-progress)))
-    ));
+  background-image: linear-gradient(135deg,
+      rgba(calc(99 * var(--timer-progress) + 239 * (1 - var(--timer-progress))),
+        calc(102 * var(--timer-progress) + 68 * (1 - var(--timer-progress))),
+        calc(241 * var(--timer-progress) + 68 * (1 - var(--timer-progress))),
+        calc(0.2 * var(--timer-progress) + 0.4 * (1 - var(--timer-progress)))),
+      rgba(calc(79 * var(--timer-progress) + 220 * (1 - var(--timer-progress))),
+        calc(70 * var(--timer-progress) + 38 * (1 - var(--timer-progress))),
+        calc(229 * var(--timer-progress) + 38 * (1 - var(--timer-progress))),
+        calc(0.1 * var(--timer-progress) + 0.3 * (1 - var(--timer-progress)))));
   transition: background-image 0.5s ease-in-out;
 }
 
@@ -288,6 +269,42 @@ body {
   }
 }
 
+/* iOS/mobile helpers */
+.mobile-container {
+  padding-left: max(1rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1rem, env(safe-area-inset-right, 0px));
+  padding-top: calc(env(safe-area-inset-top, 0px) + 0.25rem);
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px));
+}
+
+.ios-safe {
+  padding-left: max(1rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1rem, env(safe-area-inset-right, 0px));
+  padding-top: calc(env(safe-area-inset-top, 0px) + 0.5rem);
+}
+
+.ios-bottom-safe {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+}
+
+.safe-top-right {
+  top: calc(env(safe-area-inset-top, 0px) + 5rem);
+  right: calc(env(safe-area-inset-right, 0px) + 1rem);
+}
+
+.ios-button {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.overflow-touch {
+  -webkit-overflow-scrolling: touch;
+}
+
+.overscroll-contain {
+  overscroll-behavior-y: contain;
+}
+
 /* OnchainKit Identity component overrides */
 [data-testid="ockIdentity"] {
   background: transparent !important;
@@ -325,5 +342,14 @@ body {
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }

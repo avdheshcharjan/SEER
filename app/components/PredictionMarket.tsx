@@ -12,11 +12,11 @@ import { useAppStore } from '@/lib/store';
 import { UnifiedMarket, SchemaTransformer } from '@/lib/types';
 import { SupabaseService } from '@/lib/supabase';
 import { getMarketContractAddress, validateMarketContract } from '@/lib/blockchain';
-import { 
+import {
     generateBuySharesCalls,
     validatePaymasterConfig
 } from '@/lib/gasless-onchainkit';
-import { 
+import {
     Transaction,
     TransactionButton,
     TransactionSponsor,
@@ -77,10 +77,10 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
 
                 // Use only Supabase markets (single source of truth)
                 const allAvailableMarkets = supabaseMarkets.map(m => SchemaTransformer.supabaseToUnified(m));
-                
+
                 // Shuffle markets
                 const shuffledMarkets = allAvailableMarkets.sort(() => 0.5 - Math.random());
-                
+
                 setAllMarkets(shuffledMarkets);
                 setCurrentMarkets(shuffledMarkets.slice(0, 20)); // Show first 20 initially
             } catch (error) {
@@ -149,7 +149,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
 
         const betAmount = user.defaultBetAmount ?? 1;
         const predictionSide = direction === 'right' ? 'yes' : 'no';
-        
+
         // INSTANT FEEDBACK - no blockchain interaction yet
         toast.success(`${direction === 'right' ? '✅ YES' : '❌ NO'} added to batch!`, {
             duration: 2000,
@@ -179,16 +179,16 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
 
             // ✅ SECURITY FIX: Get the correct market contract address
             const marketAddress = getMarketContractAddress(marketId, rawSupabaseMarkets);
-            
+
             // Validate the market contract before proceeding
             const isValidContract = await validateMarketContract(marketAddress);
             if (!isValidContract) {
                 throw new Error(`Invalid market contract: ${marketAddress}`);
             }
-            
+
             // Log for debugging in development
             console.log(`📋 Adding prediction to batch: market ${marketId} -> contract ${marketAddress}`);
-            
+
             // Generate transaction calls for OnchainKit
             const calls = generateBuySharesCalls(
                 marketAddress as Address,
@@ -200,16 +200,16 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
             const newPrediction = { marketId, direction, amount: betAmount, calls };
             setPendingBatch(prev => {
                 const updated = [...prev, newPrediction];
-                
-                // Only auto-execute if we reach max batch size of 5
+
+                // Only auto-execute if we reach max batch size of 20 
                 // Otherwise wait for timer or manual trigger
-                if (updated.length >= 5) {
-                    console.log('🚀 Auto-executing batch: reached max size of 5');
+                if (updated.length >= 20) {
+                    console.log('🚀 Auto-executing batch: reached max size of 20');
                     setTimeout(() => executeBatch(updated), 500);
                 } else {
-                    console.log(`📦 Added to batch: ${updated.length}/5 predictions`);
+                    console.log(`📦 Added to batch: ${updated.length}/20 predictions`);
                 }
-                
+
                 return updated;
             });
 
@@ -217,9 +217,9 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
             if (batchTimer) {
                 clearTimeout(batchTimer);
             }
-            
+
             const newTimer = setTimeout(() => {
-                // Auto-execute after 8 seconds of no activity (increased from 5)
+                // Auto-execute after 30 seconds of no activity (increased from 8)
                 console.log('⏰ Auto-executing batch: 8 seconds of inactivity');
                 setPendingBatch(currentBatch => {
                     if (currentBatch.length > 0) {
@@ -227,8 +227,8 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                     }
                     return currentBatch;
                 });
-            }, 8000);
-            
+            }, 30000);
+
             setBatchTimer(newTimer);
 
         } catch (error) {
@@ -240,19 +240,19 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
     // Execute batch transaction
     const executeBatch = (batch: typeof pendingBatch) => {
         if (batch.length === 0) return;
-        
+
         console.log(`🚀 Executing batch of ${batch.length} predictions`);
-        
+
         // Combine all calls from all predictions in the batch
         const allCalls = batch.map(p => p.calls).flat();
-        
+
         setCurrentPrediction({
             marketId: 'batch', // Special identifier for batch
             direction: 'right', // Not used for batch
             amount: batch.reduce((sum, p) => sum + p.amount, 0),
             calls: allCalls
         });
-        
+
         // Clear the timer
         if (batchTimer) {
             clearTimeout(batchTimer);
@@ -272,12 +272,12 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                 // Mark this transaction as processed
                 setProcessedTransactions(prev => new Set(prev).add(txHash));
                 setIsProcessingTransaction(true);
-                
+
                 // We've already validated markets during handleSwipe, but let's double check
                 // to make sure nothing changed in the database since then
                 try {
                     console.log(`✅ Batch transaction successful: ${txHash}`);
-                    
+
                     // Show success toast
                     toast.success(
                         <div className="flex items-center justify-between">
@@ -311,14 +311,14 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                                 console.error(`Market ${prediction.marketId} no longer exists in database, skipping`);
                                 continue;
                             }
-                            
+
                             // Save prediction to Supabase (with duplicate check for development)
                             const existingPrediction = await SupabaseService.getUserPredictions(user.id);
-                            const isDuplicate = existingPrediction?.some(p => 
-                                p.market_id === prediction.marketId && 
+                            const isDuplicate = existingPrediction?.some(p =>
+                                p.market_id === prediction.marketId &&
                                 p.transaction_hash === txHash
                             );
-                            
+
                             if (!isDuplicate) {
                                 await SupabaseService.createPrediction({
                                     market_id: prediction.marketId,
@@ -328,13 +328,13 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                                     shares_received: prediction.amount,
                                     transaction_hash: txHash
                                 });
-                                
+
                                 // Update user position in Supabase
                                 const existingPosition = await SupabaseService.getUserPosition(user.id, prediction.marketId);
                                 const currentYesShares = existingPosition?.yes_shares || 0;
                                 const currentNoShares = existingPosition?.no_shares || 0;
                                 const currentInvested = existingPosition?.total_invested || 0;
-                                
+
                                 await SupabaseService.updateUserPosition({
                                     user_id: user.id,
                                     market_id: prediction.marketId,
@@ -354,7 +354,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                     // Clear batch and current prediction
                     setPendingBatch([]);
                     setCurrentPrediction(null);
-                    
+
                     // Add a small delay before allowing new transactions
                     setTimeout(() => {
                         setIsProcessingTransaction(false);
@@ -363,7 +363,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                 } catch (error) {
                     console.error('Database save error:', error);
                     toast.error('Predictions successful but failed to save. Contact support.');
-                    
+
                     // Clean up state even on error
                     setPendingBatch([]);
                     setCurrentPrediction(null);
@@ -416,7 +416,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
     }
 
     return (
-        <div className="w-full mobile-container">
+        <div className="w-full mobile-container overflow-touch overscroll-contain">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
                 <motion.button
@@ -454,17 +454,17 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
             </div>
 
 
-            {/* Category Tab Bar */}
-            <div className="flex items-center space-x-1 mb-6 p-1 bg-slate-800/50 rounded-xl border border-slate-700/50 overflow-x-auto">
+            {/* Category Tab Row (scrollable without visible scrollbar) */}
+            <div className="flex items-center space-x-1 mb-6 p-0 overflow-x-auto no-scrollbar">
                 {['all', 'crypto', 'tech', 'celebrity', 'sports', 'politics'].map((category) => (
                     <motion.button
                         key={category}
                         onClick={() => setSelectedCategory(category as typeof selectedCategory)}
                         className={`
-                            px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex-shrink-0 text-center min-w-[60px]
+                            px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex-shrink-0 text-center min-w-[72px]
                             ${selectedCategory === category
-                                ? 'bg-base-500 text-white shadow-lg'
-                                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-700/50'
+                                ? 'bg-base-500 text-white shadow-lg shadow-base-500/30'
+                                : 'text-slate-300 hover:text-slate-100 hover:bg-slate-800/70'
                             }
                         `}
                         whileHover={{ scale: selectedCategory === category ? 1 : 1.05 }}
@@ -484,7 +484,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
 
             {/* Batch Indicator */}
             {pendingBatch.length > 0 && (
-                <div className="fixed top-20 right-4 z-50 bg-blue-500/90 backdrop-blur-sm text-white px-4 py-2 rounded-full border border-blue-400/50">
+                <div className="fixed safe-top-right z-50 bg-blue-500/90 backdrop-blur-sm text-white px-4 py-2 rounded-full border border-blue-400/50">
                     <div className="flex items-center space-x-2">
                         <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
                         <span className="mobile-text-sm font-medium">{pendingBatch.length} pending</span>
@@ -497,8 +497,8 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                 <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 bg-slate-800/95 backdrop-blur-sm p-4 sm:p-6 rounded-xl border border-slate-600 min-w-[280px] sm:min-w-[300px] max-w-[90vw]">
                     <div className="text-center mb-4">
                         <h3 className="text-white font-semibold mb-2 mobile-text-lg">
-                            {pendingBatch.length > 0 ? 
-                                `Confirming ${pendingBatch.length} Predictions` : 
+                            {pendingBatch.length > 0 ?
+                                `Confirming ${pendingBatch.length} Predictions` :
                                 'Confirming Prediction'
                             }
                         </h3>
@@ -510,18 +510,18 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                         isSponsored={true}
                         onStatus={handleBatchStatus}
                     >
-                        <TransactionButton 
-                            text={pendingBatch.length > 0 ? 
-                                `Confirm ${pendingBatch.length} Predictions` : 
+                        <TransactionButton
+                            text={pendingBatch.length > 0 ?
+                                `Confirm ${pendingBatch.length} Predictions` :
                                 'Confirm Prediction'
                             }
                             className="w-full mb-2 ios-button min-h-[48px]"
                         />
                         <TransactionSponsor />
-                                            <div className="mt-4">
-                        <TransactionStatusLabel />
-                        <TransactionStatusAction />
-                    </div>
+                        <div className="mt-4">
+                            <TransactionStatusLabel />
+                            <TransactionStatusAction />
+                        </div>
                     </Transaction>
                 </div>
             )}

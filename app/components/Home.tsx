@@ -49,7 +49,7 @@ export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard, onCr
                     transition={{ duration: 0.6 }}
                 >
                     <div className="text-5xl sm:text-6xl mb-4">🔮</div>
-                    <h1 className="mobile-text-4xl font-bold text-white mb-4">
+                    <h1 className="text-5xl sm:text-7xl font-bold text-white mb-4">
                         <span className="bg-gradient-to-r from-base-400 to-base-600 bg-clip-text text-transparent">
                             Seer
                         </span>

@@ -139,7 +139,7 @@ export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }
     const visibleMarkets = markets.slice(currentIndex, currentIndex + 3);
 
     return (
-        <div className={`relative w-full h-[500px] sm:h-[600px] ${className}`}>
+        <div className={`relative w-full h-[520px] sm:h-[600px] ${className}`}>
 
 
             {/* Card Stack */}
@@ -195,10 +195,7 @@ export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }
 
 
 
-            {/* Progress Indicator */}
-            <div className="absolute top-4 right-4 bg-slate-800/90 backdrop-blur-sm rounded-full px-3 py-1 mobile-text-sm text-slate-300">
-                {currentIndex + 1} / {markets.length}
-            </div>
+            {/* Progress Indicator removed as per request */}
         </div>
     );
 }

@@ -18,57 +18,91 @@ function BaseCardComponent({ market, style, className = '', isActive = false, ch
     const baseGradientClass = getCategoryGradient(market.category);
     const timerDisplayRef = useRef<HTMLSpanElement>(null);
     const cardRef = useRef<HTMLDivElement>(null);
+    const progressBarRef = useRef<HTMLDivElement>(null);
     const timerStartTime = useRef<number>(Date.now());
-    const timerDuration = 60000; // 60 seconds in milliseconds
+    const timerDuration = 60000; // retained for CSS progress fallback
 
-    // Self-contained timer that updates display and CSS progress without causing re-renders
+    // Self-contained timer that updates the display with time until market end
     useEffect(() => {
-        if (!isActive || !timerDisplayRef.current || !cardRef.current) return;
+        if (!timerDisplayRef.current || !cardRef.current) return;
+
+        const formatRemaining = () => {
+            if (!market.endTime) return 'No end date';
+            const now = new Date().getTime();
+            const end = new Date(market.endTime).getTime();
+            const diffMs = Math.max(0, end - now);
+            const minutes = Math.floor(diffMs / 60000);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+
+            if (diffMs <= 0) return 'Ended';
+            if (days >= 1) return `${days}d ${hours % 24}h left`;
+            if (hours >= 1) return `${hours}h ${minutes % 60}m left`;
+            if (minutes > 0) return `${minutes}m left`;
+            return 'Ending soon';
+        };
+
+        // Initial paint
+        timerDisplayRef.current.textContent = formatRemaining();
+        // Keep CSS timer-progress static at 1 for now (no 60s animation)
+        cardRef.current.style.setProperty('--timer-progress', '1');
+
+        if (!isActive) return; // only live-refresh on active card
+
+        const interval = setInterval(() => {
+            if (!timerDisplayRef.current) return;
+            timerDisplayRef.current.textContent = formatRemaining();
+        }, 60000); // update each minute
+
+        return () => clearInterval(interval);
+    }, [isActive, market.endTime]);
+
+    // 60s diminishing progress bar on top; hides after 60s
+    useEffect(() => {
+        if (!isActive || !progressBarRef.current) {
+            // hide when not active
+            if (progressBarRef.current) progressBarRef.current.style.width = '0%';
+            return;
+        }
 
         timerStartTime.current = Date.now();
-        const updateTimer = () => {
-            if (!timerDisplayRef.current || !cardRef.current) return;
+        let rafId: number;
 
+        const tick = () => {
+            if (!progressBarRef.current) return;
             const elapsed = Date.now() - timerStartTime.current;
-            const remaining = Math.max(0, timerDuration - elapsed);
-            const secondsLeft = Math.ceil(remaining / 1000);
-            const progress = remaining / timerDuration;
-
-            // Update timer display
-            timerDisplayRef.current.textContent = `${secondsLeft}s left`;
-
-            // Update CSS custom property for gradient animation
-            cardRef.current.style.setProperty('--timer-progress', progress.toString());
-
-            if (remaining > 0) {
-                requestAnimationFrame(updateTimer);
+            const ratio = Math.max(0, Math.min(1, 1 - elapsed / 60000)); // 1 -> 0 over 60s
+            progressBarRef.current.style.width = `${ratio * 100}%`;
+            progressBarRef.current.style.opacity = ratio <= 0.02 ? '0' : '1';
+            if (elapsed < 60000) {
+                rafId = requestAnimationFrame(tick);
             }
         };
 
-        updateTimer();
+        // start full then shrink
+        progressBarRef.current.style.width = '100%';
+        progressBarRef.current.style.opacity = '1';
+        rafId = requestAnimationFrame(tick);
 
-        // Clean up is handled by the effect dependency
-    }, [isActive, timerDuration]);
+        return () => {
+            if (rafId) cancelAnimationFrame(rafId);
+        };
+    }, [isActive]);
 
     const getTimeRemaining = () => {
-        // Generate a random time remaining between 1-24 hours for each market
-        // Using market.id as seed for consistency
-        const seed = market.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-        const random = (seed % 24) + 1; // 1-24 hours
+        if (!market.endTime) return 'No end date';
+        const now = new Date().getTime();
+        const end = new Date(market.endTime).getTime();
+        const diffMs = Math.max(0, end - now);
+        const minutes = Math.floor(diffMs / 60000);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
 
-        if (random < 1) {
-            const minutes = Math.floor(random * 60);
-            return `${minutes}m left`;
-        } else if (random < 24) {
-            const hours = Math.floor(random);
-            const minutes = Math.floor((random - hours) * 60);
-            if (minutes === 0) {
-                return `${hours}h left`;
-            }
-            return `${hours}h ${minutes}m left`;
-        } else {
-            return `${Math.floor(random)}h left`;
-        }
+        if (diffMs <= 0) return 'Ended';
+        if (days >= 1) return `${days}d ${hours % 24}h left`;
+        if (hours >= 1) return `${hours}h ${minutes % 60}m left`;
+        if (minutes > 0) return `${minutes}m left`;
+        return 'Ending soon';
     };
 
     const getCategoryColor = (category: string) => {
@@ -91,8 +125,8 @@ function BaseCardComponent({ market, style, className = '', isActive = false, ch
             <motion.div
                 ref={cardRef}
                 className={`
-                    relative w-full h-[600px] rounded-3xl shadow-2xl overflow-hidden
-                    ${isActive ? 'backdrop-blur-sm' : 'backdrop-blur-md'} border border-white/10
+                    relative w-full h-[600px] rounded-3xl shadow-[0_20px_60px_-10px_rgba(0,0,0,0.6)] overflow-hidden
+                    ${isActive ? 'backdrop-blur-sm' : 'backdrop-blur-md'} border border-white/10 bg-slate-900/80
                     ${baseGradientClass} ${className}
                 `}
                 style={{
@@ -113,6 +147,8 @@ function BaseCardComponent({ market, style, className = '', isActive = false, ch
                     transition: { duration: 0.2 }
                 }}
             >
+                {/* Top diminishing progress bar (shrinks to zero by 60s) */}
+                <div className="absolute top-0 left-0 h-1 bg-gradient-to-r from-orange-500 via-amber-400 to-orange-500 transition-[width,opacity] duration-200" ref={progressBarRef} />
                 {/* Category Badge */}
                 <div className="absolute top-4 left-4 z-20">
                     <div className={`
@@ -128,9 +164,7 @@ function BaseCardComponent({ market, style, className = '', isActive = false, ch
                     <div className="bg-black/30 backdrop-blur-sm px-3 py-1.5 rounded-full">
                         <div className="flex items-center space-x-1 text-white text-xs">
                             <Clock className="w-3 h-3" />
-                            <span ref={timerDisplayRef}>
-                                {isActive ? '60s left' : getTimeRemaining()}
-                            </span>
+                            <span ref={timerDisplayRef}>{getTimeRemaining()}</span>
                         </div>
                     </div>
                 </div>
@@ -142,18 +176,18 @@ function BaseCardComponent({ market, style, className = '', isActive = false, ch
 
                 {/* YES/NO Progress Bar */}
                 <div className="absolute bottom-0 left-0 right-0 p-4">
-                    <div className="grid grid-cols-2 gap-2 mb-3">
-                        <div className="bg-green-500/20 backdrop-blur-sm border border-green-500/30 rounded-xl p-2 text-center">
-                            <div className="text-green-400 font-bold text-lg">
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                        <div className="bg-green-500/15 backdrop-blur-sm border border-green-500/30 rounded-2xl p-3 text-center shadow-inner">
+                            <div className="text-green-400 font-bold text-xl">
                                 {yesPercentage}%
                             </div>
-                            <div className="text-green-300 text-sm font-medium">YES</div>
+                            <div className="text-green-300 text-sm font-semibold tracking-wide">YES</div>
                         </div>
-                        <div className="bg-red-500/20 backdrop-blur-sm border border-red-500/30 rounded-xl p-2 text-center">
-                            <div className="text-red-400 font-bold text-lg">
+                        <div className="bg-red-500/15 backdrop-blur-sm border border-red-500/30 rounded-2xl p-3 text-center shadow-inner">
+                            <div className="text-red-400 font-bold text-xl">
                                 {noPercentage}%
                             </div>
-                            <div className="text-red-300 text-sm font-medium">NO</div>
+                            <div className="text-red-300 text-sm font-semibold tracking-wide">NO</div>
                         </div>
                     </div>
 
