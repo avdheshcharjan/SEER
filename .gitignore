@@ -38,6 +38,7 @@ next-env.d.ts
 # AI/LLM folders
 .claude/
 .cursor/
+.playwright-mcp/
 .llms
 SCRIPT.md
 
