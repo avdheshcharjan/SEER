@@ -24,7 +24,7 @@ import { Home } from "./components/Home";
 import { PredictionMarket } from "./components/PredictionMarket";
 import { Profile } from "./components/Profile";
 import { Leaderboard } from "./components/Leaderboard";
-import { CreateMarketOnchainKit } from "./components/CreateMarketOnchainKit";
+import { CreateMarketEnhanced } from "./components/CreateMarketEnhanced";
 
 // import { Plus, Check } from 'lucide-react';
 
@@ -83,7 +83,7 @@ export default function App() {
       case 'leaderboard':
         return <Leaderboard onBack={() => setCurrentView('home')} />;
       case 'create':
-        return <CreateMarketOnchainKit onBack={() => setCurrentView('home')} />;
+        return <CreateMarketEnhanced onBack={() => setCurrentView('home')} />;
       default:
         return (
           <Home
