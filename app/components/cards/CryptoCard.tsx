@@ -52,9 +52,6 @@ export function CryptoCard({ market, style, className, isActive }: CryptoCardPro
 
     const formatPrice = (price?: number) => {
         if (!price || price === 0) return '$0.00';
-        if (price >= 1000) {
-            return `$${(price / 1000).toFixed(1)}K`;
-        }
         return `$${price.toLocaleString()}`;
     };
 
@@ -111,7 +108,7 @@ export function CryptoCard({ market, style, className, isActive }: CryptoCardPro
 
                 {/* Hourly Chart */}
                 {coinGeckoData?.chartData && (
-                    <div className="mb-3">
+                    <div className="mb-3 flex-shrink-0">
                         <CryptoChart 
                             data={coinGeckoData.chartData}
                             currentPrice={displayPrice}

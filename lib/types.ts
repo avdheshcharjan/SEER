@@ -2,6 +2,7 @@
 // Handles both legacy mock data and Supabase schema
 
 import { Market as SupabaseMarket } from './supabase';
+import { Influencer } from './influencers';
 
 // Base unified market interface
 export interface UnifiedMarket {
@@ -11,6 +12,9 @@ export interface UnifiedMarket {
   category: 'crypto' | 'tech' | 'celebrity' | 'sports' | 'politics';
   resolved: boolean;
   outcome?: boolean | null;
+  
+  // Influencer attribution
+  influencer?: Influencer;
   
   // Time fields (normalized to ISO format)
   endTime: string; // Always ISO format
@@ -111,6 +115,56 @@ export class SchemaTransformer {
       transactionHash: market.transaction_hash,
       // Generate display format from ISO
       endDate: this.formatDisplayDate(market.end_time)
+    };
+  }
+
+  // Convert markets_with_influencers view data to UnifiedMarket
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static marketWithInfluencerToUnified(marketData: any): UnifiedMarket {
+    const totalPool = marketData.yes_pool + marketData.no_pool;
+    const yesPrice = totalPool > 0 ? marketData.yes_pool / totalPool : 0.5;
+    const noPrice = totalPool > 0 ? marketData.no_pool / totalPool : 0.5;
+    
+    // Build influencer object if influencer data exists
+    const influencer = marketData.influencer_id ? {
+      id: marketData.influencer_id,
+      handle: marketData.influencer_handle,
+      name: marketData.influencer_name,
+      avatar: marketData.influencer_avatar,
+      followerCount: marketData.influencer_followers || 0,
+      verifiedStatus: marketData.influencer_verified || false,
+      winRate: parseFloat(marketData.influencer_win_rate) || 0,
+      totalPredictions: 0, // Will be calculated from database
+      totalVolume: marketData.influencer_volume || '$0',
+      profitLoss: 0, // Will be calculated from database
+      tags: marketData.influencer_tags || [],
+      farcasterFid: undefined,
+      twitterHandle: marketData.influencer_id
+    } : undefined;
+    
+    return {
+      id: marketData.id,
+      question: marketData.question,
+      category: marketData.category as UnifiedMarket['category'],
+      resolved: marketData.resolved,
+      outcome: marketData.outcome,
+      endTime: marketData.end_time,
+      createdAt: marketData.created_at,
+      resolutionTime: marketData.resolution_time,
+      yesPrice,
+      noPrice,
+      yesOdds: Math.round(yesPrice * 100),
+      noOdds: Math.round(noPrice * 100),
+      yesPool: marketData.yes_pool,
+      noPool: marketData.no_pool,
+      totalYesShares: marketData.total_yes_shares,
+      totalNoShares: marketData.total_no_shares,
+      creatorAddress: marketData.creator_address,
+      contractAddress: marketData.contract_address,
+      transactionHash: marketData.transaction_hash,
+      influencer,
+      // Generate display format from ISO
+      endDate: this.formatDisplayDate(marketData.end_time)
     };
   }
 

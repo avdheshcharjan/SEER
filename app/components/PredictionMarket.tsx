@@ -71,12 +71,18 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
     useEffect(() => {
         const loadMarkets = async () => {
             try {
-                // Load markets from Supabase only
-                const supabaseMarkets = await SupabaseService.getActiveMarkets();
-                setRawSupabaseMarkets(supabaseMarkets); // Keep raw for contract mapping
+                // Load markets with influencer data from Supabase
+                const marketsWithInfluencers = await SupabaseService.getMarketsWithInfluencers();
+                
+                // Filter for active markets only
+                const activeMarkets = marketsWithInfluencers.filter(m => 
+                    !m.resolved && new Date(m.end_time) > new Date()
+                );
+                
+                setRawSupabaseMarkets(activeMarkets); // Keep raw for contract mapping
 
-                // Use only Supabase markets (single source of truth)
-                const allAvailableMarkets = supabaseMarkets.map(m => SchemaTransformer.supabaseToUnified(m));
+                // Use markets with influencer data - use the new transformer
+                const allAvailableMarkets = activeMarkets.map(m => SchemaTransformer.marketWithInfluencerToUnified(m));
 
                 // Shuffle markets
                 const shuffledMarkets = allAvailableMarkets.sort(() => 0.5 - Math.random());

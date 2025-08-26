@@ -1,10 +1,12 @@
 import { Market } from './supabase'
+import { Influencer } from './types'
 
 interface MockMarket extends Omit<Market, 'id' | 'created_at'> {
   ticker?: string
   currentPrice?: number
   targetPrice?: number
   direction?: 'above' | 'below'
+  influencer?: Influencer
 }
 
 const cryptoTickers = ['ETH', 'BTC', 'SOL', 'BASE', 'USDC', 'LINK', 'UNI', 'AAVE']

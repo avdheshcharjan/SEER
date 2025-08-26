@@ -170,7 +170,7 @@ export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard, onCr
                         <div className="mobile-text-xs text-slate-400">Markets</div>
                     </div>
                     <div>
-                        <div className="mobile-text-2xl font-bold text-green-400 mb-1">$10K+</div>
+                        <div className="mobile-text-2xl font-bold text-green-400 mb-1">$10,000+</div>
                         <div className="mobile-text-xs text-slate-400">Volume</div>
                     </div>
                     <div>

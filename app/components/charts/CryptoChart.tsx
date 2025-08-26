@@ -62,7 +62,7 @@ export function CryptoChart({ data, currentPrice, priceChange, className = '' }:
         </span>
       </div>
       
-      <svg width={width} height={height} className="w-full h-auto">
+      <svg width={width} height={height} className="w-full" style={{ height: `${height}px`, minHeight: `${height}px` }}>
         <defs>
           <linearGradient id="greenGradient" x1="0%" y1="0%" x2="0%" y2="100%">
             <stop offset="0%" stopColor="#10b981" stopOpacity="0.3" />

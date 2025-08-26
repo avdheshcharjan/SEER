@@ -14,9 +14,6 @@ interface MarketCardProps {
 export function MarketCard({ market, style, className, isActive }: MarketCardProps) {
     const formatPrice = (price?: number) => {
         if (!price || price === 0) return '$0.00';
-        if (price >= 1000) {
-            return `$${(price / 1000).toFixed(1)}K`;
-        }
         return `$${price.toLocaleString()}`;
     };
 

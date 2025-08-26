@@ -34,6 +34,34 @@ export interface Market {
   resolved: boolean
   outcome?: boolean
   resolution_time?: string
+  creator_influencer_id?: string
+  is_influencer_market?: boolean
+}
+
+export interface InfluencerProfile {
+  id: string
+  wallet_address?: string
+  handle: string
+  name: string
+  avatar_url?: string
+  follower_count: number
+  verified_status: boolean
+  win_rate: number
+  total_predictions: number
+  total_volume: string
+  profit_loss: number
+  tags: string[]
+  farcaster_fid?: number
+  twitter_handle?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface InfluencerMarket {
+  id: string
+  market_id: string
+  influencer_id: string
+  created_at: string
 }
 
 export interface UserPosition {
@@ -279,6 +307,99 @@ export class SupabaseService {
       totalInvested,
       totalPredictions
     }
+  }
+
+  // Influencer Profile methods
+  static async getInfluencerProfile(id: string) {
+    const { data, error } = await supabase
+      .from('influencer_profiles')
+      .select('*')
+      .eq('id', id)
+      .single()
+    
+    if (error) throw error
+    return data
+  }
+
+  static async getAllInfluencers() {
+    const { data, error } = await supabase
+      .from('influencer_profiles')
+      .select('*')
+      .order('win_rate', { ascending: false })
+    
+    if (error) throw error
+    return data
+  }
+
+  static async getTopInfluencers(limit = 10, sortBy: 'win_rate' | 'follower_count' = 'win_rate') {
+    const { data, error } = await supabase
+      .from('influencer_profiles')
+      .select('*')
+      .order(sortBy, { ascending: false })
+      .limit(limit)
+    
+    if (error) throw error
+    return data
+  }
+
+  // Markets with influencer data
+  static async getMarketsWithInfluencers() {
+    const { data, error } = await supabase
+      .from('markets_with_influencers')
+      .select('*')
+      .order('created_at', { ascending: false })
+    
+    if (error) throw error
+    return data
+  }
+
+  static async getMarketWithInfluencer(marketId: string) {
+    const { data, error } = await supabase
+      .from('markets_with_influencers')
+      .select('*')
+      .eq('id', marketId)
+      .single()
+    
+    if (error) throw error
+    return data
+  }
+
+  static async getMarketsByInfluencer(influencerId: string) {
+    const { data, error } = await supabase
+      .rpc('get_markets_by_influencer', { influencer_id_param: influencerId })
+    
+    if (error) throw error
+    return data
+  }
+
+  static async getInfluencerStats() {
+    const { data, error } = await supabase
+      .rpc('get_influencer_stats')
+      .single()
+    
+    if (error) throw error
+    return data
+  }
+
+  // Create market with influencer attribution
+  static async createMarketWithInfluencer(
+    market: Omit<Market, 'id' | 'created_at'>, 
+    influencerId?: string
+  ) {
+    const marketData = {
+      ...market,
+      creator_influencer_id: influencerId,
+      is_influencer_market: !!influencerId
+    }
+    
+    const { data, error } = await supabase
+      .from('markets')
+      .insert(marketData)
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
   }
 }
 

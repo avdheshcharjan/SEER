@@ -146,7 +146,7 @@ export function getInfluencerByMarketId(marketId: string): Influencer | undefine
 
 export function getMarketsByInfluencer(influencerId: string): string[] {
   return Object.entries(marketInfluencerMapping)
-    .filter(([_, id]) => id === influencerId)
+    .filter(([, id]) => id === influencerId)
     .map(([marketId]) => marketId);
 }
 
