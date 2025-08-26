@@ -1,5 +1,5 @@
 import { Market } from './supabase'
-import { Influencer } from './types'
+import { Influencer } from './influencers'
 
 interface MockMarket extends Omit<Market, 'id' | 'created_at'> {
   ticker?: string

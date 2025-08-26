@@ -37,14 +37,14 @@ async function populateMarkets() {
       category: market.category,
       end_time: market.endTime,
       creator_address: '0x0000000000000000000000000000000000000000', // Placeholder creator
-      contract_address: null, // Will be populated when markets are actually deployed
-      transaction_hash: null, // Will be populated when markets are actually deployed
+      contract_address: undefined, // Will be populated when markets are actually deployed
+      transaction_hash: undefined, // Will be populated when markets are actually deployed
       yes_pool: 10000000, // 10 USDC in 6 decimals (10 * 10^6)
       no_pool: 10000000, // 10 USDC in 6 decimals (10 * 10^6)
       total_yes_shares: 0,
       total_no_shares: 0,
       resolved: false,
-      outcome: null
+      outcome: undefined
     };
     
     marketsToInsert.push(marketInsert);

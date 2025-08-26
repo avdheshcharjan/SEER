@@ -7,11 +7,12 @@ export const runtime = 'edge';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const resolvedParams = await params;
     // Fetch market data
-    const marketData = await SupabaseService.getMarketWithInfluencer(params.id);
+    const marketData = await SupabaseService.getMarketWithInfluencer(resolvedParams.id);
     if (!marketData) {
       return new Response('Market not found', { status: 404 });
     }
@@ -113,9 +114,9 @@ export async function GET(
                   </div>
                 </div>
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ color: '#94a3b8', fontSize: '16px' }}>Predicts</div>
+                  <div style={{ color: '#94a3b8', fontSize: '16px' }}>Predictions</div>
                   <div style={{ color: '#22c55e', fontSize: '20px', fontWeight: 'bold' }}>
-                    {influencer.prediction} ({influencer.confidence}%)
+                    {influencer.totalPredictions}
                   </div>
                 </div>
               </div>

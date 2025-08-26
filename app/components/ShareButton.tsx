@@ -21,10 +21,10 @@ export function ShareButton({ market, className = '' }: ShareButtonProps) {
                 ? `${market.influencer.name} (@${market.influencer.handle})` 
                 : 'A verified creator';
                 
-            const shareText = `🔮 ${influencerInfo} predicts: "${market.question}"
+            const shareText = `🔮 ${influencerInfo} created: "${market.question}"
 
-Outcome: ${market.influencer?.prediction || 'TBD'}
-Confidence: ${market.influencer?.confidence || 'N/A'}%
+Win Rate: ${market.influencer?.winRate || 'N/A'}%
+Total Predictions: ${market.influencer?.totalPredictions || 'N/A'}
 
 Track their performance on SeerMarkets 👇`;
 
@@ -33,7 +33,7 @@ Track their performance on SeerMarkets 👇`;
 
             composeCast({
                 text: shareText,
-                embeds: [embedUrl]
+                url: embedUrl
             });
 
             // Show success feedback
