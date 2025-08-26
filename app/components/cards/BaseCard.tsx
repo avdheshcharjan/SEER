@@ -256,17 +256,17 @@ function BaseCardComponent({ market, style, className = '', isActive = false, ch
                 {/* YES/NO Progress Bar - Fixed at bottom */}
                 <div className="absolute bottom-0 left-0 right-0 p-4">
                     <div className="grid grid-cols-2 gap-3 mb-3">
-                        <div className="bg-green-500/15 backdrop-blur-sm border border-green-500/30 rounded-2xl p-3 text-center shadow-inner">
-                            <div className="text-green-400 font-bold text-xl">
-                                {yesPercentage}%
-                            </div>
-                            <div className="text-green-300 text-sm font-semibold tracking-wide">YES</div>
-                        </div>
                         <div className="bg-red-500/15 backdrop-blur-sm border border-red-500/30 rounded-2xl p-3 text-center shadow-inner">
                             <div className="text-red-400 font-bold text-xl">
                                 {noPercentage}%
                             </div>
                             <div className="text-red-300 text-sm font-semibold tracking-wide">NO</div>
+                        </div>
+                        <div className="bg-green-500/15 backdrop-blur-sm border border-green-500/30 rounded-2xl p-3 text-center shadow-inner">
+                            <div className="text-green-400 font-bold text-xl">
+                                {yesPercentage}%
+                            </div>
+                            <div className="text-green-300 text-sm font-semibold tracking-wide">YES</div>
                         </div>
                     </div>
 

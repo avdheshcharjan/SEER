@@ -5,6 +5,7 @@ import { SupabaseService } from '@/lib/supabase';
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { SwipeStack } from '@/app/components/SwipeStack';
+import { SmartPredictionCard } from '@/app/components/cards/SmartPredictionCard';
 import { UnifiedMarket } from '@/lib/types';
 import { ArrowLeft, Share } from 'lucide-react';
 import Link from 'next/link';
@@ -161,42 +162,14 @@ export default function MarketPage({ params, searchParams }: MarketPageProps) {
   }
 
   if (isEmbedded) {
-    // Compact embed view for social feeds (optimized for 3:2 aspect ratio)
+    // Embedded view now reuses the same SmartPredictionCard UI for consistency
+    // Mobile/iOS friendly: safe-area padding and rounded container
     return (
-      <div className="bg-slate-900 p-4">
-        <div className="w-full max-w-sm mx-auto aspect-[3/2] bg-slate-800/30 backdrop-blur-sm rounded-2xl shadow-lg p-4 flex flex-col justify-between border border-slate-700/50">
-          <div>
-            <h2 className="text-sm font-bold text-white mb-3 line-clamp-2">{market.question}</h2>
-
-            <div className="space-y-2">
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-green-400 font-semibold">YES {market.yesOdds}%</span>
-                <span className="text-red-400 font-semibold">NO {market.noOdds}%</span>
-              </div>
-
-              <div className="w-full bg-slate-700 rounded-full h-2">
-                <div
-                  className="bg-green-500 h-2 rounded-full"
-                  style={{ width: `${market.yesOdds}%` }}
-                />
-              </div>
-
-              <div className="text-xs text-slate-400 text-center">
-                Volume: ${market.totalVolume?.toLocaleString()} USDC
-              </div>
-
-              <div className="text-xs text-slate-500 text-center">
-                Ends: {new Date(market.endTime).toLocaleDateString()}
-              </div>
-            </div>
+      <div className="bg-slate-900 p-4 pb-[max(env(safe-area-inset-bottom),1rem)]">
+        <div className="w-full max-w-md mx-auto px-2">
+          <div className="rounded-3xl overflow-hidden border border-slate-700/50 shadow-[0_12px_32px_-12px_rgba(0,0,0,0.6)]">
+            <SmartPredictionCard market={market} isActive={false} forceMarketCard={true} />
           </div>
-
-          <button
-            onClick={() => window.open(`${process.env.NEXT_PUBLIC_URL || window.location.origin}/market/${market.id}`, '_blank')}
-            className="w-full bg-base-500 hover:bg-base-600 text-white py-2 rounded-lg text-sm font-semibold transition-colors"
-          >
-            Place Prediction →
-          </button>
         </div>
       </div>
     );

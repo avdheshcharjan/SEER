@@ -19,7 +19,7 @@ interface ProfileProps {
 export function Profile({ onBack, onCreateMarket }: ProfileProps) {
   const { address } = useAccount();
   const userStats = useUserStats();
-  const { createdMarkets, updateUser } = useAppStore();
+  const { createdMarkets, updateUser, swipeHistory } = useAppStore();
   const [supabasePredictions, setSupabasePredictions] = useState<Array<{
     id: string;
     market_id: string;
@@ -136,7 +136,7 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
   return (
     <div className="w-full mobile-container">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 px-1">
         <motion.button
           onClick={onBack}
           className="p-2 hover:bg-slate-800 rounded-lg transition-colors ios-button min-h-[44px] min-w-[44px]"
@@ -165,7 +165,7 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
       </div>
 
       {/* Profile Header */}
-      <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm rounded-2xl p-6 mb-6 border border-slate-700/50">
+      <div className="bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-sm rounded-3xl p-6 mb-6 border border-slate-700/50 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.4)]">
         <div className="mb-4">
           <Identity
             address={address as `0x${string}`}
@@ -211,7 +211,7 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
       </div>
 
       {/* Settings Section */}
-      <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-4 mb-6 border border-slate-700/50">
+      <div className="bg-slate-800/30 backdrop-blur-sm rounded-2xl p-4 mb-6 border border-slate-700/50">
         <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
           <Settings className="w-5 h-5 mr-2" />
           Bet Settings
@@ -249,14 +249,14 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
 
       {/* Detailed Stats */}
       <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50">
+        <div className="bg-slate-800/30 backdrop-blur-sm rounded-2xl p-4 border border-slate-700/50">
           <div className="flex items-center justify-between mb-2">
             <span className="text-slate-400 text-sm">Correct</span>
             <TrendingUp className="w-4 h-4 text-green-400" />
           </div>
           <div className="text-xl font-bold text-green-400">{userStats.correctPredictions}</div>
         </div>
-        <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50">
+        <div className="bg-slate-800/30 backdrop-blur-sm rounded-2xl p-4 border border-slate-700/50">
           <div className="flex items-center justify-between mb-2">
             <span className="text-slate-400 text-sm">Incorrect</span>
             <TrendingDown className="w-4 h-4 text-red-400" />
@@ -268,7 +268,7 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
       </div>
 
       {/* Test USDC Faucet */}
-      <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-4 mb-6 border border-slate-700/50">
+      <div className="bg-slate-800/30 backdrop-blur-sm rounded-2xl p-4 mb-6 border border-slate-700/50">
         <div className="text-center">
           <h3 className="text-lg font-semibold text-white mb-2 flex items-center justify-center">
             <DollarSign className="w-5 h-5 mr-2" />
@@ -315,7 +315,7 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
               .map((market) => (
                 <motion.div
                   key={market.id}
-                  className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 backdrop-blur-sm rounded-xl p-3 border border-purple-500/20"
+                  className="bg-gradient-to-r from-purple-500/10 to-blue-500/10 backdrop-blur-sm rounded-2xl p-3 border border-purple-500/20"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
@@ -362,21 +362,22 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
                           });
                         }
                       }}
-                      className="p-1 hover:bg-slate-700/50 rounded transition-colors"
+                      className="ios-button px-3 py-2 bg-slate-700/60 hover:bg-slate-700 border border-slate-600/60 rounded-xl transition-colors flex items-center gap-2 min-h-[44px]"
                       title="Copy share link"
                     >
-                      <Share className="w-3 h-3 text-slate-400" />
+                      <Share className="w-4 h-4 text-slate-200" />
+                      <span className="text-slate-100 text-xs font-medium">Share</span>
                     </button>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-2 text-center">
+                    <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-2 text-center">
                       <div className="text-green-400 font-bold text-xs">
                         {Math.round((market.yesPrice || 0.5) * 100)}%
                       </div>
                       <div className="text-green-300 text-xs">YES</div>
                     </div>
-                    <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-2 text-center">
+                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-2 text-center">
                       <div className="text-red-400 font-bold text-xs">
                         {Math.round((market.noPrice || 0.5) * 100)}%
                       </div>
@@ -392,7 +393,7 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
       {/* Create Market CTA */}
       {createdMarkets.length === 0 && onCreateMarket && (
         <div className="mb-6">
-          <div className="bg-gradient-to-br from-purple-500/10 to-blue-500/10 backdrop-blur-sm rounded-xl p-4 border border-purple-500/20 text-center">
+          <div className="bg-gradient-to-br from-purple-500/10 to-blue-500/10 backdrop-blur-sm rounded-2xl p-4 border border-purple-500/20 text-center">
             <div className="text-3xl mb-2">🎯</div>
             <h3 className="text-lg font-semibold text-white mb-1">Create Your First Market</h3>
             <p className="text-slate-400 text-sm mb-4">Turn your predictions into markets others can bet on</p>
@@ -425,7 +426,7 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
             <p className="text-slate-500 text-sm mt-1">Start swiping to make your first prediction!</p>
           </div>
         ) : (
-          <div className="space-y-3 max-h-96 overflow-y-auto">
+          <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
             {loading && (
               <div className="text-center py-4">
                 <div className="text-slate-400">Loading predictions from database...</div>
@@ -440,7 +441,7 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
                 return (
                   <motion.div
                     key={prediction.id}
-                    className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50"
+                    className="bg-slate-800/30 backdrop-blur-sm rounded-2xl p-4 border border-slate-700/50"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3 }}
@@ -454,10 +455,10 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
                           <span>{formatDate(prediction.createdAt)}</span>
                           <span>•</span>
                           <span className={`px-2 py-1 rounded-full ${market.category === 'crypto' ? 'bg-prediction-crypto/20 text-prediction-crypto' :
-                              market.category === 'tech' ? 'bg-prediction-tech/20 text-prediction-tech' :
-                                market.category === 'celebrity' ? 'bg-prediction-celebrity/20 text-prediction-celebrity' :
-                                  market.category === 'sports' ? 'bg-prediction-sports/20 text-prediction-sports' :
-                                    'bg-prediction-politics/20 text-prediction-politics'
+                            market.category === 'tech' ? 'bg-prediction-tech/20 text-prediction-tech' :
+                              market.category === 'celebrity' ? 'bg-prediction-celebrity/20 text-prediction-celebrity' :
+                                market.category === 'sports' ? 'bg-prediction-sports/20 text-prediction-sports' :
+                                  'bg-prediction-politics/20 text-prediction-politics'
                             }`}>
                             {market.category}
                           </span>
@@ -499,6 +500,48 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
                   </motion.div>
                 );
               })}
+
+            {(() => {
+              const predictedMarketIds = new Set(allPredictions.map(p => p.marketId));
+              const uniqueSwiped = (swipeHistory || []).filter(id => !predictedMarketIds.has(id));
+              if (uniqueSwiped.length === 0) return null;
+              return uniqueSwiped.map((marketId) => {
+                const market = getMarketById(marketId);
+                if (!market) return null;
+                return (
+                  <motion.div
+                    key={`swiped-${marketId}`}
+                    className="bg-slate-800/30 backdrop-blur-sm rounded-2xl p-4 border border-slate-700/50"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <h4 className="text-white font-medium text-sm mb-1 line-clamp-2">
+                          {market.question}
+                        </h4>
+                        <div className="flex items-center space-x-2 text-xs text-slate-400">
+                          <span className={`px-2 py-1 rounded-full ${market.category === 'crypto' ? 'bg-prediction-crypto/20 text-prediction-crypto' :
+                            market.category === 'tech' ? 'bg-prediction-tech/20 text-prediction-tech' :
+                              market.category === 'celebrity' ? 'bg-prediction-celebrity/20 text-prediction-celebrity' :
+                                market.category === 'sports' ? 'bg-prediction-sports/20 text-prediction-sports' :
+                                  'bg-prediction-politics/20 text-prediction-politics'
+                            }`}>
+                            {market.category}
+                          </span>
+                          <span>•</span>
+                          <span className="text-blue-400 font-medium">Swiped</span>
+                        </div>
+                      </div>
+                      <div className="text-right ml-3">
+                        <div className="text-xs text-slate-400">Not yet placed</div>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              });
+            })()}
           </div>
         )}
       </div>

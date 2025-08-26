@@ -23,30 +23,30 @@ type MarketCategory = 'crypto' | 'tech' | 'celebrity' | 'sports';
 type CreateMode = 'template' | 'custom';
 
 const CATEGORIES = [
-    { 
-        value: 'crypto' as MarketCategory, 
-        label: 'Crypto', 
+    {
+        value: 'crypto' as MarketCategory,
+        label: 'Crypto',
         icon: TrendingUp,
         color: 'from-orange-500 to-yellow-500',
         description: 'Cryptocurrency prices and blockchain events'
     },
-    { 
-        value: 'tech' as MarketCategory, 
-        label: 'Tech', 
+    {
+        value: 'tech' as MarketCategory,
+        label: 'Tech',
         icon: Sparkles,
         color: 'from-blue-500 to-purple-500',
         description: 'Technology companies, products, and innovation'
     },
-    { 
-        value: 'celebrity' as MarketCategory, 
-        label: 'Celebrity', 
+    {
+        value: 'celebrity' as MarketCategory,
+        label: 'Celebrity',
         icon: Users,
         color: 'from-pink-500 to-rose-500',
         description: 'Celebrity news, relationships, and career moves'
     },
-    { 
-        value: 'sports' as MarketCategory, 
-        label: 'Sports', 
+    {
+        value: 'sports' as MarketCategory,
+        label: 'Sports',
         icon: Trophy,
         color: 'from-green-500 to-emerald-500',
         description: 'Championships, records, and athletic achievements'
@@ -75,7 +75,7 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
     const [createMode, setCreateMode] = useState<CreateMode>('template');
     const [selectedTemplate, setSelectedTemplate] = useState<MarketTemplate | null>(null);
     const [templateSuggestions, setTemplateSuggestions] = useState<MarketTemplate[]>([]);
-    
+
     // Form data for custom markets
     const [customFormData, setCustomFormData] = useState({
         question: '',
@@ -84,7 +84,7 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
         tags: [] as string[],
         newTag: ''
     });
-    
+
     // Form data for crypto markets (existing functionality)
     const [cryptoFormData, setCryptoFormData] = useState({
         ticker: 'ETH',
@@ -92,7 +92,7 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
         direction: 'above' as 'above' | 'below',
         endDate: '',
     });
-    
+
     const [tokenData, setTokenData] = useState<TokenData | null>(null);
     const [loadingTokenData, setLoadingTokenData] = useState(false);
     const [marketQuestion, setMarketQuestion] = useState('');
@@ -204,7 +204,7 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
     const handlePreview = () => {
         const question = generateQuestion();
         let endTime: Date;
-        
+
         if (selectedCategory === 'crypto') {
             if (!cryptoFormData.price || !cryptoFormData.endDate) {
                 toast.error('Please fill in all fields');
@@ -257,11 +257,11 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
                         }
 
                         const supabaseMarket = await SupabaseService.getMarket(result.marketId!);
-                        
+
                         const newMarket: UnifiedMarket = {
                             id: supabaseMarket.id,
                             question: supabaseMarket.question,
-                            description: selectedCategory === 'crypto' 
+                            description: selectedCategory === 'crypto'
                                 ? `A prediction market for ${cryptoFormData.ticker} price`
                                 : customFormData.description,
                             category: selectedCategory,
@@ -319,7 +319,7 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
                 })();
             }
         }
-        
+
         if (status.statusName === 'error' && status.statusData && 'message' in status.statusData) {
             toast.error(`Market creation failed: ${status.statusData.message}`, {
                 style: {
@@ -398,7 +398,7 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
                             <h2 className="text-3xl font-bold text-white mb-4">Choose Market Category</h2>
                             <p className="text-slate-400 text-lg">Select the type of prediction market you want to create</p>
                         </div>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {CATEGORIES.map((category) => {
                                 const Icon = category.icon;
@@ -452,7 +452,7 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
                                 </div>
                                 <h3 className="text-lg font-bold text-white mb-2">Use Template</h3>
                                 <p className="text-slate-400 text-sm">
-                                    {selectedCategory === 'crypto' 
+                                    {selectedCategory === 'crypto'
                                         ? 'Create price prediction markets with built-in token data'
                                         : 'Choose from popular market templates'
                                     }
@@ -488,7 +488,7 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
                             // Crypto Template Form (existing functionality)
                             <div className="bg-slate-800/30 backdrop-blur-sm rounded-2xl p-6 space-y-6 border border-slate-700/50">
                                 <h2 className="text-xl font-bold text-white">Create Crypto Price Market</h2>
-                                
+
                                 {/* Token Selection */}
                                 <div>
                                     <label className="block text-white mb-2 font-medium">Select Token</label>
@@ -507,7 +507,7 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
 
                                 {/* Token Info */}
                                 {tokenData && !loadingTokenData && (
-                                    <div className="bg-slate-700/30 rounded-xl p-4 space-y-2 border border-slate-600/50">
+                                    <div className="bg-slate-700/30 rounded-xl p-4 space-y-2 border border-slate-600/50 mb-6">
                                         <div className="flex justify-between">
                                             <span className="text-slate-400">Current Price</span>
                                             <span className="text-white font-bold">${tokenData.currentPrice}</span>
@@ -518,6 +518,14 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
                                                 {tokenData.priceChange >= 0 ? '+' : ''}{tokenData.priceChange.toFixed(2)}%
                                             </span>
                                         </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-slate-400">Market Cap</span>
+                                            <span className="text-white font-semibold">${tokenData.marketCap}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-slate-400">24h Volume</span>
+                                            <span className="text-white font-semibold">${tokenData.volume}</span>
+                                        </div>
                                     </div>
                                 )}
 
@@ -525,16 +533,6 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
                                 <div>
                                     <label className="block text-white mb-2 font-medium">Price Direction</label>
                                     <div className="grid grid-cols-2 gap-3">
-                                        <button
-                                            onClick={() => setCryptoFormData({ ...cryptoFormData, direction: 'above' })}
-                                            className={`py-3 rounded-xl flex items-center justify-center gap-2 transition-all ${cryptoFormData.direction === 'above'
-                                                ? 'bg-green-500 text-white shadow-lg'
-                                                : 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 border border-slate-600/50'
-                                                }`}
-                                        >
-                                            <TrendingUp className="w-5 h-5" />
-                                            Above
-                                        </button>
                                         <button
                                             onClick={() => setCryptoFormData({ ...cryptoFormData, direction: 'below' })}
                                             className={`py-3 rounded-xl flex items-center justify-center gap-2 transition-all ${cryptoFormData.direction === 'below'
@@ -544,6 +542,16 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
                                         >
                                             <TrendingDown className="w-5 h-5" />
                                             Below
+                                        </button>
+                                        <button
+                                            onClick={() => setCryptoFormData({ ...cryptoFormData, direction: 'above' })}
+                                            className={`py-3 rounded-xl flex items-center justify-center gap-2 transition-all ${cryptoFormData.direction === 'above'
+                                                ? 'bg-green-500 text-white shadow-lg'
+                                                : 'bg-slate-700/50 text-slate-300 hover:bg-slate-600/50 border border-slate-600/50'
+                                                }`}
+                                        >
+                                            <TrendingUp className="w-5 h-5" />
+                                            Above
                                         </button>
                                     </div>
                                 </div>
@@ -589,17 +597,16 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
                                         Choose {CATEGORIES.find(c => c.value === selectedCategory)?.label} Template
                                     </h2>
                                     <p className="text-slate-400 mb-6">Select a popular market template to customize</p>
-                                    
+
                                     <div className="space-y-3">
                                         {templateSuggestions.map((template, index) => (
                                             <button
                                                 key={index}
                                                 onClick={() => handleTemplateSelect(template)}
-                                                className={`w-full p-4 rounded-xl text-left transition-all border ${
-                                                    selectedTemplate?.question === template.question
-                                                        ? 'bg-base-500/20 border-base-500/50 text-white'
-                                                        : 'bg-slate-700/30 border-slate-600/50 text-slate-300 hover:bg-slate-600/30'
-                                                }`}
+                                                className={`w-full p-4 rounded-xl text-left transition-all border ${selectedTemplate?.question === template.question
+                                                    ? 'bg-base-500/20 border-base-500/50 text-white'
+                                                    : 'bg-slate-700/30 border-slate-600/50 text-slate-300 hover:bg-slate-600/30'
+                                                    }`}
                                             >
                                                 <div className="font-medium text-white mb-1">{template.question}</div>
                                                 <div className="text-sm text-slate-400">{template.description}</div>
@@ -618,7 +625,7 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
                                 {selectedTemplate && (
                                     <div className="bg-slate-800/30 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50">
                                         <h3 className="text-lg font-bold text-white mb-4">Customize Your Market</h3>
-                                        
+
                                         {/* Question */}
                                         <div className="mb-4">
                                             <label className="block text-white mb-2 font-medium">Question</label>
@@ -702,7 +709,7 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
                                 <h2 className="text-xl font-bold text-white">
                                     Create Custom {CATEGORIES.find(c => c.value === selectedCategory)?.label} Market
                                 </h2>
-                                
+
                                 {/* Question */}
                                 <div>
                                     <label className="block text-white mb-2 font-medium">Question</label>
@@ -794,19 +801,18 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
 
                             <div className="bg-slate-700/30 rounded-xl p-4 space-y-3 border border-slate-600/50">
                                 <div className="flex items-center gap-2 mb-3">
-                                    <span className={`px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r ${
-                                        CATEGORIES.find(c => c.value === selectedCategory)?.color
-                                    } text-white`}>
+                                    <span className={`px-3 py-1 rounded-full text-sm font-medium bg-gradient-to-r ${CATEGORIES.find(c => c.value === selectedCategory)?.color
+                                        } text-white`}>
                                         {CATEGORIES.find(c => c.value === selectedCategory)?.label}
                                     </span>
                                 </div>
-                                
+
                                 <p className="text-white text-lg font-semibold">{marketQuestion}</p>
-                                
+
                                 {selectedCategory !== 'crypto' && customFormData.description && (
                                     <p className="text-slate-300 text-sm">{customFormData.description}</p>
                                 )}
-                                
+
                                 <div className="space-y-2 text-slate-300">
                                     <p className="flex items-center gap-2">
                                         <Calendar className="w-4 h-4" />
