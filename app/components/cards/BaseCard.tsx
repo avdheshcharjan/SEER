@@ -3,8 +3,9 @@
 import { motion } from 'framer-motion';
 import { getCategoryGradient } from '@/lib/prediction-markets';
 import { UnifiedMarket, SchemaTransformer } from '@/lib/types';
+import { getInfluencerByMarketId } from '@/lib/influencers';
 import { Clock } from 'lucide-react';
-import { memo, useRef, useEffect } from 'react';
+import { memo, useRef, useEffect, useState } from 'react';
 
 interface BaseCardProps {
     market: UnifiedMarket;
@@ -20,7 +21,11 @@ function BaseCardComponent({ market, style, className = '', isActive = false, ch
     const cardRef = useRef<HTMLDivElement>(null);
     const progressBarRef = useRef<HTMLDivElement>(null);
     const timerStartTime = useRef<number>(Date.now());
+    const [showCreatorInfo, setShowCreatorInfo] = useState(false);
     // const timerDuration = 60000; // retained for CSS progress fallback
+
+    // Get influencer data if available
+    const influencer = market.influencer || getInfluencerByMarketId(market.id);
 
     // Self-contained timer that updates the display with time until market end
     useEffect(() => {
@@ -89,6 +94,19 @@ function BaseCardComponent({ market, style, className = '', isActive = false, ch
         };
     }, [isActive]);
 
+    // Handle click outside to close popover
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const target = event.target as Element;
+            if (showCreatorInfo && !target.closest('.verification-badge')) {
+                setShowCreatorInfo(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showCreatorInfo]);
+
     const getTimeRemaining = () => {
         if (!market.endTime) return 'No end date';
         const now = new Date().getTime();
@@ -149,14 +167,72 @@ function BaseCardComponent({ market, style, className = '', isActive = false, ch
             >
                 {/* Top diminishing progress bar (shrinks to zero by 60s) */}
                 <div className="absolute top-0 left-0 h-1 bg-gradient-to-r from-orange-500 via-amber-400 to-orange-500 transition-[width,opacity] duration-200" ref={progressBarRef} />
-                {/* Category Badge */}
-                <div className="absolute top-4 left-4 z-20">
+                {/* Category Badge and Verification - Top Left */}
+                <div className="absolute top-4 left-4 z-20 flex items-center gap-2">
                     <div className={`
                         px-3 py-1.5 rounded-full text-xs font-semibold text-white backdrop-blur-sm
                         ${getCategoryColor(market.category)}
                     `}>
                         {market.category.toUpperCase()}
                     </div>
+                    
+                    {/* Interactive Verification Badge - Only if creatorAddress exists */}
+                    {market.creatorAddress && (
+                        <div className="relative verification-badge">
+                            <div 
+                                className="bg-blue-500/20 backdrop-blur-sm px-2 py-1.5 rounded-full border border-blue-500/30 cursor-pointer hover:bg-blue-500/30 transition-colors"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowCreatorInfo(!showCreatorInfo);
+                                }}
+                            >
+                                <div className="flex items-center gap-1">
+                                    <div className="w-3 h-3 bg-blue-500 rounded-full flex items-center justify-center">
+                                        <span className="text-white text-xs">✓</span>
+                                    </div>
+                                    <span className="text-blue-400 text-xs font-medium">Verified</span>
+                                </div>
+                            </div>
+                            
+                            {/* Creator Info Popover */}
+                            {showCreatorInfo && (
+                                <div className="absolute top-full mt-2 left-0 bg-slate-800/95 backdrop-blur-sm border border-slate-600/50 rounded-lg p-3 text-xs whitespace-nowrap z-30 shadow-lg min-w-[200px]">
+                                    <div className="text-white font-semibold mb-2">
+                                        {influencer ? 'Verified Creator' : 'Verified Creator'}
+                                    </div>
+                                    {influencer && (
+                                        <div className="space-y-1 mb-3">
+                                            <div className="flex items-center gap-1">
+                                                <div className="text-blue-400 font-medium">{influencer.handle}</div>
+                                                {influencer.twitterHandle && (
+                                                    <span className="text-slate-400">• @{influencer.twitterHandle}</span>
+                                                )}
+                                            </div>
+                                            <div className="text-slate-300 font-medium">{influencer.name}</div>
+                                            <div className="text-slate-400 text-xs">
+                                                {influencer.followerCount.toLocaleString()} followers • {influencer.winRate}% win rate
+                                            </div>
+                                            {influencer.tags && influencer.tags.length > 0 && (
+                                                <div className="flex flex-wrap gap-1 mt-2">
+                                                    {influencer.tags.slice(0, 2).map((tag, index) => (
+                                                        <span key={index} className="bg-slate-700/50 px-1.5 py-0.5 rounded text-xs text-slate-300">
+                                                            {tag}
+                                                        </span>
+                                                    ))}
+                                                    {influencer.tags.length > 2 && (
+                                                        <span className="text-slate-400 text-xs">+{influencer.tags.length - 2}</span>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    <div className="text-slate-400 text-xs border-t border-slate-700 pt-2">
+                                        {market.creatorAddress.slice(0, 6)}...{market.creatorAddress.slice(-6)}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Time Badge */}
@@ -170,11 +246,12 @@ function BaseCardComponent({ market, style, className = '', isActive = false, ch
                 </div>
 
                 {/* Main Content - Passed as children */}
-                <div className="relative flex flex-col p-4 pt-16 max-h-[520px] overflow-hidden">
+                <div className="relative flex flex-col p-4 pt-16 max-h-[480px] overflow-hidden">
                     {children}
                 </div>
 
-                {/* YES/NO Progress Bar */}
+
+                {/* YES/NO Progress Bar - Fixed at bottom */}
                 <div className="absolute bottom-0 left-0 right-0 p-4">
                     <div className="grid grid-cols-2 gap-3 mb-3">
                         <div className="bg-green-500/15 backdrop-blur-sm border border-green-500/30 rounded-2xl p-3 text-center shadow-inner">
