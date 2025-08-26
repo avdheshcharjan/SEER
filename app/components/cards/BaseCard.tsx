@@ -6,6 +6,7 @@ import { UnifiedMarket, SchemaTransformer } from '@/lib/types';
 import { getInfluencerByMarketId } from '@/lib/influencers';
 import { Clock } from 'lucide-react';
 import { memo, useRef, useEffect, useState } from 'react';
+import { ShareButton } from '../ShareButton';
 
 interface BaseCardProps {
     market: UnifiedMarket;
@@ -235,8 +236,9 @@ function BaseCardComponent({ market, style, className = '', isActive = false, ch
                     )}
                 </div>
 
-                {/* Time Badge */}
-                <div className="absolute top-4 right-4 z-20">
+                {/* Time Badge and Share Button */}
+                <div className="absolute top-4 right-4 z-20 flex items-center space-x-2">
+                    <ShareButton market={market} />
                     <div className="bg-black/30 backdrop-blur-sm px-3 py-1.5 rounded-full">
                         <div className="flex items-center space-x-1 text-white text-xs">
                             <Clock className="w-3 h-3" />
