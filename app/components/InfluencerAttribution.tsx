@@ -2,6 +2,7 @@
 
 import { Influencer } from '@/lib/influencers';
 import { CheckCircle } from 'lucide-react';
+import Image from 'next/image';
 
 interface InfluencerAttributionProps {
     influencer: Influencer;
@@ -12,9 +13,11 @@ export function InfluencerAttribution({ influencer, className = '' }: Influencer
     return (
         <div className={`flex items-center justify-between mt-4 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50 ${className}`}>
             <div className="flex items-center gap-2">
-                <img 
+                <Image 
                     src={influencer.avatar} 
                     alt={influencer.name}
+                    width={32}
+                    height={32}
                     className="w-8 h-8 rounded-full object-cover"
                 />
                 <div>
