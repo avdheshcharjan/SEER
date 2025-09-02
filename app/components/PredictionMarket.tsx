@@ -73,12 +73,12 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
             try {
                 // Load markets with influencer data from Supabase
                 const marketsWithInfluencers = await SupabaseService.getMarketsWithInfluencers();
-                
+
                 // Filter for active markets only
-                const activeMarkets = marketsWithInfluencers.filter(m => 
+                const activeMarkets = marketsWithInfluencers.filter(m =>
                     !m.resolved && new Date(m.end_time) > new Date()
                 );
-                
+
                 setRawSupabaseMarkets(activeMarkets); // Keep raw for contract mapping
 
                 // Use markets with influencer data - use the new transformer
@@ -225,7 +225,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
             }
 
             const newTimer = setTimeout(() => {
-                // Auto-execute after 30 seconds of no activity (increased from 8)
+                // Auto-execute after 10 seconds of no activity (increased from 8)
                 console.log('⏰ Auto-executing batch: 8 seconds of inactivity');
                 setPendingBatch(currentBatch => {
                     if (currentBatch.length > 0) {
@@ -233,7 +233,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                     }
                     return currentBatch;
                 });
-            }, 30000);
+            }, 10000);
 
             setBatchTimer(newTimer);
 
