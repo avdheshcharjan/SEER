@@ -9,9 +9,10 @@ interface TechCardProps {
     style?: React.CSSProperties;
     className?: string;
     isActive?: boolean;
+    suppressEntranceAnimation?: boolean;
 }
 
-export function TechCard({ market, style, className, isActive }: TechCardProps) {
+export function TechCard({ market, style, className, isActive, suppressEntranceAnimation }: TechCardProps) {
     const formatPrice = (price?: number) => {
         if (!price || price === 0) return '$0.00';
         return `$${price.toLocaleString()}`;
@@ -48,7 +49,7 @@ export function TechCard({ market, style, className, isActive }: TechCardProps) 
     };
 
     return (
-        <BaseCard market={market} style={style} className={className} isActive={isActive}>
+        <BaseCard market={market} style={style} className={className} isActive={isActive} suppressEntranceAnimation={suppressEntranceAnimation}>
             {/* Company Icon */}
             <div className="flex items-center justify-center mb-6">
                 <div className="text-6xl mb-2">

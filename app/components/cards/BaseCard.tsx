@@ -14,9 +14,10 @@ interface BaseCardProps {
     className?: string;
     isActive?: boolean;
     children: React.ReactNode;
+    suppressEntranceAnimation?: boolean;
 }
 
-function BaseCardComponent({ market, style, className = '', isActive = false, children }: BaseCardProps) {
+function BaseCardComponent({ market, style, className = '', isActive = false, children, suppressEntranceAnimation = false }: BaseCardProps) {
     const baseGradientClass = getCategoryGradient(market.category);
     const timerDisplayRef = useRef<HTMLSpanElement>(null);
     const cardRef = useRef<HTMLDivElement>(null);
@@ -153,17 +154,16 @@ function BaseCardComponent({ market, style, className = '', isActive = false, ch
                     '--timer-progress': isActive ? '1' : '1',
                     opacity: isActive ? 1 : style?.opacity || 0.4
                 } as React.CSSProperties}
-                initial={{ opacity: 0, scale: 0.8, rotateY: -15 }}
-                animate={{ opacity: 1, scale: 1, rotateY: 0 }}
-                exit={{ opacity: 0, scale: 0.8, rotateY: 15 }}
-                transition={{
+                initial={suppressEntranceAnimation ? undefined : { opacity: 0, scale: 0.8, rotateY: -15 }}
+                animate={suppressEntranceAnimation ? undefined : { opacity: 1, scale: 1, rotateY: 0 }}
+                exit={suppressEntranceAnimation ? undefined : { opacity: 0, scale: 0.8, rotateY: 15 }}
+                transition={suppressEntranceAnimation ? undefined : {
                     duration: 0.4,
                     ease: [0.25, 0.46, 0.45, 0.94]
                 }}
                 whileHover={{
-                    scale: 1.02,
-                    rotateY: 5,
-                    transition: { duration: 0.2 }
+                    scale: 1.01,
+                    transition: { duration: 0.3, ease: "easeOut" }
                 }}
             >
                 {/* Top diminishing progress bar (shrinks to zero by 60s) */}
@@ -291,6 +291,7 @@ export const BaseCard = memo(BaseCardComponent, (prevProps, nextProps) => {
         prevProps.style === nextProps.style &&
         prevProps.className === nextProps.className &&
         prevProps.isActive === nextProps.isActive &&
-        prevProps.children === nextProps.children
+        prevProps.children === nextProps.children &&
+        prevProps.suppressEntranceAnimation === nextProps.suppressEntranceAnimation
     );
 });

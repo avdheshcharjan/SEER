@@ -8,9 +8,10 @@ interface PoliticsCardProps {
     style?: React.CSSProperties;
     className?: string;
     isActive?: boolean;
+    suppressEntranceAnimation?: boolean;
 }
 
-export function PoliticsCard({ market, style, className, isActive }: PoliticsCardProps) {
+export function PoliticsCard({ market, style, className, isActive, suppressEntranceAnimation }: PoliticsCardProps) {
     const getPoliticalIcon = (question: string) => {
         const q = question.toLowerCase();
         if (q.includes('trump')) return '🇺🇸';
@@ -95,7 +96,7 @@ export function PoliticsCard({ market, style, className, isActive }: PoliticsCar
     };
 
     return (
-        <BaseCard market={market} style={style} className={className} isActive={isActive}>
+        <BaseCard market={market} style={style} className={className} isActive={isActive} suppressEntranceAnimation={suppressEntranceAnimation}>
             {/* Political Icon & Info */}
             <div className="flex items-center justify-center mb-4">
                 <div className="text-4xl mr-3">

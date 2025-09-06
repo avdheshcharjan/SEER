@@ -14,9 +14,10 @@ interface SmartPredictionCardProps {
     className?: string;
     isActive?: boolean;
     forceMarketCard?: boolean; // New prop to force using MarketCard
+    suppressEntranceAnimation?: boolean;
 }
 
-export function SmartPredictionCard({ market, style, className, isActive, forceMarketCard = false }: SmartPredictionCardProps) {
+export function SmartPredictionCard({ market, style, className, isActive, forceMarketCard = false, suppressEntranceAnimation = false }: SmartPredictionCardProps) {
     // If forceMarketCard is true, always use MarketCard
     if (forceMarketCard) {
         return (
@@ -25,6 +26,7 @@ export function SmartPredictionCard({ market, style, className, isActive, forceM
                 style={style}
                 className={className}
                 isActive={isActive}
+                suppressEntranceAnimation={suppressEntranceAnimation}
             />
         );
     }
@@ -39,6 +41,7 @@ export function SmartPredictionCard({ market, style, className, isActive, forceM
                         style={style}
                         className={className}
                         isActive={isActive}
+                        suppressEntranceAnimation={suppressEntranceAnimation}
                     />
                 );
             case 'tech':
@@ -48,6 +51,7 @@ export function SmartPredictionCard({ market, style, className, isActive, forceM
                         style={style}
                         className={className}
                         isActive={isActive}
+                        suppressEntranceAnimation={suppressEntranceAnimation}
                     />
                 );
             case 'celebrity':
@@ -57,6 +61,7 @@ export function SmartPredictionCard({ market, style, className, isActive, forceM
                         style={style}
                         className={className}
                         isActive={isActive}
+                        suppressEntranceAnimation={suppressEntranceAnimation}
                     />
                 );
             case 'sports':
@@ -66,6 +71,7 @@ export function SmartPredictionCard({ market, style, className, isActive, forceM
                         style={style}
                         className={className}
                         isActive={isActive}
+                        suppressEntranceAnimation={suppressEntranceAnimation}
                     />
                 );
             case 'politics':
@@ -75,6 +81,7 @@ export function SmartPredictionCard({ market, style, className, isActive, forceM
                         style={style}
                         className={className}
                         isActive={isActive}
+                        suppressEntranceAnimation={suppressEntranceAnimation}
                     />
                 );
             default:
@@ -85,6 +92,7 @@ export function SmartPredictionCard({ market, style, className, isActive, forceM
                         style={style}
                         className={className}
                         isActive={isActive}
+                        suppressEntranceAnimation={suppressEntranceAnimation}
                     />
                 );
         }

@@ -18,21 +18,13 @@ export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isAnimating, setIsAnimating] = useState(false);
     const [isTimerActive, setIsTimerActive] = useState(true);
-    const [isDragging, setIsDragging] = useState(false);
+    const [, setIsDragging] = useState(false);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const timeLeftRef = useRef<number>(60);
 
     const x = useMotionValue(0);
     const y = useMotionValue(0);
     const rotate = useTransform(x, [-400, 400], [-15, 15]);
-    const opacity = useTransform(
-        [x, y],
-        (latest: number[]) => {
-            const [xVal, yVal] = latest;
-            const distance = Math.sqrt(xVal * xVal + yVal * yVal);
-            return distance > 200 ? Math.max(0, 1 - (distance - 200) / 300) : 1;
-        }
-    );
 
     // Timer effect - uses ref to avoid re-renders
     useEffect(() => {
@@ -73,7 +65,7 @@ export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }
         };
     }, []);
 
-    const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
         if (isAnimating) return;
 
         const { offset, velocity } = info;
@@ -114,23 +106,29 @@ export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }
             didSwipe = true;
         } else {
             // Snap back to center with spring animation
-            const backX = animate(x, 0, { type: 'spring', stiffness: 400, damping: 35 });
-            const backY = animate(y, 0, { type: 'spring', stiffness: 400, damping: 35 });
-            Promise.all([backX.finished, backY.finished]).then(() => setIsAnimating(false));
+            const backX = animate(x, 0, { type: 'spring', stiffness: 500, damping: 40 });
+            const backY = animate(y, 0, { type: 'spring', stiffness: 500, damping: 40 });
+            Promise.all([backX.finished, backY.finished]).then(() => {
+                setIsAnimating(false);
+                setIsDragging(false);
+            });
             return;
         }
 
         if (didSwipe && animXTarget !== null && animYTarget !== null) {
-            const controlsX = animate(x, animXTarget, { type: 'spring', stiffness: 280, damping: 30 });
-            const controlsY = animate(y, animYTarget, { type: 'spring', stiffness: 280, damping: 30 });
+            const controlsX = animate(x, animXTarget, { type: 'spring', stiffness: 350, damping: 35 });
+            const controlsY = animate(y, animYTarget, { type: 'spring', stiffness: 350, damping: 35 });
 
             Promise.all([controlsX.finished, controlsY.finished]).then(() => {
-                setCurrentIndex(prev => prev + 1);
-                // Reset values for the next card before it mounts as top
-                x.set(0);
-                y.set(0);
-                setIsDragging(false);
-                setIsAnimating(false);
+                // Small delay to ensure smooth transition
+                setTimeout(() => {
+                    // Reset values for the next card before updating index
+                    x.set(0);
+                    y.set(0);
+                    setIsDragging(false);
+                    setIsAnimating(false);
+                    setCurrentIndex(prev => prev + 1);
+                }, 50);
             });
         }
     };
@@ -161,8 +159,8 @@ export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }
                 {visibleMarkets.map((market, index) => {
                     const isTopCard = index === 0;
                     const zIndex = visibleMarkets.length - index;
-                    const scale = 1 - (index * 0.05);
-                    const yOffset = index * 10;
+                    const scale = 1 - (index * 0.08);
+                    const yOffset = index * 20;
 
                     if (isTopCard) {
                         return (
@@ -173,12 +171,10 @@ export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }
                                     x,
                                     y,
                                     rotate,
-                                    opacity: isDragging ? 1 : (opacity as unknown as number),
                                     zIndex,
                                 }}
                                 drag
-                                dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-                                dragElastic={0.15}
+                                dragElastic={0.2}
                                 dragMomentum={false}
                                 onDragStart={() => {
                                     setIsDragging(true);
@@ -189,10 +185,10 @@ export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }
                                     }
                                 }}
                                 onDragEnd={handleDragEnd}
-                                whileDrag={{ scale: 1.05 }}
-                                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                                whileDrag={{ scale: 1.02 }}
+                                transition={{ type: 'spring', stiffness: 400, damping: 40 }}
                             >
-                                <SmartPredictionCard market={market} isActive={true} forceMarketCard={forceMarketCard} />
+                                <SmartPredictionCard market={market} isActive={true} forceMarketCard={forceMarketCard} suppressEntranceAnimation={true} />
                             </motion.div>
                         );
                     }
@@ -208,9 +204,11 @@ export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }
                             }}
                             initial={{ scale, y: yOffset }}
                             animate={{ scale, y: yOffset }}
-                            transition={{ type: 'spring', stiffness: 260, damping: 26 }}
+                            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                         >
-                            <SmartPredictionCard market={market} className="opacity-60" isActive={false} forceMarketCard={forceMarketCard} />
+                            <div className="opacity-20 blur-[1px]">
+                                <SmartPredictionCard market={market} isActive={false} forceMarketCard={forceMarketCard} suppressEntranceAnimation={true} />
+                            </div>
                         </motion.div>
                     );
                 })}

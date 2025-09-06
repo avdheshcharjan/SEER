@@ -9,9 +9,10 @@ interface SportsCardProps {
     style?: React.CSSProperties;
     className?: string;
     isActive?: boolean;
+    suppressEntranceAnimation?: boolean;
 }
 
-export function SportsCard({ market, style, className, isActive }: SportsCardProps) {
+export function SportsCard({ market, style, className, isActive, suppressEntranceAnimation }: SportsCardProps) {
     const getSportsIcon = (question: string) => {
         const q = question.toLowerCase();
         if (q.includes('messi')) return '⚽';
@@ -97,7 +98,7 @@ export function SportsCard({ market, style, className, isActive }: SportsCardPro
     };
 
     return (
-        <BaseCard market={market} style={style} className={className} isActive={isActive}>
+        <BaseCard market={market} style={style} className={className} isActive={isActive} suppressEntranceAnimation={suppressEntranceAnimation}>
             {/* Sports Icon */}
             <div className="flex items-center justify-center mb-6">
                 <div className="text-6xl mb-2">

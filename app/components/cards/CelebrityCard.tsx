@@ -8,9 +8,10 @@ interface CelebrityCardProps {
     style?: React.CSSProperties;
     className?: string;
     isActive?: boolean;
+    suppressEntranceAnimation?: boolean;
 }
 
-export function CelebrityCard({ market, style, className, isActive }: CelebrityCardProps) {
+export function CelebrityCard({ market, style, className, isActive, suppressEntranceAnimation }: CelebrityCardProps) {
     const getCelebrityIcon = (question: string) => {
         const q = question.toLowerCase();
         if (q.includes('taylor swift')) return '🎤';
@@ -99,7 +100,7 @@ export function CelebrityCard({ market, style, className, isActive }: CelebrityC
     };
 
     return (
-        <BaseCard market={market} style={style} className={className} isActive={isActive}>
+        <BaseCard market={market} style={style} className={className} isActive={isActive} suppressEntranceAnimation={suppressEntranceAnimation}>
             {/* Celebrity Icon & Name */}
             <div className="flex items-center justify-center mb-4">
                 <div className="text-4xl mr-3">

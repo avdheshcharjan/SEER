@@ -12,9 +12,10 @@ interface CryptoCardProps {
     style?: React.CSSProperties;
     className?: string;
     isActive?: boolean;
+    suppressEntranceAnimation?: boolean;
 }
 
-export function CryptoCard({ market, style, className, isActive }: CryptoCardProps) {
+export function CryptoCard({ market, style, className, isActive, suppressEntranceAnimation }: CryptoCardProps) {
     const [coinGeckoData, setCoinGeckoData] = useState<{
         currentPrice: number;
         priceChange: number;
@@ -63,7 +64,7 @@ export function CryptoCard({ market, style, className, isActive }: CryptoCardPro
 
 
     return (
-        <BaseCard market={market} style={style} className={className} isActive={isActive}>
+        <BaseCard market={market} style={style} className={className} isActive={isActive} suppressEntranceAnimation={suppressEntranceAnimation}>
             {/* Crypto Symbol/Icon */}
             <div className="flex items-center justify-center mb-4">
                 <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-yellow-500 rounded-full flex items-center justify-center shadow-lg">

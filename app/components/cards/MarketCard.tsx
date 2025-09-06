@@ -9,9 +9,10 @@ interface MarketCardProps {
     style?: React.CSSProperties;
     className?: string;
     isActive?: boolean;
+    suppressEntranceAnimation?: boolean;
 }
 
-export function MarketCard({ market, style, className, isActive }: MarketCardProps) {
+export function MarketCard({ market, style, className, isActive, suppressEntranceAnimation }: MarketCardProps) {
     const formatPrice = (price?: number) => {
         if (!price || price === 0) return '$0.00';
         return `$${price.toLocaleString()}`;
@@ -40,7 +41,7 @@ export function MarketCard({ market, style, className, isActive }: MarketCardPro
     };
 
     return (
-        <BaseCard market={market} style={style} className={className} isActive={isActive}>
+        <BaseCard market={market} style={style} className={className} isActive={isActive} suppressEntranceAnimation={suppressEntranceAnimation}>
             {/* Market Icon */}
             <div className="flex items-center justify-center mb-4">
                 <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full flex items-center justify-center shadow-lg">
