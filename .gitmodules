@@ -4,3 +4,12 @@
 [submodule "contracts/lib/openzeppelin-contracts"]
 	path = contracts/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "contracts/lib/conditional-tokens-contracts"]
+	path = contracts/lib/conditional-tokens-contracts
+	url = https://github.com/gnosis/conditional-tokens-contracts
+[submodule "contracts/lib/conditional-tokens-market-makers"]
+	path = contracts/lib/conditional-tokens-market-makers
+	url = https://github.com/gnosis/conditional-tokens-market-makers
+[submodule "contracts/lib/util-contracts"]
+	path = contracts/lib/util-contracts
+	url = https://github.com/gnosis/util-contracts

@@ -1,7 +1,7 @@
 # BASED Prediction Market - Deployment Guide
 
 ## Overview
-This guide covers deploying the BASED prediction market contracts to Base Sepolia testnet.
+This guide covers deploying the BASED prediction market contracts to Base Sepolia (testnet) and Base Mainnet (production).
 
 ## Prerequisites
 
@@ -9,26 +9,43 @@ This guide covers deploying the BASED prediction market contracts to Base Sepoli
 2. **Base Sepolia ETH**: Get from https://bridge.base.org/deposit or https://www.alchemy.com/faucets/base-sepolia
 3. **Wallet with private key**: MetaMask or similar
 
-## Quick Deploy (5 minutes)
+## Network Support
 
-### 1. Clone and Setup
+### Base Sepolia (Testnet)
+- **Chain ID**: 84532
+- **RPC**: https://sepolia.base.org
+- **USDC Address**: `0x036CbD53842c5426634e7929541eC2318f3dCF7e`
+- **Block Explorer**: https://sepolia.basescan.org
+
+### Base Mainnet (Production)
+- **Chain ID**: 8453
+- **RPC**: https://mainnet.base.org
+- **USDC Address**: `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`
+- **Block Explorer**: https://basescan.org
+
+## Quick Deploy
+
+### 1. Setup Environment
 ```bash
 cd contracts
 cp .env.example .env
-# Edit .env with your private key
+# Edit .env with your private key and Basescan API key
 ```
 
-### 2. Deploy Contracts
+### 2. Deploy to Sepolia (Testing)
 ```bash
-# Deploy to Base Sepolia
-forge script script/Deploy.s.sol --rpc-url https://sepolia.base.org --broadcast --verify
-
-# Or if you have RPC URL in .env:
-forge script script/Deploy.s.sol --rpc-url $BASE_SEPOLIA_RPC_URL --broadcast --verify
+./deploy-sepolia.sh
 ```
 
-### 3. Get Contract Addresses
-After deployment, check `deployments/base-sepolia.json` for contract addresses.
+### 3. Deploy to Mainnet (Production)
+```bash
+./deploy-mainnet.sh
+```
+
+### 4. Get Contract Addresses
+After deployment, check deployment files:
+- `deployments/gnosis-base-sepolia.json` (Sepolia)
+- `deployments/gnosis-base-mainnet.json` (Mainnet)
 
 ## Manual Steps
 

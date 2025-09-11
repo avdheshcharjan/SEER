@@ -8,7 +8,15 @@ import { Address, encodeFunctionData, parseUnits } from 'viem';
 import { 
   MARKET_FACTORY_ADDRESS,
   PREDICTION_MARKET_ABI,
-  MARKET_FACTORY_ABI
+  MARKET_FACTORY_ABI,
+  CONDITIONAL_TOKENS_ADDRESS,
+  FPMM_FACTORY_ADDRESS,
+  CONDITIONAL_TOKENS_ABI,
+  FPMM_ABI,
+  createBuyTx,
+  createSellTx,
+  createPrepareConditionTx,
+  createFPMMTx
 } from './blockchain';
 
 // USDC contract address on Base Sepolia (must match blockchain.ts)
@@ -40,7 +48,7 @@ const ERC20_ABI = [
 
 
 /**
- * Generate transaction calls for buying shares in a prediction market
+ * Generate transaction calls for buying shares in a Gnosis prediction market
  * Includes USDC approval if needed
  */
 export function generateBuySharesCalls(
@@ -55,7 +63,7 @@ export function generateBuySharesCalls(
     value: bigint;
   }> = [];
 
-  // Add approval call if needed
+  // Add approval call if needed (approve FPMM to spend USDC)
   if (needsApproval) {
     const approvalData = encodeFunctionData({
       abi: ERC20_ABI,
@@ -70,51 +78,68 @@ export function generateBuySharesCalls(
     });
   }
 
-  // Add buy shares call
-  const buySharesData = encodeFunctionData({
-    abi: PREDICTION_MARKET_ABI,
-    functionName: 'buyShares',
-    args: [prediction === 'yes', amount]
-  });
+  // Use Gnosis buy transaction
+  const amountInUsdc = Number(amount) / 1e6; // Convert from wei to USDC (6 decimals)
+  const outcomeIndex = prediction === 'yes' ? 0 : 1;
+  const buyTx = createBuyTx(marketAddress, amountInUsdc, outcomeIndex as 0 | 1);
 
   calls.push({
-    to: marketAddress,
-    data: buySharesData as `0x${string}`,
-    value: BigInt(0)
+    to: buyTx.to,
+    data: buyTx.data,
+    value: buyTx.value
   });
 
   return calls;
 }
 
 /**
- * Generate transaction calls for creating a new market
+ * Generate transaction calls for creating a new Gnosis market
+ * This includes: 1) Prepare condition 2) Create FPMM
+ */
+export function generateCreateGnosisMarketCalls(
+  question: string,
+  endTime: bigint,
+  oracle: Address,
+  initialLiquidity: number = 100 // Initial USDC liquidity
+) {
+  const calls: Array<{
+    to: Address;
+    data: `0x${string}`;
+    value: bigint;
+  }> = [];
+
+  // 1. Prepare condition on ConditionalTokens
+  const prepareConditionTx = createPrepareConditionTx(oracle, question);
+  calls.push({
+    to: prepareConditionTx.to,
+    data: prepareConditionTx.data,
+    value: prepareConditionTx.value
+  });
+
+  // 2. Create FPMM (would need the condition ID, which is deterministic)
+  // Note: In practice, you'd compute the condition ID and create FPMM in a separate transaction
+  // or use a factory contract that does both steps
+
+  console.log('🏭 Generated Gnosis market creation calls:', {
+    question,
+    oracle,
+    endTime: endTime.toString(),
+    callsCount: calls.length
+  });
+
+  return calls;
+}
+
+/**
+ * Generate transaction calls for creating a new market (legacy compatibility)
  */
 export function generateCreateMarketCalls(
   question: string,
   endTime: bigint,
   resolver: Address = '0x0000000000000000000000000000000000000000'
 ) {
-  const data = encodeFunctionData({
-    abi: MARKET_FACTORY_ABI,
-    functionName: 'createMarket',
-    args: [question, endTime, resolver]
-  });
-
-  const calls = [{
-    to: MARKET_FACTORY_ADDRESS,
-    data: data as `0x${string}`,
-    value: BigInt(0)
-  }];
-
-  console.log('🏭 Generated market creation call:', {
-    to: MARKET_FACTORY_ADDRESS,
-    data: data,
-    question,
-    endTime: endTime.toString(),
-    resolver
-  });
-
-  return calls;
+  // For backward compatibility, use Gnosis market creation
+  return generateCreateGnosisMarketCalls(question, endTime, resolver);
 }
 
 /**
@@ -179,17 +204,30 @@ export function getRequiredAllowlist() {
   return {
     contracts: [
       {
+        address: CONDITIONAL_TOKENS_ADDRESS,
+        functions: ['prepareCondition', 'splitPosition', 'mergePositions', 'redeemPositions']
+      },
+      {
+        address: FPMM_FACTORY_ADDRESS,
+        functions: ['createFixedProductMarketMaker']
+      },
+      {
         address: MARKET_FACTORY_ADDRESS,
         functions: ['createMarket']
       },
-      // Individual market contracts need to be added dynamically
+      // Individual FPMM contracts need to be added dynamically
       {
-        address: 'DYNAMIC_MARKET_ADDRESSES',
-        functions: ['buyShares', 'sellShares']
+        address: 'DYNAMIC_FPMM_ADDRESSES',
+        functions: ['buy', 'sell', 'addFunding', 'removeFunding']
+      },
+      // USDC contract for approvals
+      {
+        address: USDC_CONTRACT_ADDRESS,
+        functions: ['approve', 'transfer']
       }
     ],
     networks: ['base-sepolia', 'base'],
-    description: 'These contracts and functions must be allowlisted in your Coinbase Developer Platform project'
+    description: 'These Gnosis Conditional Tokens contracts and functions must be allowlisted in your Coinbase Developer Platform project'
   };
 }
 

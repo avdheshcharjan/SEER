@@ -2,76 +2,112 @@
 pragma solidity ^0.8.19;
 
 import "forge-std/Script.sol";
-// Using real Base Sepolia USDC contract
-import "../src/SimplePredictionMarket.sol";
-import "../src/MarketFactory.sol";
+import "../src/GnosisPredictionMarketFactory.sol";
+import "../src/PredictionMarketTrader.sol";
+import "../src/ConditionalTokens.sol";
+import "../src/FixedProductMarketMakerFactory.sol";
 
-/// @title Deploy script for BASED prediction market contracts
-/// @notice Deploys MockUSDC and creates a demo prediction market
-contract DeployScript is Script {
+contract Deploy is Script {
+    // Network configurations
+    struct NetworkConfig {
+        address usdc;
+        string name;
+    }
     
-    // Base Sepolia Chain ID
-    uint256 constant BASE_SEPOLIA_CHAIN_ID = 84532;
+    // Base Sepolia (Chain ID: 84532)
+    address constant USDC_BASE_SEPOLIA = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
     
-    // Real Base Sepolia USDC contract
-    address constant BASE_SEPOLIA_USDC = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
+    // Base Mainnet (Chain ID: 8453)
+    address constant USDC_BASE_MAINNET = 0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913;
     
     function run() external {
-        // Ensure we're deploying to the correct network
-        require(block.chainid == BASE_SEPOLIA_CHAIN_ID, "Must deploy to Base Sepolia");
-        
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
         
-        console.log("Deploying contracts to Base Sepolia...");
-        console.log("Deployer address:", deployer);
-        console.log("Deployer balance:", deployer.balance);
+        NetworkConfig memory config = getNetworkConfig();
+        
+        console.log("Deploying on network:", config.name);
+        console.log("Using USDC address:", config.usdc);
+        console.log("Deploying with address:", deployer);
+        console.log("Balance:", deployer.balance);
         
         vm.startBroadcast(deployerPrivateKey);
         
-        // Use real Base Sepolia USDC
-        console.log("Using real Base Sepolia USDC...");
-        address usdc = BASE_SEPOLIA_USDC;
-        console.log("USDC address:", usdc);
+        // Deploy ConditionalTokens
+        console.log("Deploying ConditionalTokens...");
+        address conditionalTokens = deployConditionalTokens();
+        console.log("ConditionalTokens deployed at:", conditionalTokens);
         
-        // Deploy Market Factory
-        console.log("Deploying MarketFactory...");
-        MarketFactory factory = new MarketFactory(usdc, deployer);
-        console.log("MarketFactory deployed at:", address(factory));
+        // Deploy FixedProductMarketMakerFactory
+        console.log("Deploying FixedProductMarketMakerFactory...");
+        address fpmmFactory = deployFPMMFactory();
+        console.log("FixedProductMarketMakerFactory deployed at:", fpmmFactory);
         
-        // Create a demo prediction market through factory
-        console.log("Creating demo prediction market...");
-        SimplePredictionMarket demoMarket = factory.createMarket(
-            "Will ETH be above $4000 on December 31, 2024?",
-            block.timestamp + 60 days, // End in 60 days
-            address(0) // Use default resolver (deployer)
+        // Deploy our factory
+        console.log("Deploying GnosisPredictionMarketFactory...");
+        GnosisPredictionMarketFactory factory = new GnosisPredictionMarketFactory(
+            conditionalTokens,
+            fpmmFactory,
+            config.usdc
         );
-        console.log("Demo market created at:", address(demoMarket));
+        console.log("GnosisPredictionMarketFactory deployed at:", address(factory));
         
-        // Note: Demo market starts with MINIMUM_LIQUIDITY
-        // Real USDC requires actual balance to add liquidity
-        console.log("Demo market created with minimal liquidity");
-        console.log("To add liquidity, ensure deployer has USDC balance");
+        // Deploy trader
+        console.log("Deploying PredictionMarketTrader...");
+        PredictionMarketTrader trader = new PredictionMarketTrader(
+            address(factory),
+            conditionalTokens,
+            config.usdc
+        );
+        console.log("PredictionMarketTrader deployed at:", address(trader));
         
         vm.stopBroadcast();
         
-        // Log deployment info
-        console.log("=== DEPLOYMENT COMPLETE ===");
-        console.log("USDC address:", usdc);
-        console.log("Demo market address:", address(demoMarket));
-        console.log("Market question:", demoMarket.question());
-        console.log("Market end time:", demoMarket.endTime());
-        console.log("YES price:", demoMarket.getYesPrice());
-        console.log("NO price:", demoMarket.getNoPrice());
+        // Save deployment addresses
+        string memory deploymentData = string(abi.encodePacked(
+            '{\n',
+            '  "conditionalTokens": "', vm.toString(conditionalTokens), '",\n',
+            '  "fpmmFactory": "', vm.toString(fpmmFactory), '",\n',
+            '  "factory": "', vm.toString(address(factory)), '",\n',
+            '  "trader": "', vm.toString(address(trader)), '",\n',
+            '  "usdc": "', vm.toString(config.usdc), '",\n',
+            '  "network": "', config.name, '",\n',
+            '  "chainId": ', vm.toString(block.chainid), '\n',
+            '}'
+        ));
         
-        // Log final addresses for manual saving
-        console.log("=== SAVE THESE ADDRESSES ===");
-        console.log("Network: Base Sepolia");
-        console.log("Chain ID: 84532");
-        console.log("Deployer: %s", deployer);
-        console.log("USDC: %s", usdc);
-        console.log("MarketFactory: %s", address(factory));
-        console.log("Demo Market: %s", address(demoMarket));
-        console.log("Deployed At: %s", block.timestamp);
+        string memory fileName = string(abi.encodePacked("./deployments/gnosis-", config.name, ".json"));
+        vm.writeFile(fileName, deploymentData);
+        console.log("Deployment complete! Addresses saved to", fileName);
+    }
+    
+    function getNetworkConfig() internal view returns (NetworkConfig memory) {
+        uint256 chainId = block.chainid;
+        
+        if (chainId == 84532) {
+            return NetworkConfig({
+                usdc: USDC_BASE_SEPOLIA,
+                name: "base-sepolia"
+            });
+        } else if (chainId == 8453) {
+            return NetworkConfig({
+                usdc: USDC_BASE_MAINNET,
+                name: "base-mainnet"
+            });
+        } else {
+            revert("Unsupported network");
+        }
+    }
+    
+    function deployConditionalTokens() internal returns (address) {
+        // Deploy our ConditionalTokens implementation
+        ConditionalTokens conditionalTokens = new ConditionalTokens();
+        return address(conditionalTokens);
+    }
+    
+    function deployFPMMFactory() internal returns (address) {
+        // Deploy our FPMM factory
+        FixedProductMarketMakerFactory fpmmFactory = new FixedProductMarketMakerFactory();
+        return address(fpmmFactory);
     }
 }

@@ -1,12 +1,25 @@
 import { base, baseSepolia } from 'wagmi/chains';
 import { encodeFunctionData, parseUnits, Address } from 'viem';
+import { 
+  CURRENT_ADDRESSES, 
+  CONDITIONAL_TOKENS_ABI, 
+  FPMM_ABI,
+  createBuyTx,
+  createSellTx,
+  generateConditionId,
+  generatePositionIds,
+  GnosisMarket,
+  createGnosisMarket
+} from './gnosis-integration';
 
-// Real deployed contract addresses on Base Sepolia (with real USDC integration)
-export const MARKET_FACTORY_ADDRESS = '0xB788385cf679A69C43CfD9cB35045BBd4c2843f2' as Address;
+// Re-export addresses from Gnosis integration for backward compatibility
+export const MARKET_FACTORY_ADDRESS = CURRENT_ADDRESSES.marketFactory;
 export const DEMO_MARKET_ADDRESS = '0x86F3108947dA0a88170A7AE8E967dAE8ce0a41F9' as Address;
+export const USDC_CONTRACT_ADDRESS = CURRENT_ADDRESSES.usdc;
 
-// USDC contract address on Base Sepolia
-export const USDC_CONTRACT_ADDRESS = '0x036CbD53842c5426634e7929541eC2318f3dCF7e' as Address;
+// Gnosis-specific exports
+export const CONDITIONAL_TOKENS_ADDRESS = CURRENT_ADDRESSES.conditionalTokens;
+export const FPMM_FACTORY_ADDRESS = CURRENT_ADDRESSES.fpmmFactory;
 
 // Legacy addresses (replaced with new deployment)
 // OLD: Factory: 0xfE7440a0C61aE1156E9B759Bb6C7E8BEFa0BCC3C (used MockUSDC)
@@ -135,26 +148,29 @@ export interface PredictionTransaction {
 }
 
 /**
- * Generate transaction data for buying shares in a prediction market
+ * Generate transaction data for buying shares in a prediction market (Gnosis CTF)
  */
 export function generateBuySharesTransaction(data: PredictionTransaction) {
     const { marketAddress, prediction, amount } = data;
+    
+    // For Gnosis FPMM: 0 = YES, 1 = NO
+    const outcomeIndex = prediction === 'yes' ? 0 : 1;
+    
+    // Use Gnosis integration function
+    return createBuyTx(marketAddress, amount, outcomeIndex as 0 | 1);
+}
 
-    // Convert amount to 6 decimals (USDC format)
-    const amountFormatted = parseUnits(amount.toString(), 6);
-
-    // Encode the function call
-    const encodedData = encodeFunctionData({
-        abi: PREDICTION_MARKET_ABI,
-        functionName: 'buyShares',
-        args: [prediction === 'yes', amountFormatted]
-    });
-
-    return {
-        to: marketAddress,
-        data: encodedData,
-        value: BigInt(0), // No ETH value, using USDC
-    };
+/**
+ * Generate transaction data for selling shares in a prediction market (Gnosis CTF)
+ */
+export function generateSellSharesTransaction(data: PredictionTransaction) {
+    const { marketAddress, prediction, amount } = data;
+    
+    // For Gnosis FPMM: 0 = YES, 1 = NO
+    const outcomeIndex = prediction === 'yes' ? 0 : 1;
+    
+    // Use Gnosis integration function
+    return createSellTx(marketAddress, amount, outcomeIndex as 0 | 1);
 }
 
 /**
@@ -259,3 +275,43 @@ export function predictionToBoolean(prediction: 'yes' | 'no'): boolean {
 export function booleanToPrediction(value: boolean): 'yes' | 'no' {
     return value ? 'yes' : 'no';
 }
+
+/**
+ * Create a new Gnosis-based prediction market
+ */
+export function createGnosisPredictionMarket(
+    id: string,
+    question: string,
+    oracle: Address,
+    endTime: Date
+): GnosisMarket {
+    return createGnosisMarket(id, question, oracle, BigInt(Math.floor(endTime.getTime() / 1000)));
+}
+
+/**
+ * Generate condition ID for a market question
+ */
+export function getConditionId(oracle: Address, question: string): `0x${string}` {
+    return generateConditionId(oracle, question);
+}
+
+/**
+ * Get position IDs for YES/NO tokens
+ */
+export function getPositionIds(conditionId: `0x${string}`): {
+    yesPositionId: bigint;
+    noPositionId: bigint;
+} {
+    return generatePositionIds(conditionId, CURRENT_ADDRESSES.usdc);
+}
+
+// Re-export Gnosis types and functions
+export type { GnosisMarket };
+export { 
+    CONDITIONAL_TOKENS_ABI, 
+    FPMM_ABI,
+    createBuyTx,
+    createSellTx,
+    createPrepareConditionTx,
+    createFPMMTx
+} from './gnosis-integration';
