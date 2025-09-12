@@ -45,8 +45,6 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
         }>;
     }[]>([]);
     const [batchTimer, setBatchTimer] = useState<NodeJS.Timeout | null>(null);
-    const [timerProgress, setTimerProgress] = useState(0);
-    const [progressInterval, setProgressInterval] = useState<NodeJS.Timeout | null>(null);
     const [currentPrediction, setCurrentPrediction] = useState<{
         marketId: string;
         direction: 'left' | 'right';
@@ -221,34 +219,14 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                 return updated;
             });
 
-            // Clear existing timer and progress interval
+            // Clear existing auto-execute timer
             if (batchTimer) {
                 clearTimeout(batchTimer);
             }
-            if (progressInterval) {
-                clearInterval(progressInterval);
-            }
-
-            // Reset and start progress tracking
-            setTimerProgress(0);
-            const startTime = Date.now();
-            const duration = 30000; // 30 seconds
-
-            const progressTimer = setInterval(() => {
-                const elapsed = Date.now() - startTime;
-                const progress = Math.min((elapsed / duration) * 100, 100);
-                setTimerProgress(progress);
-                
-                if (progress >= 100) {
-                    clearInterval(progressTimer);
-                }
-            }, 100); // Update every 100ms for smooth animation
 
             const newTimer = setTimeout(() => {
                 // Auto-execute after 30 seconds of no activity (increased from 10s for better UX)
                 console.log('⏰ Auto-executing batch: 30 seconds of inactivity');
-                clearInterval(progressTimer);
-                setTimerProgress(0);
                 setPendingBatch(currentBatch => {
                     if (currentBatch.length > 0) {
                         executeBatch(currentBatch);
@@ -258,7 +236,6 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
             }, 30000);
 
             setBatchTimer(newTimer);
-            setProgressInterval(progressTimer);
 
         } catch (error) {
             console.error('Batch setup error:', error);
@@ -282,29 +259,24 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
             calls: allCalls
         });
 
-        // Clear the timer and progress interval
+        // Clear the timer
         if (batchTimer) {
             clearTimeout(batchTimer);
             setBatchTimer(null);
         }
-        if (progressInterval) {
-            clearInterval(progressInterval);
-            setProgressInterval(null);
-        }
-        setTimerProgress(0);
-    }, [batchTimer, progressInterval]);
+    }, [batchTimer]);
 
     // Manual commit function for the commit button
     const handleManualCommit = useCallback(() => {
         if (pendingBatch.length === 0 || isProcessingTransaction) return;
-        
+
         console.log(`👆 Manual commit triggered for ${pendingBatch.length} predictions`);
-        
+
         // Haptic feedback for mobile devices
         if ('navigator' in window && 'vibrate' in navigator) {
             navigator.vibrate([50, 30, 50]); // Short-long-short pattern
         }
-        
+
         // Show enhanced feedback for manual commit
         toast.success(
             <div className="flex items-center space-x-2">
@@ -313,9 +285,9 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                     <div className="font-semibold">Manual Submit!</div>
                     <div className="text-sm opacity-90">{pendingBatch.length} predictions queued</div>
                 </div>
-            </div>, 
+            </div>,
             {
-                duration: 3000,
+                duration: Infinity,
                 style: {
                     borderRadius: '12px',
                     background: '#1e293b',
@@ -519,10 +491,10 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
     return (
         <div className="w-full mobile-container overflow-touch overscroll-contain">
             {/* Header */}
-            <div className="flex items-center justify-between mb-6">
+            <div className="grid grid-cols-3 items-center mb-6">
                 <motion.button
                     onClick={onBack}
-                    className="p-2 hover:bg-slate-800 rounded-lg transition-colors ios-button min-h-[44px] min-w-[44px]"
+                    className="p-2 hover:bg-slate-800 rounded-lg transition-colors ios-button min-h-[44px] min-w-[44px] justify-self-start"
                     whileHover={{ scale: 1.1 }}
                     whileTap={{ scale: 0.95 }}
                 >
@@ -531,28 +503,16 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                     </svg>
                 </motion.button>
 
-                <div className="flex flex-col items-center">
+                <div className="flex flex-col items-center justify-self-center">
                     <h1 className="mobile-text-xl font-bold text-white">Tomo</h1>
                     {isPaymasterConfigured() && (
                         <div className="text-xs text-green-400 mt-1">
                             ⚡ Gasless enabled
                         </div>
                     )}
-                    {pendingBatch.length > 0 && (
-                        <div className="flex items-center space-x-1 text-xs text-blue-400 mt-1">
-                            <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse"></div>
-                            <span>{pendingBatch.length}/20 queued</span>
-                        </div>
-                    )}
                 </div>
 
-                <div className="p-2">
-                    <div className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center">
-                        <div className="w-6 h-6 bg-slate-500 rounded-full flex items-center justify-center text-xs text-slate-300 font-medium">
-                            {isPaymasterConfigured() ? '⚡' : '?'}
-                        </div>
-                    </div>
-                </div>
+                <div className="min-h-[44px] min-w-[44px] justify-self-end" />
             </div>
 
 
@@ -577,64 +537,61 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                 ))}
             </div>
 
-            {/* Swipe Stack */}
-            <SwipeStack
-                markets={currentMarkets}
-                onSwipe={handleSwipe}
-                className="mb-8"
-            />
+            {/* Swipe Stack Container with Batch Indicator Below */}
+            <div className="relative mb-8 w-full">
+                {/* Swipe Stack */}
+                <SwipeStack
+                    markets={currentMarkets}
+                    onSwipe={handleSwipe}
+                    className="mb-4"
+                />
 
-            {/* Enhanced Batch Indicator with Timer and Manual Commit */}
-            {pendingBatch.length > 0 && (
-                <div className="fixed top-4 right-4 z-50 bg-blue-500/90 backdrop-blur-sm text-white rounded-xl border border-blue-400/50 shadow-lg overflow-hidden">
-                    <div className="flex items-center space-x-3 px-3 py-2">
-                        <div className="relative">
-                            <div className="w-6 h-6 rounded-full border-2 border-white/30">
-                                <div 
-                                    className="absolute top-0 left-0 w-6 h-6 rounded-full border-2 border-white border-transparent"
-                                    style={{
-                                        borderRightColor: 'white',
-                                        borderTopColor: 'white',
-                                        transform: `rotate(${(timerProgress / 100) * 360}deg)`,
-                                        transition: 'transform 0.1s ease-out'
-                                    }}
-                                />
-                            </div>
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="w-1 h-1 bg-white rounded-full animate-pulse"></div>
+                {/* Compact Batch Indicator - Directly Below Cards */}
+                {pendingBatch.length > 0 && (
+                    <motion.div
+                        className="flex justify-center relative z-40"
+                        initial={{ opacity: 0, y: 15, scale: 0.9 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 15, scale: 0.9 }}
+                        transition={{ type: "spring", damping: 25, stiffness: 350 }}
+                    >
+                        <div className="bg-blue-500/90 backdrop-blur-sm text-white rounded-lg border border-blue-400/40 shadow-lg overflow-hidden max-w-xs">
+                            <div className="flex items-center space-x-3 px-3 py-2">
+                                {/* Compact Info */}
+                                <div className="flex flex-col items-center min-w-[35px]">
+                                    <span className="text-xs font-bold leading-none">{pendingBatch.length}/20</span>
+                                    <span className="text-[10px] opacity-75 leading-none">queued</span>
+                                </div>
+
+                                {/* Compact Commit Button */}
+                                <motion.button
+                                    onClick={handleManualCommit}
+                                    className={`
+                                        text-xs font-medium px-2.5 py-1.5 rounded-md transition-all duration-200 
+                                        min-w-[60px] flex-shrink-0
+                                        ${isProcessingTransaction
+                                            ? 'bg-gray-400/50 text-gray-300 cursor-not-allowed border border-gray-400/30'
+                                            : pendingBatch.length >= 5
+                                                ? 'bg-gradient-to-r from-green-400 to-blue-400 text-white hover:from-green-500 hover:to-blue-500 border border-green-300 shadow-md'
+                                                : 'bg-white text-blue-600 hover:bg-blue-50 active:bg-blue-100 border border-white hover:shadow-sm'
+                                        }
+                                    `}
+                                    whileHover={!isProcessingTransaction ? { scale: 1.05 } : {}}
+                                    whileTap={!isProcessingTransaction ? { scale: 0.95 } : {}}
+                                    disabled={isProcessingTransaction}
+                                >
+                                    {isProcessingTransaction
+                                        ? '...'
+                                        : pendingBatch.length >= 5
+                                            ? `🚀 (${pendingBatch.length})`
+                                            : '🚀 Go'
+                                    }
+                                </motion.button>
                             </div>
                         </div>
-                        <div className="flex flex-col">
-                            <span className="text-xs font-bold">{pendingBatch.length}/20</span>
-                            <span className="text-[10px] opacity-75">
-                                {timerProgress > 0 ? `${Math.ceil(30 - (timerProgress / 100) * 30)}s` : 'pending'}
-                            </span>
-                        </div>
-                        <motion.button
-                            onClick={handleManualCommit}
-                            className={`
-                                text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 
-                                ${isProcessingTransaction 
-                                    ? 'bg-gray-400/50 text-gray-300 cursor-not-allowed border border-gray-400/30' 
-                                    : pendingBatch.length >= 5
-                                        ? 'bg-gradient-to-r from-green-400 to-blue-400 text-white hover:from-green-500 hover:to-blue-500 border border-green-300 shadow-md'
-                                        : 'bg-white text-blue-600 hover:bg-blue-50 active:bg-blue-100 border border-white hover:shadow-sm'
-                                }
-                            `}
-                            whileHover={!isProcessingTransaction ? { scale: 1.05 } : {}}
-                            whileTap={!isProcessingTransaction ? { scale: 0.95 } : {}}
-                            disabled={isProcessingTransaction}
-                        >
-                            {isProcessingTransaction 
-                                ? '...' 
-                                : pendingBatch.length >= 5 
-                                    ? `🚀 Commit (${pendingBatch.length})`
-                                    : '🚀 Commit'
-                            }
-                        </motion.button>
-                    </div>
-                </div>
-            )}
+                    </motion.div>
+                )}
+            </div>
 
             {/* OnchainKit Transaction component for batch gasless predictions */}
             {currentPrediction && (

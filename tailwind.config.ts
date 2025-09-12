@@ -14,7 +14,7 @@ const config: Config = {
         // Base Network Brand Colors
         base: {
           50: '#eff6ff',
-          100: '#dbeafe', 
+          100: '#dbeafe',
           200: '#bfdbfe',
           300: '#93c5fd',
           400: '#60a5fa',
@@ -40,7 +40,7 @@ const config: Config = {
         "fade-out": "1s fadeOut 3s ease-out forwards",
         "fade-in": "fadeIn 0.5s ease-in-out",
         "swipe-left": "swipeLeft 0.3s ease-out forwards",
-        "swipe-right": "swipeRight 0.3s ease-out forwards", 
+        "swipe-right": "swipeRight 0.3s ease-out forwards",
         "swipe-up": "swipeUp 0.3s ease-out forwards",
         "bounce-in": "bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
         "pulse-glow": "pulseGlow 2s ease-in-out infinite",

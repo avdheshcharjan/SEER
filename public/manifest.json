@@ -1,7 +1,7 @@
 {
-  "name": "Seer - Prediction Markets",
-  "short_name": "Seer",
-  "description": "Swipe-based prediction markets. Create and trade predictions by swiping.",
+  "name": "Tomo - Micro Predictions",
+  "short_name": "Tomo",
+  "description": "Swipe-based micro prediction app. Make quick predictions by swiping.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",
@@ -33,14 +33,14 @@
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "Seer Prediction Markets - Desktop View"
+      "label": "Tomo Micro Predictions - Desktop View"
     },
     {
       "src": "/screenshot.png",
       "sizes": "390x844",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Seer Prediction Markets - Mobile View"
+      "label": "Tomo Micro Predictions - Mobile View"
     }
   ],
   "shortcuts": [

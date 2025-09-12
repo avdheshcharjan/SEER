@@ -128,12 +128,9 @@ export default function App() {
         </main>
 
         <footer className="mt-6 pt-4 flex justify-center">
-          <button
-            className="text-slate-400 hover:text-slate-300 text-xs transition-colors"
-            onClick={() => window.open("https://base.org/builders/minikit", "_blank")}
-          >
-            Built on Base with MiniKit
-          </button>
+          <div className="text-slate-400 text-xs">
+            Tomo • Swipe to Predict
+          </div>
         </footer>
       </div>
     </div>

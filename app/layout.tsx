@@ -13,10 +13,10 @@ export async function generateMetadata(): Promise<Metadata> {
   const URL = process.env.NEXT_PUBLIC_URL;
   return {
     title: process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME,
-    description: "Swipe-based prediction markets. Create and trade predictions by swiping. The easiest way to bet on crypto, sports, and politics.",
+    description: "Swipe-based micro predictions. Make quick predictions by swiping. The easiest way to predict on crypto, sports, and politics.",
     openGraph: {
       title: process.env.NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME,
-      description: "Swipe-based prediction markets",
+      description: "Swipe-based micro predictions",
       images: process.env.NEXT_PUBLIC_APP_HERO_IMAGE ? [process.env.NEXT_PUBLIC_APP_HERO_IMAGE] : [],
       url: URL,
     },
@@ -54,7 +54,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#0052FF" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Seer" />
+        <meta name="apple-mobile-web-app-title" content="Tomo" />
         <link rel="apple-touch-icon" href="/icon.png" />
       </head>
       <body className="bg-background">

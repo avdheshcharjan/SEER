@@ -1,6 +1,6 @@
-# SEER - Prediction Market Platform
+# Tomo - Micro Prediction App
 
-A swipe-based prediction market platform built on Base, featuring gasless transactions and instant predictions. Users can create markets and make predictions with simple swipe gestures.
+A swipe-based micro prediction app built on Base, featuring gasless transactions and instant predictions. Users can make quick predictions with simple swipe gestures.
 Here's the demo link: https://based-rust.vercel.app/
 Youtube video: https://www.youtube.com/watch?v=wV99Tz0V4mw
 
@@ -30,7 +30,7 @@ bun install
 
 ```bash
 # OnchainKit Configuration
-NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME=BASED
+NEXT_PUBLIC_ONCHAINKIT_PROJECT_NAME=TOMO
 NEXT_PUBLIC_URL=your-deployment-url
 NEXT_PUBLIC_ICON_URL=your-icon-url
 NEXT_PUBLIC_ONCHAINKIT_API_KEY=your-api-key

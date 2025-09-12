@@ -173,7 +173,7 @@ export async function GET(
                 fontSize: '18px',
               }}
             >
-              SeerMarkets
+              Tomo
             </div>
           </div>
         </div>
