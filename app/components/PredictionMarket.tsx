@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { useAccount } from 'wagmi';
@@ -45,6 +45,8 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
         }>;
     }[]>([]);
     const [batchTimer, setBatchTimer] = useState<NodeJS.Timeout | null>(null);
+    const [timerProgress, setTimerProgress] = useState(0);
+    const [progressInterval, setProgressInterval] = useState<NodeJS.Timeout | null>(null);
     const [currentPrediction, setCurrentPrediction] = useState<{
         marketId: string;
         direction: 'left' | 'right';
@@ -219,23 +221,44 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                 return updated;
             });
 
-            // Clear existing timer and set new one
+            // Clear existing timer and progress interval
             if (batchTimer) {
                 clearTimeout(batchTimer);
             }
+            if (progressInterval) {
+                clearInterval(progressInterval);
+            }
+
+            // Reset and start progress tracking
+            setTimerProgress(0);
+            const startTime = Date.now();
+            const duration = 30000; // 30 seconds
+
+            const progressTimer = setInterval(() => {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min((elapsed / duration) * 100, 100);
+                setTimerProgress(progress);
+                
+                if (progress >= 100) {
+                    clearInterval(progressTimer);
+                }
+            }, 100); // Update every 100ms for smooth animation
 
             const newTimer = setTimeout(() => {
-                // Auto-execute after 10 seconds of no activity (increased from 8)
-                console.log('⏰ Auto-executing batch: 8 seconds of inactivity');
+                // Auto-execute after 30 seconds of no activity (increased from 10s for better UX)
+                console.log('⏰ Auto-executing batch: 30 seconds of inactivity');
+                clearInterval(progressTimer);
+                setTimerProgress(0);
                 setPendingBatch(currentBatch => {
                     if (currentBatch.length > 0) {
                         executeBatch(currentBatch);
                     }
                     return currentBatch;
                 });
-            }, 10000);
+            }, 30000);
 
             setBatchTimer(newTimer);
+            setProgressInterval(progressTimer);
 
         } catch (error) {
             console.error('Batch setup error:', error);
@@ -244,7 +267,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
     };
 
     // Execute batch transaction
-    const executeBatch = (batch: typeof pendingBatch) => {
+    const executeBatch = useCallback((batch: typeof pendingBatch) => {
         if (batch.length === 0) return;
 
         console.log(`🚀 Executing batch of ${batch.length} predictions`);
@@ -259,12 +282,84 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
             calls: allCalls
         });
 
-        // Clear the timer
+        // Clear the timer and progress interval
         if (batchTimer) {
             clearTimeout(batchTimer);
             setBatchTimer(null);
         }
-    };
+        if (progressInterval) {
+            clearInterval(progressInterval);
+            setProgressInterval(null);
+        }
+        setTimerProgress(0);
+    }, [batchTimer, progressInterval]);
+
+    // Manual commit function for the commit button
+    const handleManualCommit = useCallback(() => {
+        if (pendingBatch.length === 0 || isProcessingTransaction) return;
+        
+        console.log(`👆 Manual commit triggered for ${pendingBatch.length} predictions`);
+        
+        // Haptic feedback for mobile devices
+        if ('navigator' in window && 'vibrate' in navigator) {
+            navigator.vibrate([50, 30, 50]); // Short-long-short pattern
+        }
+        
+        // Show enhanced feedback for manual commit
+        toast.success(
+            <div className="flex items-center space-x-2">
+                <span className="text-lg">🚀</span>
+                <div>
+                    <div className="font-semibold">Manual Submit!</div>
+                    <div className="text-sm opacity-90">{pendingBatch.length} predictions queued</div>
+                </div>
+            </div>, 
+            {
+                duration: 3000,
+                style: {
+                    borderRadius: '12px',
+                    background: '#1e293b',
+                    color: '#f1f5f9',
+                    border: '1px solid #3b82f6',
+                    minWidth: '200px',
+                },
+            }
+        );
+
+        executeBatch(pendingBatch);
+    }, [pendingBatch, executeBatch, isProcessingTransaction]);
+
+    // Handle app backgrounding/exit to auto-submit pending bets
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            // If page becomes hidden and we have pending bets, execute them
+            if (document.hidden && pendingBatch.length > 0) {
+                console.log('🌙 Page hidden, auto-executing pending batch');
+                executeBatch(pendingBatch);
+            }
+        };
+
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            // If user tries to leave/close and has pending bets, execute them
+            if (pendingBatch.length > 0) {
+                console.log('👋 Page unloading, auto-executing pending batch');
+                executeBatch(pendingBatch);
+                // Show warning to user about pending bets
+                e.preventDefault();
+                e.returnValue = 'You have pending predictions that will be submitted automatically.';
+            }
+        };
+
+        // Add event listeners
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        // Cleanup
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [pendingBatch, executeBatch]);
 
     // Modify the handleBatchStatus function to improve error handling
     const handleBatchStatus = async (status: LifecycleStatus) => {
@@ -437,15 +532,16 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                 </motion.button>
 
                 <div className="flex flex-col items-center">
-                    <h1 className="mobile-text-xl font-bold text-white">Seer</h1>
+                    <h1 className="mobile-text-xl font-bold text-white">Tomo</h1>
                     {isPaymasterConfigured() && (
                         <div className="text-xs text-green-400 mt-1">
                             ⚡ Gasless enabled
                         </div>
                     )}
                     {pendingBatch.length > 0 && (
-                        <div className="text-xs text-blue-400 mt-1">
-                            {pendingBatch.length} queued
+                        <div className="flex items-center space-x-1 text-xs text-blue-400 mt-1">
+                            <div className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-pulse"></div>
+                            <span>{pendingBatch.length}/20 queued</span>
                         </div>
                     )}
                 </div>
@@ -488,12 +584,54 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                 className="mb-8"
             />
 
-            {/* Batch Indicator */}
+            {/* Enhanced Batch Indicator with Timer and Manual Commit */}
             {pendingBatch.length > 0 && (
-                <div className="fixed safe-top-right z-50 bg-blue-500/90 backdrop-blur-sm text-white px-4 py-2 rounded-full border border-blue-400/50">
-                    <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                        <span className="mobile-text-sm font-medium">{pendingBatch.length} pending</span>
+                <div className="fixed top-4 right-4 z-50 bg-blue-500/90 backdrop-blur-sm text-white rounded-xl border border-blue-400/50 shadow-lg overflow-hidden">
+                    <div className="flex items-center space-x-3 px-3 py-2">
+                        <div className="relative">
+                            <div className="w-6 h-6 rounded-full border-2 border-white/30">
+                                <div 
+                                    className="absolute top-0 left-0 w-6 h-6 rounded-full border-2 border-white border-transparent"
+                                    style={{
+                                        borderRightColor: 'white',
+                                        borderTopColor: 'white',
+                                        transform: `rotate(${(timerProgress / 100) * 360}deg)`,
+                                        transition: 'transform 0.1s ease-out'
+                                    }}
+                                />
+                            </div>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="w-1 h-1 bg-white rounded-full animate-pulse"></div>
+                            </div>
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-xs font-bold">{pendingBatch.length}/20</span>
+                            <span className="text-[10px] opacity-75">
+                                {timerProgress > 0 ? `${Math.ceil(30 - (timerProgress / 100) * 30)}s` : 'pending'}
+                            </span>
+                        </div>
+                        <motion.button
+                            onClick={handleManualCommit}
+                            className={`
+                                text-xs font-semibold px-3 py-1.5 rounded-lg transition-all duration-200 
+                                ${isProcessingTransaction 
+                                    ? 'bg-gray-400/50 text-gray-300 cursor-not-allowed border border-gray-400/30' 
+                                    : pendingBatch.length >= 5
+                                        ? 'bg-gradient-to-r from-green-400 to-blue-400 text-white hover:from-green-500 hover:to-blue-500 border border-green-300 shadow-md'
+                                        : 'bg-white text-blue-600 hover:bg-blue-50 active:bg-blue-100 border border-white hover:shadow-sm'
+                                }
+                            `}
+                            whileHover={!isProcessingTransaction ? { scale: 1.05 } : {}}
+                            whileTap={!isProcessingTransaction ? { scale: 0.95 } : {}}
+                            disabled={isProcessingTransaction}
+                        >
+                            {isProcessingTransaction 
+                                ? '...' 
+                                : pendingBatch.length >= 5 
+                                    ? `🚀 Commit (${pendingBatch.length})`
+                                    : '🚀 Commit'
+                            }
+                        </motion.button>
                     </div>
                 </div>
             )}
