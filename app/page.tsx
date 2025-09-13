@@ -21,7 +21,7 @@ import {
 import { useState } from "react";
 import { Toaster } from 'react-hot-toast';
 import { Home } from "./components/Home";
-import { PredictionMarket } from "./components/PredictionMarket";
+import { ParimutuelPredictionMarket } from "./components/ParimutuelPredictionMarket";
 import { Profile } from "./components/Profile";
 import { Leaderboard } from "./components/Leaderboard";
 import { CreateMarketEnhanced } from "./components/CreateMarketEnhanced";
@@ -77,7 +77,7 @@ export default function App() {
   const renderCurrentView = () => {
     switch (currentView) {
       case 'predict':
-        return <PredictionMarket onBack={() => setCurrentView('home')} />;
+        return <ParimutuelPredictionMarket onBack={() => setCurrentView('home')} />;
       case 'profile':
         return <Profile onBack={() => setCurrentView('home')} onCreateMarket={() => setCurrentView('create')} />;
       case 'leaderboard':

@@ -10,9 +10,14 @@ interface TechCardProps {
     className?: string;
     isActive?: boolean;
     suppressEntranceAnimation?: boolean;
+    rawSupabaseMarkets?: Array<{
+        id: string;
+        contract_address?: string;
+        [key: string]: unknown;
+    }>;
 }
 
-export function TechCard({ market, style, className, isActive, suppressEntranceAnimation }: TechCardProps) {
+export function TechCard({ market, style, className, isActive, suppressEntranceAnimation, rawSupabaseMarkets }: TechCardProps) {
     const formatPrice = (price?: number) => {
         if (!price || price === 0) return '$0.00';
         return `$${price.toLocaleString()}`;
@@ -49,7 +54,7 @@ export function TechCard({ market, style, className, isActive, suppressEntranceA
     };
 
     return (
-        <BaseCard market={market} style={style} className={className} isActive={isActive} suppressEntranceAnimation={suppressEntranceAnimation}>
+        <BaseCard market={market} style={style} className={className} isActive={isActive} suppressEntranceAnimation={suppressEntranceAnimation} rawSupabaseMarkets={rawSupabaseMarkets}>
             {/* Company Icon */}
             <div className="flex items-center justify-center mb-6">
                 <div className="text-6xl mb-2">

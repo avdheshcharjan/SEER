@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, TrendingUp, TrendingDown, Sparkles, Users, Trophy, Calendar, Tag } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { UnifiedMarket } from '@/lib/types';
-import { SupabaseService } from '@/lib/supabase';
+import { ParimutuelSupabaseService } from '@/lib/supabase-parimutuel';
 import { generateCreateMarketCalls } from '@/lib/market-factory-onchainkit';
 import { processMarketCreation, validateMarketCreation } from '@/lib/market-factory-onchainkit';
 import { Address } from 'viem';
@@ -256,7 +256,7 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
                             throw new Error(result.error || 'Failed to process market creation');
                         }
 
-                        const supabaseMarket = await SupabaseService.getMarket(result.marketId!);
+                        const supabaseMarket = await ParimutuelSupabaseService.getMarket(result.marketId!);
 
                         const newMarket: UnifiedMarket = {
                             id: supabaseMarket.id,

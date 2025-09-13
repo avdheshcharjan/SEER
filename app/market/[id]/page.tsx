@@ -1,7 +1,7 @@
 "use client";
 
 
-import { SupabaseService } from '@/lib/supabase';
+import { ParimutuelSupabaseService } from '@/lib/supabase-parimutuel';
 import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { SwipeStack } from '@/app/components/SwipeStack';
@@ -18,13 +18,13 @@ interface MarketPageProps {
 // Fetch real market data from database
 const getMarket = async (id: string): Promise<UnifiedMarket | null> => {
   try {
-    const market = await SupabaseService.getMarket(id);
+    const market = await ParimutuelSupabaseService.getMarket(id);
     if (!market) return null;
 
-    // Convert Supabase market to UnifiedMarket format
-    const totalPool = market.yes_pool + market.no_pool;
-    const yesPrice = totalPool > 0 ? market.yes_pool / totalPool : 0.5;
-    const noPrice = totalPool > 0 ? market.no_pool / totalPool : 0.5;
+    // Convert Supabase pari-mutuel market to UnifiedMarket format
+    const totalPool = market.total_yes_bets + market.total_no_bets;
+    const yesPrice = totalPool > 0 ? market.total_yes_bets / totalPool : 0.5;
+    const noPrice = totalPool > 0 ? market.total_no_bets / totalPool : 0.5;
 
     return {
       id: market.id,
@@ -37,15 +37,15 @@ const getMarket = async (id: string): Promise<UnifiedMarket | null> => {
       outcome: market.outcome,
       creatorAddress: market.creator_address,
       contractAddress: market.contract_address,
-      yesPool: market.yes_pool,
-      noPool: market.no_pool,
-      totalYesShares: market.total_yes_shares,
-      totalNoShares: market.total_no_shares,
+      yesPool: market.total_yes_bets,
+      noPool: market.total_no_bets,
+      totalYesShares: market.total_yes_bets, // In pari-mutuel, bets are the shares
+      totalNoShares: market.total_no_bets,  // In pari-mutuel, bets are the shares
       yesPrice,
       noPrice,
       yesOdds: Math.round(yesPrice * 100),
       noOdds: Math.round(noPrice * 100),
-      totalVolume: market.yes_pool + market.no_pool,
+      totalVolume: market.total_volume,
       // Add any additional fields that might be needed
       ticker: market.category === 'crypto' ? 'ETH' : undefined,
       targetPrice: undefined,

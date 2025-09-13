@@ -15,9 +15,14 @@ interface SmartPredictionCardProps {
     isActive?: boolean;
     forceMarketCard?: boolean; // New prop to force using MarketCard
     suppressEntranceAnimation?: boolean;
+    rawSupabaseMarkets?: Array<{
+        id: string;
+        contract_address?: string;
+        [key: string]: unknown;
+    }>;
 }
 
-export function SmartPredictionCard({ market, style, className, isActive, forceMarketCard = false, suppressEntranceAnimation = false }: SmartPredictionCardProps) {
+export function SmartPredictionCard({ market, style, className, isActive, forceMarketCard = false, suppressEntranceAnimation = false, rawSupabaseMarkets }: SmartPredictionCardProps) {
     // If forceMarketCard is true, always use MarketCard
     if (forceMarketCard) {
         return (
@@ -27,6 +32,7 @@ export function SmartPredictionCard({ market, style, className, isActive, forceM
                 className={className}
                 isActive={isActive}
                 suppressEntranceAnimation={suppressEntranceAnimation}
+                rawSupabaseMarkets={rawSupabaseMarkets}
             />
         );
     }
@@ -42,6 +48,7 @@ export function SmartPredictionCard({ market, style, className, isActive, forceM
                         className={className}
                         isActive={isActive}
                         suppressEntranceAnimation={suppressEntranceAnimation}
+                        rawSupabaseMarkets={rawSupabaseMarkets}
                     />
                 );
             case 'tech':
@@ -52,6 +59,7 @@ export function SmartPredictionCard({ market, style, className, isActive, forceM
                         className={className}
                         isActive={isActive}
                         suppressEntranceAnimation={suppressEntranceAnimation}
+                        rawSupabaseMarkets={rawSupabaseMarkets}
                     />
                 );
             case 'celebrity':
@@ -62,6 +70,7 @@ export function SmartPredictionCard({ market, style, className, isActive, forceM
                         className={className}
                         isActive={isActive}
                         suppressEntranceAnimation={suppressEntranceAnimation}
+                        rawSupabaseMarkets={rawSupabaseMarkets}
                     />
                 );
             case 'sports':
@@ -72,6 +81,7 @@ export function SmartPredictionCard({ market, style, className, isActive, forceM
                         className={className}
                         isActive={isActive}
                         suppressEntranceAnimation={suppressEntranceAnimation}
+                        rawSupabaseMarkets={rawSupabaseMarkets}
                     />
                 );
             case 'politics':
@@ -82,6 +92,7 @@ export function SmartPredictionCard({ market, style, className, isActive, forceM
                         className={className}
                         isActive={isActive}
                         suppressEntranceAnimation={suppressEntranceAnimation}
+                        rawSupabaseMarkets={rawSupabaseMarkets}
                     />
                 );
             default:
@@ -93,6 +104,7 @@ export function SmartPredictionCard({ market, style, className, isActive, forceM
                         className={className}
                         isActive={isActive}
                         suppressEntranceAnimation={suppressEntranceAnimation}
+                        rawSupabaseMarkets={rawSupabaseMarkets}
                     />
                 );
         }

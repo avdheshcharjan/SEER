@@ -12,7 +12,7 @@ export interface UserPrediction {
   user_id: string
   side: 'yes' | 'no'
   amount: number
-  // Removed shares_received - not relevant for pari-mutuel
+  shares_received: number
   transaction_hash?: string
   created_at: string
   updated_at: string
@@ -27,10 +27,10 @@ export interface Market {
   creator_address?: string
   contract_address?: string
   transaction_hash?: string
-  // Pari-mutuel specific fields (replacing AMM fields)
-  total_yes_bets: number  // Total amount bet on YES
-  total_no_bets: number   // Total amount bet on NO
-  total_volume: number    // total_yes_bets + total_no_bets
+  yes_pool: number
+  no_pool: number
+  total_yes_shares: number
+  total_no_shares: number
   resolved: boolean
   outcome?: boolean
   resolution_time?: string
@@ -68,9 +68,9 @@ export interface UserPosition {
   id: string
   user_id: string
   market_id: string
-  yes_bet_amount: number    // Amount bet on YES (replacing yes_shares)
-  no_bet_amount: number     // Amount bet on NO (replacing no_shares)
-  total_invested: number    // yes_bet_amount + no_bet_amount
+  yes_shares: number
+  no_shares: number
+  total_invested: number
   created_at: string
   updated_at: string
 }
@@ -88,33 +88,6 @@ export class SupabaseService {
     
     if (error) throw error
     return data
-  }
-
-  // Insert multiple predictions in a batch (for pari-mutuel batched transactions)
-  static async insertPredictions(
-    predictions: Array<{
-      market_id: string;
-      prediction: 'yes' | 'no';
-      amount: number;
-      transaction_hash: string;
-    }>,
-    userAddress: string
-  ) {
-    const predictionRows = predictions.map(p => ({
-      market_id: p.market_id,
-      user_id: userAddress,
-      side: p.prediction,
-      amount: p.amount,
-      transaction_hash: p.transaction_hash
-    }));
-
-    const { data, error } = await supabase
-      .from('user_predictions')
-      .insert(predictionRows)
-      .select();
-
-    if (error) throw error;
-    return data;
   }
 
   static async getUserPredictions(userId: string) {

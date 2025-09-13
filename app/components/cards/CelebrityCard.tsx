@@ -9,9 +9,14 @@ interface CelebrityCardProps {
     className?: string;
     isActive?: boolean;
     suppressEntranceAnimation?: boolean;
+    rawSupabaseMarkets?: Array<{
+        id: string;
+        contract_address?: string;
+        [key: string]: unknown;
+    }>;
 }
 
-export function CelebrityCard({ market, style, className, isActive, suppressEntranceAnimation }: CelebrityCardProps) {
+export function CelebrityCard({ market, style, className, isActive, suppressEntranceAnimation, rawSupabaseMarkets }: CelebrityCardProps) {
     const getCelebrityIcon = (question: string) => {
         const q = question.toLowerCase();
         if (q.includes('taylor swift')) return '🎤';
@@ -100,7 +105,7 @@ export function CelebrityCard({ market, style, className, isActive, suppressEntr
     };
 
     return (
-        <BaseCard market={market} style={style} className={className} isActive={isActive} suppressEntranceAnimation={suppressEntranceAnimation}>
+        <BaseCard market={market} style={style} className={className} isActive={isActive} suppressEntranceAnimation={suppressEntranceAnimation} rawSupabaseMarkets={rawSupabaseMarkets}>
             {/* Celebrity Icon & Name */}
             <div className="flex items-center justify-center mb-4">
                 <div className="text-4xl mr-3">

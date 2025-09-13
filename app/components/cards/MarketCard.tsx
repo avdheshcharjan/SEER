@@ -10,9 +10,14 @@ interface MarketCardProps {
     className?: string;
     isActive?: boolean;
     suppressEntranceAnimation?: boolean;
+    rawSupabaseMarkets?: Array<{
+        id: string;
+        contract_address?: string;
+        [key: string]: unknown;
+    }>;
 }
 
-export function MarketCard({ market, style, className, isActive, suppressEntranceAnimation }: MarketCardProps) {
+export function MarketCard({ market, style, className, isActive, suppressEntranceAnimation, rawSupabaseMarkets }: MarketCardProps) {
     const formatPrice = (price?: number) => {
         if (!price || price === 0) return '$0.00';
         return `$${price.toLocaleString()}`;
@@ -41,7 +46,7 @@ export function MarketCard({ market, style, className, isActive, suppressEntranc
     };
 
     return (
-        <BaseCard market={market} style={style} className={className} isActive={isActive} suppressEntranceAnimation={suppressEntranceAnimation}>
+        <BaseCard market={market} style={style} className={className} isActive={isActive} suppressEntranceAnimation={suppressEntranceAnimation} rawSupabaseMarkets={rawSupabaseMarkets}>
             {/* Market Icon */}
             <div className="flex items-center justify-center mb-4">
                 <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-blue-500 rounded-full flex items-center justify-center shadow-lg">

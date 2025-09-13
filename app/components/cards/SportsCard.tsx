@@ -10,9 +10,14 @@ interface SportsCardProps {
     className?: string;
     isActive?: boolean;
     suppressEntranceAnimation?: boolean;
+    rawSupabaseMarkets?: Array<{
+        id: string;
+        contract_address?: string;
+        [key: string]: unknown;
+    }>;
 }
 
-export function SportsCard({ market, style, className, isActive, suppressEntranceAnimation }: SportsCardProps) {
+export function SportsCard({ market, style, className, isActive, suppressEntranceAnimation, rawSupabaseMarkets }: SportsCardProps) {
     const getSportsIcon = (question: string) => {
         const q = question.toLowerCase();
         if (q.includes('messi')) return '⚽';
@@ -98,7 +103,7 @@ export function SportsCard({ market, style, className, isActive, suppressEntranc
     };
 
     return (
-        <BaseCard market={market} style={style} className={className} isActive={isActive} suppressEntranceAnimation={suppressEntranceAnimation}>
+        <BaseCard market={market} style={style} className={className} isActive={isActive} suppressEntranceAnimation={suppressEntranceAnimation} rawSupabaseMarkets={rawSupabaseMarkets}>
             {/* Sports Icon */}
             <div className="flex items-center justify-center mb-6">
                 <div className="text-6xl mb-2">
