@@ -14,7 +14,7 @@ interface ShareButtonProps {
 export function ShareButton({ market, className = '' }: ShareButtonProps) {
     const { composeCast } = useComposeCast();
 
-    const handleShare = () => {
+    const handleShare = async () => {
         try {
             // Generate shareable content with market details
             const influencerInfo = market.influencer 
@@ -28,12 +28,15 @@ Total Predictions: ${market.influencer?.totalPredictions || 'N/A'}
 
 Track their performance on SeerMarkets 👇`;
 
-            // Create embed URL for the specific market
-            const embedUrl = `${window.location.origin}/market/${market.id}`;
+            // Create absolute embed URL for the specific market
+            const embedUrl = typeof window !== 'undefined' 
+                ? `${window.location.origin}/market/${market.id}`
+                : `${process.env.NEXT_PUBLIC_URL || 'https://based-rust.vercel.app'}/market/${market.id}`;
 
-            composeCast({
+            // Use proper embeds array format for Farcaster
+            await composeCast({
                 text: shareText,
-                url: embedUrl
+                embeds: [embedUrl], // This must be an array of URLs
             });
 
             // Show success feedback
@@ -49,7 +52,26 @@ Track their performance on SeerMarkets 👇`;
 
         } catch (error) {
             console.error('Share error:', error);
-            toast.error('Failed to open share composer');
+            
+            // Fallback: copy to clipboard
+            try {
+                const shareUrl = typeof window !== 'undefined' 
+                    ? `${window.location.origin}/market/${market.id}`
+                    : `${process.env.NEXT_PUBLIC_URL || 'https://based-rust.vercel.app'}/market/${market.id}`;
+                
+                await navigator.clipboard.writeText(shareUrl);
+                toast.success('Market link copied to clipboard! 📋', {
+                    duration: 2000,
+                    style: {
+                        borderRadius: '12px',
+                        background: '#1e293b',
+                        color: '#f1f5f9',
+                        border: '1px solid #22c55e',
+                    },
+                });
+            } catch (clipboardError) {
+                toast.error('Failed to share or copy link');
+            }
         }
     };
 

@@ -121,7 +121,7 @@ declare module '@coinbase/onchainkit/minikit' {
   }
 
   export function useComposeCast(): {
-    composeCast: (options: { text: string; url?: string }) => void;
+    composeCast: (options: { text: string; url?: string; embeds?: string[] }) => Promise<void>;
   };
 
   export function MiniKitProvider(props: MiniKitProviderProps): JSX.Element;
