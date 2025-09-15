@@ -51,11 +51,11 @@ export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard, onCr
                     <div className="text-5xl sm:text-6xl mb-4">🔮</div>
                     <h1 className="text-5xl sm:text-7xl font-bold text-white mb-4">
                         <span className="bg-gradient-to-r from-base-400 to-base-600 bg-clip-text text-transparent">
-                            Seer
+                            Tomo
                         </span>
                     </h1>
                     <p className="text-slate-300 mobile-text-lg mb-2">
-                        Prediction Market Mini-App
+                        Micro Prediction App
                     </p>
                     <p className="text-slate-400 mobile-text-sm">
                         Swipe right for YES, left for NO, up to SKIP

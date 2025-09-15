@@ -9,9 +9,14 @@ interface PoliticsCardProps {
     className?: string;
     isActive?: boolean;
     suppressEntranceAnimation?: boolean;
+    rawSupabaseMarkets?: Array<{
+        id: string;
+        contract_address?: string;
+        [key: string]: unknown;
+    }>;
 }
 
-export function PoliticsCard({ market, style, className, isActive, suppressEntranceAnimation }: PoliticsCardProps) {
+export function PoliticsCard({ market, style, className, isActive, suppressEntranceAnimation, rawSupabaseMarkets }: PoliticsCardProps) {
     const getPoliticalIcon = (question: string) => {
         const q = question.toLowerCase();
         if (q.includes('trump')) return '🇺🇸';
@@ -96,7 +101,7 @@ export function PoliticsCard({ market, style, className, isActive, suppressEntra
     };
 
     return (
-        <BaseCard market={market} style={style} className={className} isActive={isActive} suppressEntranceAnimation={suppressEntranceAnimation}>
+        <BaseCard market={market} style={style} className={className} isActive={isActive} suppressEntranceAnimation={suppressEntranceAnimation} rawSupabaseMarkets={rawSupabaseMarkets}>
             {/* Political Icon & Info */}
             <div className="flex items-center justify-center mb-4">
                 <div className="text-4xl mr-3">

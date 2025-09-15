@@ -26,7 +26,7 @@ export function ShareButton({ market, className = '' }: ShareButtonProps) {
 Win Rate: ${market.influencer?.winRate || 'N/A'}%
 Total Predictions: ${market.influencer?.totalPredictions || 'N/A'}
 
-Track their performance on SeerMarkets 👇`;
+Track their performance on Tomo 👇`;
 
             // Create absolute embed URL for the specific market
             const embedUrl = typeof window !== 'undefined' 

@@ -10,12 +10,12 @@ import { SwipeStack } from './SwipeStack';
 import { useAppStore } from '@/lib/store';
 // Static markets removed - now using only Supabase data
 import { UnifiedMarket, SchemaTransformer } from '@/lib/types';
-import { ParimutuelSupabaseService } from '@/lib/supabase-parimutuel';
+import { SupabaseService } from '@/lib/supabase';
 import { getMarketContractAddress, validateMarketContract } from '@/lib/blockchain';
 import {
-    generateBetCalls,
+    generateBuySharesCalls,
     validatePaymasterConfig
-} from '@/lib/gasless-parimutuel';
+} from '@/lib/gasless-onchainkit';
 import {
     Transaction,
     TransactionButton,
@@ -196,7 +196,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
             console.log(`📋 Adding prediction to batch: market ${marketId} -> contract ${marketAddress}`);
 
             // Generate transaction calls for OnchainKit
-            const calls = generateBetCalls(
+            const calls = generateBuySharesCalls(
                 marketAddress as Address,
                 predictionSide,
                 parseUnits(betAmount.toString(), 6) // USDC has 6 decimals
@@ -379,39 +379,40 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                     for (const prediction of pendingBatch) {
                         try {
                             // Verify market still exists before saving prediction
-                            const marketExists = await ParimutuelSupabaseService.getMarket(prediction.marketId);
+                            const marketExists = await SupabaseService.getMarket(prediction.marketId);
                             if (!marketExists) {
                                 console.error(`Market ${prediction.marketId} no longer exists in database, skipping`);
                                 continue;
                             }
 
                             // Save prediction to Supabase (with duplicate check for development)
-                            const existingPrediction = await ParimutuelSupabaseService.getUserPredictions(user.id);
+                            const existingPrediction = await SupabaseService.getUserPredictions(user.id);
                             const isDuplicate = existingPrediction?.some(p =>
                                 p.market_id === prediction.marketId &&
                                 p.transaction_hash === txHash
                             );
 
                             if (!isDuplicate) {
-                                await ParimutuelSupabaseService.createPrediction({
+                                await SupabaseService.createPrediction({
                                     market_id: prediction.marketId,
                                     user_id: user.id,
                                     side: prediction.direction === 'right' ? 'yes' : 'no',
                                     amount: prediction.amount,
+                                    shares_received: prediction.amount,
                                     transaction_hash: txHash
                                 });
 
                                 // Update user position in Supabase
-                                const existingPosition = await ParimutuelSupabaseService.getUserPosition(user.id, prediction.marketId);
-                                const currentYesBets = existingPosition?.yes_bet_amount || 0;
-                                const currentNoBets = existingPosition?.no_bet_amount || 0;
+                                const existingPosition = await SupabaseService.getUserPosition(user.id, prediction.marketId);
+                                const currentYesShares = existingPosition?.yes_shares || 0;
+                                const currentNoShares = existingPosition?.no_shares || 0;
                                 const currentInvested = existingPosition?.total_invested || 0;
 
-                                await ParimutuelSupabaseService.updateUserPosition({
+                                await SupabaseService.updateUserPosition({
                                     user_id: user.id,
                                     market_id: prediction.marketId,
-                                    yes_bet_amount: prediction.direction === 'right' ? currentYesBets + prediction.amount : currentYesBets,
-                                    no_bet_amount: prediction.direction === 'left' ? currentNoBets + prediction.amount : currentNoBets,
+                                    yes_shares: prediction.direction === 'right' ? currentYesShares + prediction.amount : currentYesShares,
+                                    no_shares: prediction.direction === 'left' ? currentNoShares + prediction.amount : currentNoShares,
                                     total_invested: currentInvested + prediction.amount
                                 });
                             } else {

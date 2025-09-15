@@ -152,7 +152,7 @@ async function verifyMarketDistribution() {
 // Main execution function
 async function main() {
   try {
-    console.log('🔮 SEER Market Population Script');
+    console.log('🔮 Tomo Market Population Script');
     console.log('================================\n');
     
     // Check Supabase connection

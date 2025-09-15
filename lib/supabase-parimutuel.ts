@@ -5,7 +5,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-// Types for our database
+// Updated types for pari-mutuel betting system
 export interface UserPrediction {
   id: string
   market_id: string
@@ -18,7 +18,8 @@ export interface UserPrediction {
   updated_at: string
 }
 
-export interface Market {
+// Updated Market interface for pari-mutuel system
+export interface ParimutuelMarket {
   id: string
   question: string
   category: string
@@ -27,7 +28,7 @@ export interface Market {
   creator_address?: string
   contract_address?: string
   transaction_hash?: string
-  // Pari-mutuel specific fields (replacing AMM fields)
+  // Pari-mutuel specific fields
   total_yes_bets: number  // Total amount bet on YES
   total_no_bets: number   // Total amount bet on NO
   total_volume: number    // total_yes_bets + total_no_bets
@@ -38,6 +39,7 @@ export interface Market {
   is_influencer_market?: boolean
 }
 
+// Keep InfluencerProfile unchanged
 export interface InfluencerProfile {
   id: string
   wallet_address?: string
@@ -64,21 +66,22 @@ export interface InfluencerMarket {
   created_at: string
 }
 
+// Updated UserPosition for pari-mutuel system
 export interface UserPosition {
   id: string
   user_id: string
   market_id: string
-  yes_bet_amount: number    // Amount bet on YES (replacing yes_shares)
-  no_bet_amount: number     // Amount bet on NO (replacing no_shares)
+  yes_bet_amount: number    // Amount bet on YES
+  no_bet_amount: number     // Amount bet on NO
   total_invested: number    // yes_bet_amount + no_bet_amount
   created_at: string
   updated_at: string
 }
 
-// Database functions
-export class SupabaseService {
+// Updated database functions for pari-mutuel system
+export class ParimutuelSupabaseService {
   
-  // User Predictions
+  // User Predictions (updated for pari-mutuel)
   static async createPrediction(prediction: Omit<UserPrediction, 'id' | 'created_at' | 'updated_at'>) {
     const { data, error } = await supabase
       .from('user_predictions')
@@ -90,7 +93,7 @@ export class SupabaseService {
     return data
   }
 
-  // Insert multiple predictions in a batch (for pari-mutuel batched transactions)
+  // Insert multiple predictions in a batch (for batched transactions)
   static async insertPredictions(
     predictions: Array<{
       market_id: string;
@@ -147,11 +150,16 @@ export class SupabaseService {
     return data
   }
 
-  // Markets
-  static async createMarket(market: Omit<Market, 'id' | 'created_at'>) {
+  // Markets (updated for pari-mutuel)
+  static async createMarket(market: Omit<ParimutuelMarket, 'id' | 'created_at' | 'total_volume'>) {
+    const marketData = {
+      ...market,
+      total_volume: market.total_yes_bets + market.total_no_bets
+    };
+
     const { data, error } = await supabase
       .from('markets')
-      .insert(market)
+      .insert(marketData)
       .select()
       .single()
     
@@ -212,10 +220,18 @@ export class SupabaseService {
     return data
   }
 
-  static async updateMarket(id: string, updates: Partial<Market>) {
+  static async updateMarket(id: string, updates: Partial<ParimutuelMarket>) {
+    const updateData = {
+      ...updates,
+      // Recalculate total_volume if bet amounts are updated
+      ...(updates.total_yes_bets !== undefined || updates.total_no_bets !== undefined) && {
+        total_volume: (updates.total_yes_bets || 0) + (updates.total_no_bets || 0)
+      }
+    };
+
     const { data, error } = await supabase
       .from('markets')
-      .update(updates)
+      .update(updateData)
       .eq('id', id)
       .select()
       .single()
@@ -249,12 +265,39 @@ export class SupabaseService {
     return data
   }
 
-  // User Positions
-  static async updateUserPosition(position: Omit<UserPosition, 'id' | 'created_at' | 'updated_at'>) {
+  // User Positions (updated for pari-mutuel)
+  static async updateUserPosition(position: {
+    market_id: string;
+    user_address: string;
+    prediction: 'yes' | 'no';
+    amount_bet: number;
+    transaction_hash: string;
+  }) {
+    // First get existing position
+    const existingPosition = await this.getUserPosition(position.user_address, position.market_id);
+    
+    const positionData = {
+      user_id: position.user_address,
+      market_id: position.market_id,
+      yes_bet_amount: existingPosition?.yes_bet_amount || 0,
+      no_bet_amount: existingPosition?.no_bet_amount || 0,
+      total_invested: existingPosition?.total_invested || 0,
+      updated_at: new Date().toISOString()
+    };
+
+    // Add the new bet amount to the appropriate side
+    if (position.prediction === 'yes') {
+      positionData.yes_bet_amount += position.amount_bet;
+    } else {
+      positionData.no_bet_amount += position.amount_bet;
+    }
+    
+    positionData.total_invested = positionData.yes_bet_amount + positionData.no_bet_amount;
+
     const { data, error } = await supabase
       .from('user_positions')
       .upsert(
-        { ...position, updated_at: new Date().toISOString() },
+        positionData,
         { onConflict: 'user_id,market_id' }
       )
       .select()
@@ -296,7 +339,7 @@ export class SupabaseService {
     return data
   }
 
-  // Analytics
+  // Analytics (updated for pari-mutuel)
   static async getMarketStats(marketId: string) {
     const { data: predictions, error } = await supabase
       .from('user_predictions')
@@ -315,8 +358,39 @@ export class SupabaseService {
       total,
       yesPercentage: total > 0 ? (yesTotal / total) * 100 : 50,
       noPercentage: total > 0 ? (noTotal / total) * 100 : 50,
-      totalPredictions: predictions?.length || 0
+      totalPredictions: predictions?.length || 0,
+      // Pari-mutuel specific: implied odds
+      yesImpliedOdds: total > 0 ? yesTotal / total : 0.5,
+      noImpliedOdds: total > 0 ? noTotal / total : 0.5
     }
+  }
+
+  // Calculate potential payout for a user in a pari-mutuel market
+  static async getUserPotentialPayout(userId: string, marketId: string) {
+    const [userPosition, marketStats] = await Promise.all([
+      this.getUserPosition(userId, marketId),
+      this.getMarketStats(marketId)
+    ]);
+
+    if (!userPosition) return { yesPayout: 0, noPayout: 0 };
+
+    const { yes_bet_amount, no_bet_amount } = userPosition;
+    const { yesTotal, noTotal } = marketStats;
+
+    let yesPayout = 0;
+    let noPayout = 0;
+
+    // Calculate potential payout if YES wins
+    if (yes_bet_amount > 0 && yesTotal > 0) {
+      yesPayout = yes_bet_amount + (yes_bet_amount / yesTotal) * noTotal;
+    }
+
+    // Calculate potential payout if NO wins  
+    if (no_bet_amount > 0 && noTotal > 0) {
+      noPayout = no_bet_amount + (no_bet_amount / noTotal) * yesTotal;
+    }
+
+    return { yesPayout, noPayout };
   }
 
   static async getUserStats(userId: string) {
@@ -336,7 +410,7 @@ export class SupabaseService {
     }
   }
 
-  // Influencer Profile methods
+  // Influencer Profile methods (unchanged)
   static async getInfluencerProfile(id: string) {
     const { data, error } = await supabase
       .from('influencer_profiles')
@@ -410,13 +484,14 @@ export class SupabaseService {
 
   // Create market with influencer attribution
   static async createMarketWithInfluencer(
-    market: Omit<Market, 'id' | 'created_at'>, 
+    market: Omit<ParimutuelMarket, 'id' | 'created_at' | 'total_volume'>, 
     influencerId?: string
   ) {
     const marketData = {
       ...market,
       creator_influencer_id: influencerId,
-      is_influencer_market: !!influencerId
+      is_influencer_market: !!influencerId,
+      total_volume: market.total_yes_bets + market.total_no_bets
     }
     
     const { data, error } = await supabase
@@ -428,6 +503,28 @@ export class SupabaseService {
     if (error) throw error
     return data
   }
+
+  // Migration helper: Convert AMM market data to pari-mutuel
+  static async convertMarketToParimutuel(marketId: string) {
+    // Get all predictions for this market
+    const { data: predictions, error: predError } = await supabase
+      .from('user_predictions')
+      .select('side, amount')
+      .eq('market_id', marketId);
+
+    if (predError) throw predError;
+
+    // Calculate total bet amounts from predictions
+    const totalYesBets = predictions?.filter(p => p.side === 'yes').reduce((sum, p) => sum + p.amount, 0) || 0;
+    const totalNoBets = predictions?.filter(p => p.side === 'no').reduce((sum, p) => sum + p.amount, 0) || 0;
+
+    // Update market with pari-mutuel fields
+    return await this.updateMarket(marketId, {
+      total_yes_bets: totalYesBets,
+      total_no_bets: totalNoBets,
+      total_volume: totalYesBets + totalNoBets
+    });
+  }
 }
 
-export default SupabaseService
+export default ParimutuelSupabaseService

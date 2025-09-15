@@ -13,9 +13,14 @@ interface CryptoCardProps {
     className?: string;
     isActive?: boolean;
     suppressEntranceAnimation?: boolean;
+    rawSupabaseMarkets?: Array<{
+        id: string;
+        contract_address?: string;
+        [key: string]: unknown;
+    }>;
 }
 
-export function CryptoCard({ market, style, className, isActive, suppressEntranceAnimation }: CryptoCardProps) {
+export function CryptoCard({ market, style, className, isActive, suppressEntranceAnimation, rawSupabaseMarkets }: CryptoCardProps) {
     const [coinGeckoData, setCoinGeckoData] = useState<{
         currentPrice: number;
         priceChange: number;
@@ -64,7 +69,7 @@ export function CryptoCard({ market, style, className, isActive, suppressEntranc
 
 
     return (
-        <BaseCard market={market} style={style} className={className} isActive={isActive} suppressEntranceAnimation={suppressEntranceAnimation}>
+        <BaseCard market={market} style={style} className={className} isActive={isActive} suppressEntranceAnimation={suppressEntranceAnimation} rawSupabaseMarkets={rawSupabaseMarkets}>
             {/* Crypto Symbol/Icon */}
             <div className="flex items-center justify-center mb-4">
                 <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-yellow-500 rounded-full flex items-center justify-center shadow-lg">

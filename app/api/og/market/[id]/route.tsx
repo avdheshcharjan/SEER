@@ -1,6 +1,6 @@
 import { ImageResponse } from 'next/og';
 import { NextRequest } from 'next/server';
-import { SupabaseService } from '@/lib/supabase';
+import { ParimutuelSupabaseService } from '@/lib/supabase-parimutuel';
 import { SchemaTransformer } from '@/lib/types';
 
 export const runtime = 'edge';
@@ -12,7 +12,7 @@ export async function GET(
   try {
     const resolvedParams = await params;
     // Fetch market data
-    const marketData = await SupabaseService.getMarketWithInfluencer(resolvedParams.id);
+    const marketData = await ParimutuelSupabaseService.getMarketWithInfluencer(resolvedParams.id);
     if (!marketData) {
       return new Response('Market not found', { status: 404 });
     }
@@ -173,7 +173,7 @@ export async function GET(
                 fontSize: '18px',
               }}
             >
-              SeerMarkets
+              Tomo
             </div>
           </div>
         </div>

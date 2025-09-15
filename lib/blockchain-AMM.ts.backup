@@ -1,13 +1,9 @@
 import { base, baseSepolia } from 'wagmi/chains';
 import { encodeFunctionData, parseUnits, Address } from 'viem';
 
-// Pari-mutuel contract addresses on Base Sepolia (replacing AMM system)
-export const MARKET_FACTORY_ADDRESS = '0xd0a6e763691fe2041aA5eA04deb67AcF888A40dD' as Address;
-export const DEMO_MARKET_ADDRESS = '0x0Ee1Eaa29418e64b20d53794B26c7C7D1aD02687' as Address;
-
-// Legacy AMM addresses (for reference)
-export const AMM_FACTORY_ADDRESS = '0xB788385cf679A69C43CfD9cB35045BBd4c2843f2' as Address;
-export const DEMO_AMM_MARKET_ADDRESS = '0x86F3108947dA0a88170A7AE8E967dAE8ce0a41F9' as Address;
+// Real deployed contract addresses on Base Sepolia (with real USDC integration)
+export const MARKET_FACTORY_ADDRESS = '0xB788385cf679A69C43CfD9cB35045BBd4c2843f2' as Address;
+export const DEMO_MARKET_ADDRESS = '0x86F3108947dA0a88170A7AE8E967dAE8ce0a41F9' as Address;
 
 // USDC contract address on Base Sepolia
 export const USDC_CONTRACT_ADDRESS = '0x036CbD53842c5426634e7929541eC2318f3dCF7e' as Address;
@@ -51,50 +47,50 @@ export const MARKET_FACTORY_ABI = [
     }
 ] as const;
 
-// ParimutuelPredictionMarket ABI (replacing AMM functions)
+// SimplePredictionMarket ABI
 export const PREDICTION_MARKET_ABI = [
     {
-        name: 'betYes',
-        type: 'function',
-        inputs: [{ name: 'amount', type: 'uint256' }],
-        outputs: [],
-        stateMutability: 'nonpayable'
-    },
-    {
-        name: 'betNo',
-        type: 'function',
-        inputs: [{ name: 'amount', type: 'uint256' }],
-        outputs: [],
-        stateMutability: 'nonpayable'
-    },
-    {
-        name: 'placeBet',
+        name: 'buyShares',
         type: 'function',
         inputs: [
             { name: 'side', type: 'bool' }, // true for YES, false for NO
             { name: 'amount', type: 'uint256' }
         ],
-        outputs: [],
+        outputs: [{ name: 'shares', type: 'uint256' }],
         stateMutability: 'nonpayable'
     },
     {
-        name: 'getUserBets',
+        name: 'sellShares',
+        type: 'function',
+        inputs: [
+            { name: 'side', type: 'bool' },
+            { name: 'sharesToSell', type: 'uint256' }
+        ],
+        outputs: [{ name: 'usdcOut', type: 'uint256' }],
+        stateMutability: 'nonpayable'
+    },
+    {
+        name: 'getUserShares',
         type: 'function',
         inputs: [{ name: 'user', type: 'address' }],
         outputs: [
-            { name: 'yesBet', type: 'uint256' },
-            { name: 'noBet', type: 'uint256' }
+            { name: 'yesBalance', type: 'uint256' },
+            { name: 'noBalance', type: 'uint256' }
         ],
         stateMutability: 'view'
     },
     {
-        name: 'getCurrentOdds',
+        name: 'getYesPrice',
         type: 'function',
         inputs: [],
-        outputs: [
-            { name: 'yesOdds', type: 'uint256' },
-            { name: 'noOdds', type: 'uint256' }
-        ],
+        outputs: [{ name: 'price', type: 'uint256' }],
+        stateMutability: 'view'
+    },
+    {
+        name: 'getNoPrice',
+        type: 'function',
+        inputs: [],
+        outputs: [{ name: 'price', type: 'uint256' }],
         stateMutability: 'view'
     },
     {
@@ -102,25 +98,11 @@ export const PREDICTION_MARKET_ABI = [
         type: 'function',
         inputs: [],
         outputs: [
-            { name: 'totalYesBets', type: 'uint256' },
-            { name: 'totalNoBets', type: 'uint256' },
+            { name: '_yesPool', type: 'uint256' },
+            { name: '_noPool', type: 'uint256' },
             { name: 'totalVolume', type: 'uint256' }
         ],
         stateMutability: 'view'
-    },
-    {
-        name: 'calculatePotentialPayout',
-        type: 'function',
-        inputs: [{ name: 'user', type: 'address' }],
-        outputs: [{ name: 'potentialPayout', type: 'uint256' }],
-        stateMutability: 'view'
-    },
-    {
-        name: 'claimRewards',
-        type: 'function',
-        inputs: [],
-        outputs: [{ name: 'payout', type: 'uint256' }],
-        stateMutability: 'nonpayable'
     },
     {
         name: 'question',

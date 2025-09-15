@@ -10,11 +10,16 @@ interface SwipeStackProps {
     onSwipe: (marketId: string, direction: 'left' | 'right' | 'up') => void;
     className?: string;
     forceMarketCard?: boolean; // New prop to force using MarketCard
+    rawSupabaseMarkets?: Array<{
+        id: string;
+        contract_address?: string;
+        [key: string]: unknown;
+    }>;
 }
 
 const SWIPE_THRESHOLD = 100;
 
-export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }: SwipeStackProps) {
+export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard, rawSupabaseMarkets }: SwipeStackProps) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isAnimating, setIsAnimating] = useState(false);
     const [isTimerActive, setIsTimerActive] = useState(true);
@@ -188,7 +193,7 @@ export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }
                                 whileDrag={{ scale: 1.02 }}
                                 transition={{ type: 'spring', stiffness: 400, damping: 40 }}
                             >
-                                <SmartPredictionCard market={market} isActive={true} forceMarketCard={forceMarketCard} suppressEntranceAnimation={true} />
+                                <SmartPredictionCard market={market} isActive={true} forceMarketCard={forceMarketCard} suppressEntranceAnimation={true} rawSupabaseMarkets={rawSupabaseMarkets} />
                             </motion.div>
                         );
                     }
@@ -207,7 +212,7 @@ export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }
                             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                         >
                             <div className="opacity-20 blur-[1px]">
-                                <SmartPredictionCard market={market} isActive={false} forceMarketCard={forceMarketCard} suppressEntranceAnimation={true} />
+                                <SmartPredictionCard market={market} isActive={false} forceMarketCard={forceMarketCard} suppressEntranceAnimation={true} rawSupabaseMarkets={rawSupabaseMarkets} />
                             </div>
                         </motion.div>
                     );

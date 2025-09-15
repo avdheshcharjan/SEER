@@ -5,7 +5,7 @@ import { useAccount } from 'wagmi';
 import { toast } from 'react-hot-toast';
 import { useAppStore, useUserStats } from '@/lib/store';
 import { getMarketById } from '@/lib/prediction-markets';
-import { SupabaseService } from '@/lib/supabase';
+import { ParimutuelSupabaseService } from '@/lib/supabase-parimutuel';
 import { TrendingUp, TrendingDown, Clock, ExternalLink, Trophy, Target, DollarSign, Settings, Plus, Share } from 'lucide-react';
 import { useEffect, useState, useCallback } from 'react';
 import { Avatar, Identity, Name, Badge, Address } from '@coinbase/onchainkit/identity';
@@ -26,7 +26,6 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
     user_id: string;
     side: 'yes' | 'no';
     amount: number;
-    shares_received: number;
     transaction_hash?: string;
     created_at: string;
     updated_at: string;
@@ -39,7 +38,7 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
 
     setLoading(true);
     try {
-      const predictions = await SupabaseService.getUserPredictions(address);
+      const predictions = await ParimutuelSupabaseService.getUserPredictions(address);
       setSupabasePredictions(predictions || []);
     } catch (error) {
       console.error('Error loading user predictions:', error);

@@ -7,6 +7,9 @@ import { getInfluencerByMarketId } from '@/lib/influencers';
 import { Clock } from 'lucide-react';
 import { memo, useRef, useEffect, useState } from 'react';
 import { ShareButton } from '../ShareButton';
+import { getParimutuelMarketContractAddress } from '@/lib/blockchain-parimutuel';
+import { useMarketStats } from '@/lib/hooks/useMarketStats';
+import { Address } from 'viem';
 
 interface BaseCardProps {
     market: UnifiedMarket;
@@ -15,9 +18,14 @@ interface BaseCardProps {
     isActive?: boolean;
     children: React.ReactNode;
     suppressEntranceAnimation?: boolean;
+    rawSupabaseMarkets?: Array<{
+        id: string;
+        contract_address?: string;
+        [key: string]: unknown;
+    }>;
 }
 
-function BaseCardComponent({ market, style, className = '', isActive = false, children, suppressEntranceAnimation = false }: BaseCardProps) {
+function BaseCardComponent({ market, style, className = '', isActive = false, children, suppressEntranceAnimation = false, rawSupabaseMarkets }: BaseCardProps) {
     const baseGradientClass = getCategoryGradient(market.category);
     const timerDisplayRef = useRef<HTMLSpanElement>(null);
     const cardRef = useRef<HTMLDivElement>(null);
@@ -28,6 +36,14 @@ function BaseCardComponent({ market, style, className = '', isActive = false, ch
 
     // Get influencer data if available
     const influencer = market.influencer || getInfluencerByMarketId(market.id);
+
+    // Get market contract address for onchain data
+    const marketAddress = rawSupabaseMarkets 
+        ? getParimutuelMarketContractAddress(market.id, rawSupabaseMarkets) as Address
+        : undefined;
+    
+    // Fetch real onchain market stats
+    const { yesPercentage: onchainYesPercentage, noPercentage: onchainNoPercentage, totalVolume, isLoading: statsLoading } = useMarketStats(marketAddress);
 
     // Self-contained timer that updates the display with time until market end
     useEffect(() => {
@@ -136,9 +152,21 @@ function BaseCardComponent({ market, style, className = '', isActive = false, ch
         return colors[category] || 'bg-slate-500';
     };
 
-    // Safely get percentages with fallbacks
-    const yesPercentage = SchemaTransformer.getYesPercentage(market);
-    const noPercentage = SchemaTransformer.getNoPercentage(market);
+    // Use onchain data if available, otherwise fallback to schema transformer
+    const yesPercentage = statsLoading ? SchemaTransformer.getYesPercentage(market) : onchainYesPercentage;
+    const noPercentage = statsLoading ? SchemaTransformer.getNoPercentage(market) : onchainNoPercentage;
+    
+    // Format volume for display
+    const formatVolume = (volume: bigint): string => {
+        const volumeNum = Number(volume) / 1e6; // Convert from USDC (6 decimals) to display
+        if (volumeNum < 1000) {
+            return `$${volumeNum.toFixed(0)}`;
+        } else if (volumeNum < 1000000) {
+            return `$${(volumeNum / 1000).toFixed(1)}K`;
+        } else {
+            return `$${(volumeNum / 1000000).toFixed(1)}M`;
+        }
+    };
 
     return (
         <div className="relative">
@@ -253,20 +281,54 @@ function BaseCardComponent({ market, style, className = '', isActive = false, ch
                 </div>
 
 
-                {/* YES/NO Progress Bar - Fixed at bottom */}
+                {/* YES/NO Progress Bar with Onchain Data - Fixed at bottom */}
                 <div className="absolute bottom-0 left-0 right-0 p-4">
-                    <div className="grid grid-cols-2 gap-3 mb-3">
-                        <div className="bg-red-500/15 backdrop-blur-sm border border-red-500/30 rounded-2xl p-3 text-center shadow-inner">
-                            <div className="text-red-400 font-bold text-xl">
-                                {noPercentage}%
+                    {/* Betting Pool Analytics */}
+                    <div className="mb-3">
+                        {/* Volume Display */}
+                        {totalVolume > 0 && !statsLoading && (
+                            <div className="text-center mb-2">
+                                <div className="text-white/60 text-xs mb-1">Total Pool</div>
+                                <div className="text-white font-semibold text-sm">
+                                    {formatVolume(totalVolume)}
+                                </div>
                             </div>
-                            <div className="text-red-300 text-sm font-semibold tracking-wide">NO</div>
+                        )}
+                        
+                        {/* Progress Bar Visualization */}
+                        <div className="w-full h-2 bg-slate-700/50 rounded-full overflow-hidden mb-2">
+                            <motion.div
+                                initial={{ width: '50%' }}
+                                animate={{ width: `${yesPercentage}%` }}
+                                transition={{ duration: 0.8, ease: "easeOut" }}
+                                className="h-full bg-gradient-to-r from-green-500 to-green-400 rounded-full"
+                            />
                         </div>
-                        <div className="bg-green-500/15 backdrop-blur-sm border border-green-500/30 rounded-2xl p-3 text-center shadow-inner">
-                            <div className="text-green-400 font-bold text-xl">
-                                {yesPercentage}%
+                        
+                        {/* Percentage Display */}
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="bg-red-500/15 backdrop-blur-sm border border-red-500/30 rounded-2xl p-3 text-center shadow-inner relative">
+                                {statsLoading && (
+                                    <div className="absolute top-1 right-1">
+                                        <div className="w-1 h-1 bg-red-400 rounded-full animate-pulse" />
+                                    </div>
+                                )}
+                                <div className="text-red-400 font-bold text-xl">
+                                    {noPercentage}%
+                                </div>
+                                <div className="text-red-300 text-sm font-semibold tracking-wide">NO</div>
                             </div>
-                            <div className="text-green-300 text-sm font-semibold tracking-wide">YES</div>
+                            <div className="bg-green-500/15 backdrop-blur-sm border border-green-500/30 rounded-2xl p-3 text-center shadow-inner relative">
+                                {statsLoading && (
+                                    <div className="absolute top-1 right-1">
+                                        <div className="w-1 h-1 bg-green-400 rounded-full animate-pulse" />
+                                    </div>
+                                )}
+                                <div className="text-green-400 font-bold text-xl">
+                                    {yesPercentage}%
+                                </div>
+                                <div className="text-green-300 text-sm font-semibold tracking-wide">YES</div>
+                            </div>
                         </div>
                     </div>
 

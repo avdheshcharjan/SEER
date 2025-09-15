@@ -5,8 +5,8 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, TrendingUp, TrendingDown } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { UnifiedMarket } from '@/lib/types';
-import { SupabaseService } from '@/lib/supabase';
-import { generateCreateMarketCalls } from '@/lib/gasless-onchainkit';
+import { ParimutuelSupabaseService } from '@/lib/supabase-parimutuel';
+import { generateCreateParimutuelMarketCalls } from '@/lib/gasless-parimutuel';
 import { processMarketCreation, validateMarketCreation } from '@/lib/market-factory-onchainkit';
 import { Address } from 'viem';
 import toast from 'react-hot-toast';
@@ -142,7 +142,7 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
                     }
 
                     // Get the created market from database (now has proper contract address)
-                    const supabaseMarket = await SupabaseService.getMarket(result.marketId!);
+                    const supabaseMarket = await ParimutuelSupabaseService.getMarket(result.marketId!);
 
                     const newMarket: UnifiedMarket = {
                         id: supabaseMarket.id,
@@ -369,7 +369,7 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
                             {/* OnchainKit Transaction - Gasless Market Creation */}
                             <Transaction
                                 isSponsored={true}
-                                calls={generateCreateMarketCalls(
+                                calls={generateCreateParimutuelMarketCalls(
                                     generateQuestion(),
                                     BigInt(Math.floor(new Date(formData.endDate).getTime() / 1000))
                                 )}

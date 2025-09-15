@@ -21,7 +21,7 @@ import {
 import { useState } from "react";
 import { Toaster } from 'react-hot-toast';
 import { Home } from "./components/Home";
-import { PredictionMarket } from "./components/PredictionMarket";
+import { ParimutuelPredictionMarket } from "./components/ParimutuelPredictionMarket";
 import { Profile } from "./components/Profile";
 import { Leaderboard } from "./components/Leaderboard";
 import { CreateMarketEnhanced } from "./components/CreateMarketEnhanced";
@@ -77,7 +77,7 @@ export default function App() {
   const renderCurrentView = () => {
     switch (currentView) {
       case 'predict':
-        return <PredictionMarket onBack={() => setCurrentView('home')} />;
+        return <ParimutuelPredictionMarket onBack={() => setCurrentView('home')} />;
       case 'profile':
         return <Profile onBack={() => setCurrentView('home')} onCreateMarket={() => setCurrentView('create')} />;
       case 'leaderboard':
@@ -128,12 +128,9 @@ export default function App() {
         </main>
 
         <footer className="mt-6 pt-4 flex justify-center">
-          <button
-            className="text-slate-400 hover:text-slate-300 text-xs transition-colors"
-            onClick={() => window.open("https://base.org/builders/minikit", "_blank")}
-          >
-            Built on Base with MiniKit
-          </button>
+          <div className="text-slate-400 text-xs">
+            Tomo • Swipe to Predict
+          </div>
         </footer>
       </div>
     </div>

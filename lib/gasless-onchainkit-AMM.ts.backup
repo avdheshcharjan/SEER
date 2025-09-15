@@ -40,7 +40,7 @@ const ERC20_ABI = [
 
 
 /**
- * Generate transaction calls for placing a bet in a pari-mutuel market
+ * Generate transaction calls for buying shares in a prediction market
  * Includes USDC approval if needed
  */
 export function generateBuySharesCalls(
@@ -70,33 +70,20 @@ export function generateBuySharesCalls(
     });
   }
 
-  // Add bet call (using placeBet function for pari-mutuel)
-  const placeBetData = encodeFunctionData({
+  // Add buy shares call
+  const buySharesData = encodeFunctionData({
     abi: PREDICTION_MARKET_ABI,
-    functionName: 'placeBet',
+    functionName: 'buyShares',
     args: [prediction === 'yes', amount]
   });
 
   calls.push({
     to: marketAddress,
-    data: placeBetData as `0x${string}`,
+    data: buySharesData as `0x${string}`,
     value: BigInt(0)
   });
 
   return calls;
-}
-
-/**
- * Generate transaction calls for placing a bet in a pari-mutuel market (new name)
- * Includes USDC approval if needed
- */
-export function generateBetCalls(
-  marketAddress: Address,
-  prediction: 'yes' | 'no',
-  amount: bigint,
-  needsApproval: boolean = true
-) {
-  return generateBuySharesCalls(marketAddress, prediction, amount, needsApproval);
 }
 
 /**
@@ -198,7 +185,7 @@ export function getRequiredAllowlist() {
       // Individual market contracts need to be added dynamically
       {
         address: 'DYNAMIC_MARKET_ADDRESSES',
-        functions: ['placeBet', 'betYes', 'betNo', 'claimRewards']
+        functions: ['buyShares', 'sellShares']
       }
     ],
     networks: ['base-sepolia', 'base'],
