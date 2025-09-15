@@ -268,7 +268,8 @@ contract ParimutuelPredictionMarketTest is Test {
     }
     
     function testEmergencyResolve() public {
-        vm.prank(deployer);
+        address marketOwner = market.owner();
+        vm.prank(marketOwner);
         market.emergencyResolve(true);
         assertTrue(market.resolved());
         assertTrue(market.outcome());

@@ -4,11 +4,12 @@ pragma solidity ^0.8.19;
 import "./ParimutuelPredictionMarket.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /// @title ParimutuelMarketFactory
 /// @notice Factory contract for creating ParimutuelPredictionMarket instances
 /// @dev Simplified factory for pari-mutuel betting markets
-contract ParimutuelMarketFactory is Context, Ownable {
+contract ParimutuelMarketFactory is Context, Ownable, ReentrancyGuard {
     
     address public immutable usdc;
     address public defaultResolver;
@@ -18,9 +19,11 @@ contract ParimutuelMarketFactory is Context, Ownable {
     
     address public constant ENTRY_POINT = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789; // ERC-4337 EntryPoint on Base
     
-    uint256 private constant _NOT_ENTERED = 1;
-    uint256 private constant _ENTERED = 2;
-    uint256 private _entryPointReentrancyStatus;
+    uint256 public constant MAX_MARKETS_PER_QUERY = 100; // Limit for gas safety
+    uint256 public constant MINIMUM_END_TIME_BUFFER = 1 hours;
+    uint256 public constant MAXIMUM_END_TIME_BUFFER = 365 days;
+    
+    mapping(address => uint256) public creatorMarketCount; // Track count separately for gas efficiency
     
     event MarketCreated(
         address indexed market,
@@ -32,13 +35,15 @@ contract ParimutuelMarketFactory is Context, Ownable {
     
     error InvalidEndTime();
     error InvalidResolver();
+    error InvalidAddressError();
+    error QueryLimitExceededError();
     
     constructor(address _usdc, address _defaultResolver) Ownable(_msgSender()) {
+        if (_usdc == address(0)) revert InvalidAddressError();
+        if (_defaultResolver == address(0)) revert InvalidAddressError();
+        
         usdc = _usdc;
         defaultResolver = _defaultResolver;
-        
-        // Initialize reentrancy protection for EntryPoint
-        _entryPointReentrancyStatus = _NOT_ENTERED;
     }
     
     /// @notice Create a new pari-mutuel prediction market
@@ -50,8 +55,9 @@ contract ParimutuelMarketFactory is Context, Ownable {
         string memory question,
         uint256 endTime,
         address resolver
-    ) external notPaused entryPointReentrancyGuard returns (ParimutuelPredictionMarket market) {
-        if (endTime <= block.timestamp + 1 hours) revert InvalidEndTime();
+    ) external notPaused nonReentrant returns (ParimutuelPredictionMarket market) {
+        if (endTime <= block.timestamp + MINIMUM_END_TIME_BUFFER) revert InvalidEndTime();
+        if (endTime > block.timestamp + MAXIMUM_END_TIME_BUFFER) revert InvalidEndTime();
         
         address actualResolver = resolver == address(0) ? defaultResolver : resolver;
         if (actualResolver == address(0)) revert InvalidResolver();
@@ -66,6 +72,7 @@ contract ParimutuelMarketFactory is Context, Ownable {
         address creator = _msgSender();
         markets.push(market);
         creatorMarkets[creator].push(market);
+        creatorMarketCount[creator]++;
         
         emit MarketCreated(
             address(market),
@@ -94,6 +101,7 @@ contract ParimutuelMarketFactory is Context, Ownable {
         view 
         returns (ParimutuelPredictionMarket[] memory result) 
     {
+        if (limit > MAX_MARKETS_PER_QUERY) revert QueryLimitExceededError();
         if (start >= markets.length) {
             return new ParimutuelPredictionMarket[](0);
         }
@@ -116,9 +124,13 @@ contract ParimutuelMarketFactory is Context, Ownable {
         view 
         returns (ParimutuelPredictionMarket[] memory result) 
     {
-        // Count active markets
+        if (limit > MAX_MARKETS_PER_QUERY) revert QueryLimitExceededError();
+        
+        // Count active markets (limited to prevent gas issues)
         uint256 activeCount = 0;
-        for (uint256 i = 0; i < markets.length && activeCount < limit; i++) {
+        uint256 maxCheck = markets.length > 1000 ? 1000 : markets.length; // Limit iterations
+        
+        for (uint256 i = 0; i < maxCheck && activeCount < limit; i++) {
             if (markets[i].endTime() > block.timestamp && !markets[i].resolved()) {
                 activeCount++;
             }
@@ -131,7 +143,7 @@ contract ParimutuelMarketFactory is Context, Ownable {
         result = new ParimutuelPredictionMarket[](activeCount);
         uint256 resultIndex = 0;
         
-        for (uint256 i = 0; i < markets.length && resultIndex < activeCount; i++) {
+        for (uint256 i = 0; i < maxCheck && resultIndex < activeCount; i++) {
             if (markets[i].endTime() > block.timestamp && !markets[i].resolved()) {
                 result[resultIndex] = markets[i];
                 resultIndex++;
@@ -153,14 +165,6 @@ contract ParimutuelMarketFactory is Context, Ownable {
         _;
     }
     
-    modifier entryPointReentrancyGuard() {
-        if (_entryPointReentrancyStatus == _ENTERED) {
-            revert("EntryPoint reentrancy");
-        }
-        _entryPointReentrancyStatus = _ENTERED;
-        _;
-        _entryPointReentrancyStatus = _NOT_ENTERED;
-    }
     
     function pause() external onlyOwner {
         paused = true;
@@ -177,14 +181,14 @@ contract ParimutuelMarketFactory is Context, Ownable {
         uint256 /* endTime */,
         address /* resolver */
     ) external view returns (uint256 gasEstimate) {
-        // Base gas for contract deployment: ~1.2M (simpler than AMM version)
-        // Storage writes for arrays and mappings: ~100k
-        // Buffer for ERC-4337 overhead: ~50k
-        gasEstimate = 1350000;
+        // Base gas for contract deployment with security improvements: ~1.4M
+        // Storage writes for arrays and mappings: ~120k
+        // Buffer for safety: ~80k
+        gasEstimate = 1600000;
         
         // Add extra gas if this is the first market for the creator
         address creator = _msgSender();
-        if (creatorMarkets[creator].length == 0) {
+        if (creatorMarketCount[creator] == 0) {
             gasEstimate += 50000; // Extra gas for new creator mapping
         }
     }
@@ -205,7 +209,7 @@ contract ParimutuelMarketFactory is Context, Ownable {
     /// @return marketCount Number of markets created by this address
     /// @return isNewCreator true if this would be their first market
     function getCreatorStats(address creator) external view returns (uint256 marketCount, bool isNewCreator) {
-        marketCount = creatorMarkets[creator].length;
+        marketCount = creatorMarketCount[creator];
         isNewCreator = marketCount == 0;
     }
 }

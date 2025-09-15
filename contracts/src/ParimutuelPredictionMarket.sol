@@ -2,14 +2,18 @@
 pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 
 /// @title ParimutuelPredictionMarket
 /// @notice A pari-mutuel prediction market for binary outcomes with fixed USDC settlement
 /// @dev Winners split the losers' pool proportional to their bet size
 contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
+    using SafeERC20 for IERC20;
+    using Math for uint256;
     
     // State variables
     IERC20 public immutable usdc;
@@ -30,9 +34,10 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
     
     address public constant ENTRY_POINT = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789; // ERC-4337 EntryPoint on Base
     
-    uint256 private constant _NOT_ENTERED = 1;
-    uint256 private constant _ENTERED = 2;
-    uint256 private _entryPointReentrancyStatus;
+    uint256 public constant MINIMUM_BET = 1e6; // 1 USDC minimum bet
+    uint256 public constant MAXIMUM_BET = 1000000e6; // 1M USDC maximum bet
+    uint256 public constant MINIMUM_MARKET_DURATION = 1 hours;
+    uint256 public constant MAXIMUM_MARKET_DURATION = 365 days;
     
     // Events
     event BetPlaced(address indexed bettor, bool side, uint256 amount);
@@ -47,6 +52,12 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
     error UnauthorizedResolverError();
     error InvalidAmountError();
     error NothingToClaimError();
+    error InvalidAddressError();
+    error InvalidMarketDurationError();
+    error BetTooLowError();
+    error BetTooHighError();
+    error DivisionByZeroError();
+    error MathOverflowError();
     
     modifier onlyBeforeEnd() {
         if (block.timestamp >= endTime) revert MarketEndedError();
@@ -68,13 +79,10 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
         _;
     }
     
-    modifier entryPointReentrancyGuard() {
-        if (_entryPointReentrancyStatus == _ENTERED) {
-            revert("EntryPoint reentrancy");
-        }
-        _entryPointReentrancyStatus = _ENTERED;
+    modifier validBetAmount(uint256 amount) {
+        if (amount < MINIMUM_BET) revert BetTooLowError();
+        if (amount > MAXIMUM_BET) revert BetTooHighError();
         _;
-        _entryPointReentrancyStatus = _NOT_ENTERED;
     }
     
     constructor(
@@ -83,13 +91,15 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
         uint256 _endTime,
         address _resolver
     ) Ownable(_msgSender()) {
+        if (_usdc == address(0)) revert InvalidAddressError();
+        if (_resolver == address(0)) revert InvalidAddressError();
+        if (_endTime <= block.timestamp + MINIMUM_MARKET_DURATION) revert InvalidMarketDurationError();
+        if (_endTime > block.timestamp + MAXIMUM_MARKET_DURATION) revert InvalidMarketDurationError();
+        
         usdc = IERC20(_usdc);
         question = _question;
         endTime = _endTime;
         resolver = _resolver;
-        
-        // Initialize reentrancy protection for EntryPoint
-        _entryPointReentrancyStatus = _NOT_ENTERED;
     }
     
     /// @notice Place a bet on YES
@@ -99,14 +109,17 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
         onlyBeforeEnd 
         notResolved 
         nonReentrant 
-        entryPointReentrancyGuard
+        validBetAmount(amount)
     {
-        if (amount == 0) revert InvalidAmountError();
-        
-        // Transfer USDC from user (works with both EOAs and smart wallets)
-        usdc.transferFrom(_msgSender(), address(this), amount);
-        
         address user = _msgSender();
+        
+        // Check for overflow before updating state
+        if (yesBets[user] > type(uint256).max - amount) revert MathOverflowError();
+        if (totalYesBets > type(uint256).max - amount) revert MathOverflowError();
+        
+        // Transfer USDC from user using SafeERC20
+        usdc.safeTransferFrom(user, address(this), amount);
+        
         yesBets[user] += amount;
         totalYesBets += amount;
         
@@ -120,14 +133,17 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
         onlyBeforeEnd 
         notResolved 
         nonReentrant 
-        entryPointReentrancyGuard
+        validBetAmount(amount)
     {
-        if (amount == 0) revert InvalidAmountError();
-        
-        // Transfer USDC from user (works with both EOAs and smart wallets)
-        usdc.transferFrom(_msgSender(), address(this), amount);
-        
         address user = _msgSender();
+        
+        // Check for overflow before updating state
+        if (noBets[user] > type(uint256).max - amount) revert MathOverflowError();
+        if (totalNoBets > type(uint256).max - amount) revert MathOverflowError();
+        
+        // Transfer USDC from user using SafeERC20
+        usdc.safeTransferFrom(user, address(this), amount);
+        
         noBets[user] += amount;
         totalNoBets += amount;
         
@@ -142,14 +158,22 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
         onlyBeforeEnd 
         notResolved 
         nonReentrant 
-        entryPointReentrancyGuard
+        validBetAmount(amount)
     {
-        if (amount == 0) revert InvalidAmountError();
-        
-        // Transfer USDC from user (works with both EOAs and smart wallets)
-        usdc.transferFrom(_msgSender(), address(this), amount);
-        
         address user = _msgSender();
+        
+        // Check for overflow before updating state
+        if (side) {
+            if (yesBets[user] > type(uint256).max - amount) revert MathOverflowError();
+            if (totalYesBets > type(uint256).max - amount) revert MathOverflowError();
+        } else {
+            if (noBets[user] > type(uint256).max - amount) revert MathOverflowError();
+            if (totalNoBets > type(uint256).max - amount) revert MathOverflowError();
+        }
+        
+        // Transfer USDC from user using SafeERC20
+        usdc.safeTransferFrom(user, address(this), amount);
+        
         if (side) {
             yesBets[user] += amount;
             totalYesBets += amount;
@@ -184,7 +208,7 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
     
     /// @notice Claim winnings after market resolution
     /// @return payout Amount of USDC claimed
-    function claimRewards() external onlyResolved nonReentrant entryPointReentrancyGuard returns (uint256 payout) {
+    function claimRewards() external onlyResolved nonReentrant returns (uint256 payout) {
         address user = _msgSender();
         uint256 userBet = outcome ? yesBets[user] : noBets[user];
         
@@ -195,23 +219,27 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
         uint256 totalLosingBets = outcome ? totalNoBets : totalYesBets;
         
         if (totalWinningBets == 0) {
-            // Edge case: no winning bets (shouldn't happen in practice)
-            payout = 0;
-        } else {
-            // Payout = original bet + (user's bet / total winning bets) * total losing bets
-            payout = userBet + (userBet * totalLosingBets) / totalWinningBets;
+            revert DivisionByZeroError();
         }
         
-        // Clear user's bet
-        if (outcome) {
-            yesBets[user] = 0;
-        } else {
-            noBets[user] = 0;
+        // Safe multiplication and division to prevent overflow
+        uint256 shareOfLosingPool;
+        if (totalLosingBets > 0) {
+            // Use mulDiv for safer calculation
+            shareOfLosingPool = Math.mulDiv(userBet, totalLosingBets, totalWinningBets);
         }
         
-        // Transfer payout
+        // Check for overflow before adding
+        if (userBet > type(uint256).max - shareOfLosingPool) revert MathOverflowError();
+        payout = userBet + shareOfLosingPool;
+        
+        // Clear user's bets on both sides (prevent double claiming)
+        yesBets[user] = 0;
+        noBets[user] = 0;
+        
+        // Transfer payout using SafeERC20
         if (payout > 0) {
-            usdc.transfer(user, payout);
+            usdc.safeTransfer(user, payout);
         }
         
         emit RewardsClaimed(user, payout);
@@ -230,11 +258,11 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
             uint256 noPayout = 0;
             
             if (userYesBet > 0 && totalYesBets > 0) {
-                yesPayout = userYesBet + (userYesBet * totalNoBets) / totalYesBets;
+                yesPayout = userYesBet + Math.mulDiv(userYesBet, totalNoBets, totalYesBets);
             }
             
             if (userNoBet > 0 && totalNoBets > 0) {
-                noPayout = userNoBet + (userNoBet * totalYesBets) / totalNoBets;
+                noPayout = userNoBet + Math.mulDiv(userNoBet, totalYesBets, totalNoBets);
             }
             
             // Return the higher potential payout (user's best case)
@@ -248,10 +276,10 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
             uint256 totalLosingBets = outcome ? totalNoBets : totalYesBets;
             
             if (totalWinningBets == 0) {
-                potentialPayout = 0;
-            } else {
-                potentialPayout = userBet + (userBet * totalLosingBets) / totalWinningBets;
+                return 0;
             }
+            
+            potentialPayout = userBet + Math.mulDiv(userBet, totalLosingBets, totalWinningBets);
         }
     }
     
@@ -297,11 +325,11 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
     /// @notice Emergency withdraw (owner only, after resolution + 30 days)
     /// @dev Safety mechanism to recover any stuck funds
     function emergencyWithdraw() external onlyOwner {
-        require(resolved && block.timestamp > endTime + 30 days, "Too early for emergency withdrawal");
+        require(resolved && block.timestamp > endTime + 90 days, "Too early for emergency withdrawal");
         
         uint256 balance = usdc.balanceOf(address(this));
         if (balance > 0) {
-            usdc.transfer(owner(), balance);
+            usdc.safeTransfer(owner(), balance);
         }
     }
     
@@ -309,10 +337,10 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
     /// @param side true for YES bet, false for NO bet
     /// @return gasEstimate Estimated gas units for the transaction
     function estimateGasForBet(bool side, uint256 /* amount */) external view returns (uint256 gasEstimate) {
-        // Base gas for storage writes and transfers: ~50k
-        // Additional gas for calculations: ~3k
-        // Buffer for ERC-4337 overhead: ~30k
-        gasEstimate = 85000;
+        // Base gas for storage writes and transfers: ~60k (SafeERC20 overhead)
+        // Additional gas for overflow checks: ~5k
+        // Buffer for safety: ~40k
+        gasEstimate = 105000;
         
         // Add extra gas if this is user's first bet on this side
         address user = _msgSender();
