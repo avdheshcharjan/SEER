@@ -183,6 +183,18 @@ contract SimplePredictionMarket is Context, ReentrancyGuard, Ownable {
         emit MarketResolved(_outcome, block.timestamp);
     }
     
+    /// @notice External resolution function (for MarketResolver contract)
+    /// @param _outcome true if YES wins, false if NO wins
+    function resolveMarketExternal(bool _outcome) external notResolved {
+        address sender = _msgSender();
+        if (sender != resolver) revert UnauthorizedResolverError();
+        
+        resolved = true;
+        outcome = _outcome;
+        
+        emit MarketResolved(_outcome, block.timestamp);
+    }
+    
     /// @notice Emergency resolve (only owner, any time)
     /// @param _outcome true if YES wins, false if NO wins
     function emergencyResolve(bool _outcome) external onlyOwner notResolved {

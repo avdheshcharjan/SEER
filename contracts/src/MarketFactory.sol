@@ -2,6 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "./SimplePredictionMarket.sol";
+import "./MarketResolver.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 
@@ -12,6 +13,7 @@ contract MarketFactory is Context, Ownable {
     
     address public immutable usdc;
     address public defaultResolver;
+    MarketResolver public marketResolver;
     
     SimplePredictionMarket[] public markets;
     mapping(address => SimplePredictionMarket[]) public creatorMarkets;
@@ -33,9 +35,14 @@ contract MarketFactory is Context, Ownable {
     error InvalidEndTime();
     error InvalidResolver();
     
-    constructor(address _usdc, address _defaultResolver) Ownable(_msgSender()) {
+    constructor(
+        address _usdc, 
+        address _defaultResolver,
+        address _marketResolver
+    ) Ownable(_msgSender()) {
         usdc = _usdc;
         defaultResolver = _defaultResolver;
+        marketResolver = MarketResolver(_marketResolver);
         
         // Initialize reentrancy protection for EntryPoint
         _entryPointReentrancyStatus = _NOT_ENTERED;
@@ -44,17 +51,17 @@ contract MarketFactory is Context, Ownable {
     /// @notice Create a new prediction market
     /// @param question The prediction question
     /// @param endTime When the market should end (timestamp)
-    /// @param resolver Who can resolve the market (use address(0) for default)
+    /// @param isPlatformMarket True for platform markets (UMA resolution), false for user markets
     /// @return market The deployed market contract
     function createMarket(
         string memory question,
         uint256 endTime,
-        address resolver
+        bool isPlatformMarket
     ) external notPaused entryPointReentrancyGuard returns (SimplePredictionMarket market) {
         if (endTime <= block.timestamp + 1 hours) revert InvalidEndTime();
         
-        address actualResolver = resolver == address(0) ? defaultResolver : resolver;
-        if (actualResolver == address(0)) revert InvalidResolver();
+        // Use market resolver for all markets
+        address actualResolver = address(marketResolver);
         
         market = new SimplePredictionMarket(
             usdc,
@@ -64,6 +71,13 @@ contract MarketFactory is Context, Ownable {
         );
         
         address creator = _msgSender();
+        MarketResolver.MarketType marketType = isPlatformMarket 
+            ? MarketResolver.MarketType.PLATFORM 
+            : MarketResolver.MarketType.USER;
+        
+        // Register market with resolver
+        marketResolver.registerMarket(address(market), marketType, creator);
+        
         markets.push(market);
         creatorMarkets[creator].push(market);
         
@@ -175,7 +189,7 @@ contract MarketFactory is Context, Ownable {
     function estimateGasForCreateMarket(
         string memory /* question */,
         uint256 /* endTime */,
-        address /* resolver */
+        bool /* isPlatformMarket */
     ) external view returns (uint256 gasEstimate) {
         // Base gas for contract deployment: ~1.5M
         // Storage writes for arrays and mappings: ~100k

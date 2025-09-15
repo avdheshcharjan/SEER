@@ -22,22 +22,15 @@ contract DeployParimutuel is Script {
         
         vm.startBroadcast(deployerPrivateKey);
         
-        // Deploy the factory with deployer as default resolver
-        ParimutuelMarketFactory factory = new ParimutuelMarketFactory(
-            USDC_ADDRESS,
-            deployer // Use deployer as default resolver for MVP
-        );
-        
-        console.log("ParimutuelMarketFactory deployed at:", address(factory));
-        
-        // Create a demo market for testing
+        // Deploy single parimutuel market (legacy deployment - use DeployMarketResolver.s.sol for new system)
         string memory question = "Will BTC be above $70k by end of December 2024?";
         uint256 endTime = block.timestamp + 30 days; // 30 days from now
         
-        ParimutuelPredictionMarket demoMarket = factory.createMarket(
+        ParimutuelPredictionMarket demoMarket = new ParimutuelPredictionMarket(
+            USDC_ADDRESS,
             question,
             endTime,
-            address(0) // Use default resolver
+            deployer // Use deployer as resolver
         );
         
         console.log("Demo ParimutuelPredictionMarket deployed at:", address(demoMarket));
@@ -49,7 +42,6 @@ contract DeployParimutuel is Script {
         // Log deployment info for updating frontend
         console.log("");
         console.log("=== UPDATE THESE ADDRESSES IN YOUR FRONTEND ===");
-        console.log("PARIMUTUEL_FACTORY_ADDRESS:", address(factory));
         console.log("DEMO_PARIMUTUEL_MARKET_ADDRESS:", address(demoMarket));
         console.log("===============================================");
     }

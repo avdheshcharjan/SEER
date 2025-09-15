@@ -2,6 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "./ParimutuelPredictionMarket.sol";
+import "./MarketResolver.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -13,6 +14,7 @@ contract ParimutuelMarketFactory is Context, Ownable, ReentrancyGuard {
     
     address public immutable usdc;
     address public defaultResolver;
+    MarketResolver public marketResolver;
     
     ParimutuelPredictionMarket[] public markets;
     mapping(address => ParimutuelPredictionMarket[]) public creatorMarkets;
@@ -30,7 +32,8 @@ contract ParimutuelMarketFactory is Context, Ownable, ReentrancyGuard {
         address indexed creator,
         string question,
         uint256 endTime,
-        uint256 marketIndex
+        uint256 marketIndex,
+        MarketResolver.MarketType marketType
     );
     
     error InvalidEndTime();
@@ -38,29 +41,35 @@ contract ParimutuelMarketFactory is Context, Ownable, ReentrancyGuard {
     error InvalidAddressError();
     error QueryLimitExceededError();
     
-    constructor(address _usdc, address _defaultResolver) Ownable(_msgSender()) {
+    constructor(
+        address _usdc, 
+        address _defaultResolver,
+        address _marketResolver
+    ) Ownable(_msgSender()) {
         if (_usdc == address(0)) revert InvalidAddressError();
         if (_defaultResolver == address(0)) revert InvalidAddressError();
+        if (_marketResolver == address(0)) revert InvalidAddressError();
         
         usdc = _usdc;
         defaultResolver = _defaultResolver;
+        marketResolver = MarketResolver(_marketResolver);
     }
     
     /// @notice Create a new pari-mutuel prediction market
     /// @param question The prediction question
     /// @param endTime When the market should end (timestamp)
-    /// @param resolver Who can resolve the market (use address(0) for default)
+    /// @param isPlatformMarket True for platform markets (UMA resolution), false for user markets
     /// @return market The deployed market contract
     function createMarket(
         string memory question,
         uint256 endTime,
-        address resolver
+        bool isPlatformMarket
     ) external notPaused nonReentrant returns (ParimutuelPredictionMarket market) {
         if (endTime <= block.timestamp + MINIMUM_END_TIME_BUFFER) revert InvalidEndTime();
         if (endTime > block.timestamp + MAXIMUM_END_TIME_BUFFER) revert InvalidEndTime();
         
-        address actualResolver = resolver == address(0) ? defaultResolver : resolver;
-        if (actualResolver == address(0)) revert InvalidResolver();
+        // Use market resolver for all markets
+        address actualResolver = address(marketResolver);
         
         market = new ParimutuelPredictionMarket(
             usdc,
@@ -70,6 +79,13 @@ contract ParimutuelMarketFactory is Context, Ownable, ReentrancyGuard {
         );
         
         address creator = _msgSender();
+        MarketResolver.MarketType marketType = isPlatformMarket 
+            ? MarketResolver.MarketType.PLATFORM 
+            : MarketResolver.MarketType.USER;
+        
+        // Register market with resolver
+        marketResolver.registerMarket(address(market), marketType, creator);
+        
         markets.push(market);
         creatorMarkets[creator].push(market);
         creatorMarketCount[creator]++;
@@ -79,7 +95,8 @@ contract ParimutuelMarketFactory is Context, Ownable, ReentrancyGuard {
             creator,
             question,
             endTime,
-            markets.length - 1
+            markets.length - 1,
+            marketType
         );
     }
     
@@ -179,7 +196,7 @@ contract ParimutuelMarketFactory is Context, Ownable, ReentrancyGuard {
     function estimateGasForCreateMarket(
         string memory /* question */,
         uint256 /* endTime */,
-        address /* resolver */
+        bool /* isPlatformMarket */
     ) external view returns (uint256 gasEstimate) {
         // Base gas for contract deployment with security improvements: ~1.4M
         // Storage writes for arrays and mappings: ~120k

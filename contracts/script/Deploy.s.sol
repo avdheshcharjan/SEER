@@ -34,17 +34,13 @@ contract DeployScript is Script {
         address usdc = BASE_SEPOLIA_USDC;
         console.log("USDC address:", usdc);
         
-        // Deploy Market Factory
-        console.log("Deploying MarketFactory...");
-        MarketFactory factory = new MarketFactory(usdc, deployer);
-        console.log("MarketFactory deployed at:", address(factory));
-        
-        // Create a demo prediction market through factory
-        console.log("Creating demo prediction market...");
-        SimplePredictionMarket demoMarket = factory.createMarket(
+        // Deploy single market (legacy deployment - use DeployMarketResolver.s.sol for new system)
+        console.log("Deploying single prediction market...");
+        SimplePredictionMarket demoMarket = new SimplePredictionMarket(
+            usdc,
             "Will ETH be above $4000 on December 31, 2024?",
             block.timestamp + 60 days, // End in 60 days
-            address(0) // Use default resolver (deployer)
+            deployer // deployer as resolver
         );
         console.log("Demo market created at:", address(demoMarket));
         
@@ -70,7 +66,6 @@ contract DeployScript is Script {
         console.log("Chain ID: 84532");
         console.log("Deployer: %s", deployer);
         console.log("USDC: %s", usdc);
-        console.log("MarketFactory: %s", address(factory));
         console.log("Demo Market: %s", address(demoMarket));
         console.log("Deployed At: %s", block.timestamp);
     }
