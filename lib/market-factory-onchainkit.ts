@@ -1,10 +1,12 @@
 import { Address, encodeFunctionData, type Hex, decodeEventLog } from 'viem';
 import { publicClient } from './viem-client';
-// Updated MarketFactory contract address (deployed with real USDC)
-const MARKET_FACTORY_ADDRESS = '0xB788385cf679A69C43CfD9cB35045BBd4c2843f2' as const;
+// Updated MarketFactory contract address with resolver system
+const MARKET_FACTORY_ADDRESS = '0x90193C961A926261B756D1E5bb255e67ff9498A1' as const;
 import { SupabaseService } from './supabase';
+import { ParimutuelSupabaseService } from './supabase-parimutuel';
+import { MarketType } from './market-resolver';
 
-// MarketFactory ABI for contract interaction
+// Updated MarketFactory ABI for new resolver system
 export const MARKET_FACTORY_ABI = [
     {
         name: 'createMarket',
@@ -12,7 +14,7 @@ export const MARKET_FACTORY_ABI = [
         inputs: [
             { name: 'question', type: 'string' },
             { name: 'endTime', type: 'uint256' },
-            { name: 'resolver', type: 'address' }
+            { name: 'isPlatformMarket', type: 'bool' } // true for platform (UMA), false for user
         ],
         outputs: [{ name: 'market', type: 'address' }],
         stateMutability: 'nonpayable'
@@ -26,31 +28,26 @@ export const MARKET_FACTORY_ABI = [
             { name: 'creator', type: 'address', indexed: true },
             { name: 'question', type: 'string', indexed: false },
             { name: 'endTime', type: 'uint256', indexed: false },
-            { name: 'marketIndex', type: 'uint256', indexed: false }
+            { name: 'marketIndex', type: 'uint256', indexed: false },
+            { name: 'marketType', type: 'uint8', indexed: false } // 1 = PLATFORM, 2 = USER
         ]
     }
 ] as const;
 
 /**
- * Generate transaction calls for creating a prediction market
+ * Generate transaction calls for creating a prediction market with new resolver system
  * Returns calls formatted for OnchainKit's Transaction component
  */
-export function generateCreateMarketCalls(params: {
-    question: string;
-    endTime: Date;
-    resolverAddress?: Address;
-}) {
-    // Default resolver to zero address
-    const resolverAddress = params.resolverAddress || '0x0000000000000000000000000000000000000000';
-
-    // Convert endTime to timestamp
-    const endTimeTimestamp = Math.floor(params.endTime.getTime() / 1000);
-
+export function generateCreateMarketCalls(
+    question: string,
+    endTimeTimestamp: number,
+    isPlatformMarket: boolean
+) {
     // Encode the createMarket function call
     const data = encodeFunctionData({
         abi: MARKET_FACTORY_ABI,
         functionName: 'createMarket',
-        args: [params.question, BigInt(endTimeTimestamp), resolverAddress]
+        args: [question, BigInt(endTimeTimestamp), isPlatformMarket]
     });
 
     // Return the call in OnchainKit format
@@ -59,6 +56,19 @@ export function generateCreateMarketCalls(params: {
         data: data as Hex,
         value: BigInt(0) // No ETH required for market creation
     }];
+}
+
+/**
+ * Backward compatibility function with old signature
+ */
+export function generateCreateMarketCallsOld(params: {
+    question: string;
+    endTime: Date;
+    resolverAddress?: Address;
+}) {
+    const endTimeTimestamp = Math.floor(params.endTime.getTime() / 1000);
+    // Default to platform market for backward compatibility
+    return generateCreateMarketCalls(params.question, endTimeTimestamp, true);
 }
 
 // Using centralized public client from viem-client.ts
@@ -133,21 +143,22 @@ async function parseMarketCreatedEvent(transactionHash: string): Promise<Address
 }
 
 /**
- * Process successful market creation transaction
+ * Process successful market creation transaction with resolver system
  * Extracts the market address from transaction receipt and creates database entry
  */
-export async function processMarketCreation(params: {
-    question: string;
-    category: string;
-    endTime: Date;
-    creatorAddress: Address;
-    transactionHash: string;
-}) {
+export async function processMarketCreation(
+    transactionHash: string,
+    question: string,
+    category: string,
+    endTimeTimestamp: number,
+    creatorAddress: Address,
+    marketType: MarketType
+) {
     try {
-        console.log('🔍 Processing market creation transaction:', params.transactionHash);
+        console.log('🔍 Processing market creation transaction:', transactionHash);
 
         // Parse the transaction receipt to get the deployed market address
-        const marketAddress = await parseMarketCreatedEvent(params.transactionHash);
+        const marketAddress = await parseMarketCreatedEvent(transactionHash);
 
         if (!marketAddress) {
             throw new Error('Failed to extract market address from transaction');
@@ -156,31 +167,34 @@ export async function processMarketCreation(params: {
         console.log('📍 Market deployed at:', marketAddress);
 
         // Create database entry with contract address and transaction hash
-        const supabaseMarket = await SupabaseService.createMarket({
-            question: params.question,
-            category: params.category,
-            end_time: params.endTime.toISOString(),
-            creator_address: params.creatorAddress,
+        const supabaseMarket = await ParimutuelSupabaseService.createMarket({
+            question: question,
+            category: category,
+            end_time: new Date(endTimeTimestamp * 1000).toISOString(),
+            creator_address: creatorAddress,
             contract_address: marketAddress,
-            transaction_hash: params.transactionHash, // Save the transaction hash
-            yes_pool: 10, // Initial liquidity from contract
-            no_pool: 10,  // Initial liquidity from contract
-            total_yes_shares: 0,
-            total_no_shares: 0,
+            transaction_hash: transactionHash,
+            market_type: marketType === MarketType.PLATFORM ? 'platform' : 'user',
+            yes_pool: 0, // Start with no pool for parimutuel
+            no_pool: 0,  // Start with no pool for parimutuel
+            total_yes_bets: 0,
+            total_no_bets: 0,
             resolved: false
         });
 
         console.log('✅ Market created successfully:', {
             marketId: supabaseMarket.id,
             contractAddress: marketAddress,
-            transactionHash: params.transactionHash
+            transactionHash: transactionHash,
+            marketType: marketType
         });
 
         return {
             success: true,
             marketId: supabaseMarket.id,
             contractAddress: marketAddress,
-            transactionHash: params.transactionHash
+            transactionHash: transactionHash,
+            marketType: marketType
         };
 
     } catch (error) {
@@ -193,45 +207,36 @@ export async function processMarketCreation(params: {
 }
 
 /**
- * Validate market creation parameters
+ * Validate market creation parameters for 24-hour fixed duration
  */
-export function validateMarketCreation(params: {
-    question: string;
-    endTime: Date;
-    creatorAddress: Address;
-}): { valid: boolean; errors: string[] } {
-    const errors: string[] = [];
-
+export function validateMarketCreation(
+    question: string,
+    endTimeTimestamp: number
+): { isValid: boolean; error?: string } {
     // Validate question
-    if (!params.question || params.question.trim().length < 10) {
-        errors.push('Question must be at least 10 characters long');
+    if (!question || question.trim().length < 10) {
+        return { isValid: false, error: 'Question must be at least 10 characters long' };
     }
 
-    if (params.question.length > 256) {
-        errors.push('Question must be less than 256 characters');
+    if (question.length > 256) {
+        return { isValid: false, error: 'Question must be less than 256 characters' };
     }
 
-    // Validate end time
-    const now = new Date();
-    const minEndTime = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour from now
-
-    if (params.endTime <= now) {
-        errors.push('End time must be in the future');
+    // Validate end time is exactly 24 hours from now (with small tolerance for processing time)
+    const now = Math.floor(Date.now() / 1000);
+    const expectedEndTime = now + (24 * 60 * 60); // Exactly 24 hours from now
+    const tolerance = 60; // 1 minute tolerance
+    
+    if (Math.abs(endTimeTimestamp - expectedEndTime) > tolerance) {
+        return { isValid: false, error: 'Market duration must be exactly 24 hours' };
     }
 
-    if (params.endTime <= minEndTime) {
-        errors.push('End time must be at least 1 hour from now');
+    // Ensure end time is in the future
+    if (endTimeTimestamp <= now) {
+        return { isValid: false, error: 'End time must be in the future' };
     }
 
-    // Validate creator address
-    if (!params.creatorAddress || params.creatorAddress === '0x0000000000000000000000000000000000000000') {
-        errors.push('Valid creator address required');
-    }
-
-    return {
-        valid: errors.length === 0,
-        errors
-    };
+    return { isValid: true };
 }
 
 const marketFactoryOnchainKit = {

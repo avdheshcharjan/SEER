@@ -8,6 +8,8 @@ import { UnifiedMarket } from '@/lib/types';
 import { ParimutuelSupabaseService } from '@/lib/supabase-parimutuel';
 import { generateCreateParimutuelMarketCalls } from '@/lib/gasless-parimutuel';
 import { processMarketCreation, validateMarketCreation } from '@/lib/market-factory-onchainkit';
+import { getMarketEndTime, getMarketEndTimeTimestamp } from '@/lib/market-duration';
+import { MarketType } from '@/lib/market-resolver';
 import { Address } from 'viem';
 import toast from 'react-hot-toast';
 import { useAccount } from 'wagmi';
@@ -38,11 +40,17 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
     const { addCreatedMarket } = useAppStore();
     const { address } = useAccount();
     const [step, setStep] = useState<'form' | 'preview' | 'creating'>('form');
+    // Fixed 24-hour duration from creation time
+    const getMarketEndTime = () => {
+        const now = new Date();
+        const endTime = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
+        return endTime;
+    };
+
     const [formData, setFormData] = useState({
         ticker: 'ETH',
         price: '',
         direction: 'above' as 'above' | 'below',
-        endDate: '',
     });
     const [tokenData, setTokenData] = useState<TokenData | null>(null);
     const [loadingTokenData, setLoadingTokenData] = useState(false);
@@ -83,36 +91,32 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
 
     // Generate question string
     const generateQuestion = () => {
-        if (!formData.ticker || !formData.price || !formData.endDate) {
+        if (!formData.ticker || !formData.price) {
             return 'Please fill all fields';
         }
 
-        const endDate = new Date(formData.endDate).toLocaleDateString();
+        const endDate = getMarketEndTime().toLocaleDateString();
         const direction = formData.direction === 'above' ? 'above' : 'below';
         return `Will ${formData.ticker} be ${direction} $${formData.price} by ${endDate}?`;
     };
 
     const handlePreview = () => {
-        if (!formData.price || !formData.endDate) {
+        if (!formData.price) {
             toast.error('Please fill in all fields');
             return;
         }
 
         const question = generateQuestion();
-        const endTime = new Date(formData.endDate);
+        const endTime = getMarketEndTime();
 
         setMarketQuestion(question);
         setMarketEndTime(endTime);
 
         // Validate parameters
-        const validation = validateMarketCreation({
-            question,
-            endTime,
-            creatorAddress: address as Address
-        });
+        const validation = validateMarketCreation(question, getMarketEndTimeTimestamp());
 
-        if (!validation.valid) {
-            toast.error(validation.errors.join(', '));
+        if (!validation.isValid) {
+            toast.error(validation.error || 'Validation failed');
             return;
         }
 
@@ -129,13 +133,14 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
                 (async () => {
                     try {
                     // Use the existing processMarketCreation function to handle contract address extraction
-                    const result = await processMarketCreation({
-                        question: generateQuestion(),
-                        category: 'crypto',
-                        endTime: new Date(formData.endDate),
-                        creatorAddress: address as Address,
-                        transactionHash: txHash
-                    });
+                    const result = await processMarketCreation(
+                        txHash,
+                        generateQuestion(),
+                        'crypto',
+                        getMarketEndTimeTimestamp(),
+                        address as Address,
+                        MarketType.USER // User market for regular predictions
+                    );
 
                     if (!result.success) {
                         throw new Error(result.error || 'Failed to process market creation');
@@ -190,7 +195,6 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
                         ticker: 'ETH',
                         price: '',
                         direction: 'above',
-                        endDate: '',
                     });
                     onBack();
 
@@ -325,16 +329,15 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
                                 />
                             </div>
 
-                            {/* End Date */}
+                            {/* Market Duration - Fixed 24 hours */}
                             <div>
-                                <label className="block text-white mb-2 font-medium">End Date</label>
-                                <input
-                                    type="datetime-local"
-                                    value={formData.endDate}
-                                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                                    min={new Date(Date.now() + 3600000).toISOString().slice(0, 16)}
-                                    className="w-full px-4 py-3 bg-slate-700/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-base-500/50 border border-slate-600/50"
-                                />
+                                <label className="block text-white mb-2 font-medium">Market Duration</label>
+                                <div className="w-full px-4 py-3 bg-slate-700/30 rounded-xl text-slate-300 border border-slate-600/50">
+                                    Fixed 24 hours from creation
+                                    <div className="text-sm text-slate-400 mt-1">
+                                        Ends: {getMarketEndTime().toLocaleString()}
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Preview Button */}
@@ -360,6 +363,7 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
                             <div className="bg-slate-700/30 rounded-xl p-4 space-y-3 border border-slate-600/50">
                                 <p className="text-white text-lg font-semibold">{marketQuestion}</p>
                                 <div className="space-y-2 text-slate-300">
+                                    <p>Duration: 24 hours from creation</p>
                                     <p>End Date: {marketEndTime?.toLocaleString()}</p>
                                     <p>Initial Liquidity: 10 USDC each side</p>
                                     <p>Transaction: Gasless (sponsored)</p>
@@ -371,7 +375,7 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
                                 isSponsored={true}
                                 calls={generateCreateParimutuelMarketCalls(
                                     generateQuestion(),
-                                    BigInt(Math.floor(new Date(formData.endDate).getTime() / 1000))
+                                    BigInt(getMarketEndTimeTimestamp())
                                 )}
                                 onStatus={onTransactionStatus}
                             >

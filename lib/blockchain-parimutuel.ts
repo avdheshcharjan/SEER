@@ -11,7 +11,7 @@ export const USDC_CONTRACT_ADDRESS = '0x036CbD53842c5426634e7929541eC2318f3dCF7e
 export const AMM_FACTORY_ADDRESS = '0xB788385cf679A69C43CfD9cB35045BBd4c2843f2' as Address;
 export const DEMO_AMM_MARKET_ADDRESS = '0x86F3108947dA0a88170A7AE8E967dAE8ce0a41F9' as Address;
 
-// Pari-mutuel Factory ABI for creating markets
+// Updated Pari-mutuel Factory ABI for creating markets with new system
 export const PARIMUTUEL_FACTORY_ABI = [
     {
         name: 'createMarket',
@@ -19,7 +19,7 @@ export const PARIMUTUEL_FACTORY_ABI = [
         inputs: [
             { name: 'question', type: 'string' },
             { name: 'endTime', type: 'uint256' },
-            { name: 'resolver', type: 'address' }
+            { name: 'isPlatformMarket', type: 'bool' } // true for platform (UMA), false for user
         ],
         outputs: [{ name: 'market', type: 'address' }],
         stateMutability: 'nonpayable'
@@ -47,7 +47,8 @@ export const PARIMUTUEL_FACTORY_ABI = [
             { name: 'creator', type: 'address', indexed: true },
             { name: 'question', type: 'string', indexed: false },
             { name: 'endTime', type: 'uint256', indexed: false },
-            { name: 'marketIndex', type: 'uint256', indexed: false }
+            { name: 'marketIndex', type: 'uint256', indexed: false },
+            { name: 'marketType', type: 'uint8', indexed: false } // 1 = PLATFORM, 2 = USER
         ]
     }
 ] as const;

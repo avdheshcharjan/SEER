@@ -8,6 +8,8 @@ import { UnifiedMarket } from '@/lib/types';
 import { ParimutuelSupabaseService } from '@/lib/supabase-parimutuel';
 import { generateCreateMarketCalls } from '@/lib/market-factory-onchainkit';
 import { processMarketCreation, validateMarketCreation } from '@/lib/market-factory-onchainkit';
+import { getMarketEndTime, getMarketEndTimeTimestamp } from '@/lib/market-duration';
+import { MarketType } from '@/lib/market-resolver';
 import { Address } from 'viem';
 import toast from 'react-hot-toast';
 import { useAccount } from 'wagmi';
@@ -76,11 +78,17 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
     const [selectedTemplate, setSelectedTemplate] = useState<MarketTemplate | null>(null);
     const [templateSuggestions, setTemplateSuggestions] = useState<MarketTemplate[]>([]);
 
+    // Fixed 24-hour duration from creation time
+    const getMarketEndTime = () => {
+        const now = new Date();
+        const endTime = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now
+        return endTime;
+    };
+
     // Form data for custom markets
     const [customFormData, setCustomFormData] = useState({
         question: '',
         description: '',
-        endDate: '',
         tags: [] as string[],
         newTag: ''
     });
@@ -90,7 +98,6 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
         ticker: 'ETH',
         price: '',
         direction: 'above' as 'above' | 'below',
-        endDate: '',
     });
 
     const [tokenData, setTokenData] = useState<TokenData | null>(null);
@@ -143,10 +150,10 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
     // Generate question based on category and form data
     const generateQuestion = (): string => {
         if (selectedCategory === 'crypto') {
-            if (!cryptoFormData.ticker || !cryptoFormData.price || !cryptoFormData.endDate) {
+            if (!cryptoFormData.ticker || !cryptoFormData.price) {
                 return 'Please fill all fields';
             }
-            const endDate = new Date(cryptoFormData.endDate).toLocaleDateString();
+            const endDate = getMarketEndTime().toLocaleDateString();
             const direction = cryptoFormData.direction === 'above' ? 'above' : 'below';
             return `Will ${cryptoFormData.ticker} be ${direction} $${cryptoFormData.price} by ${endDate}?`;
         } else if (selectedTemplate) {
@@ -174,12 +181,11 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
 
     const handleTemplateSelect = (template: MarketTemplate) => {
         setSelectedTemplate(template);
-        // Auto-fill end date and description
+        // Auto-fill description (end date is now fixed at 24 hours)
         setCustomFormData({
             ...customFormData,
             question: template.question,
             description: template.description,
-            endDate: template.endTime.slice(0, 16), // Convert ISO to datetime-local format
             tags: template.tags
         });
     };
@@ -203,34 +209,26 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
 
     const handlePreview = () => {
         const question = generateQuestion();
-        let endTime: Date;
-
         if (selectedCategory === 'crypto') {
-            if (!cryptoFormData.price || !cryptoFormData.endDate) {
+            if (!cryptoFormData.price) {
                 toast.error('Please fill in all fields');
                 return;
             }
-            endTime = new Date(cryptoFormData.endDate);
         } else {
-            if (!customFormData.question || !customFormData.endDate) {
+            if (!customFormData.question) {
                 toast.error('Please fill in all fields');
                 return;
             }
-            endTime = new Date(customFormData.endDate);
         }
 
         setMarketQuestion(question);
-        setMarketEndTime(endTime);
+        setMarketEndTime(getMarketEndTime());
 
         // Validate parameters
-        const validation = validateMarketCreation({
-            question,
-            endTime,
-            creatorAddress: address as Address
-        });
+        const validation = validateMarketCreation(question, getMarketEndTimeTimestamp());
 
-        if (!validation.valid) {
-            toast.error(validation.errors.join(', '));
+        if (!validation.isValid) {
+            toast.error(validation.error || 'Validation failed');
             return;
         }
 
@@ -244,13 +242,14 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
             if (txHash) {
                 (async () => {
                     try {
-                        const result = await processMarketCreation({
-                            question: generateQuestion(),
-                            category: selectedCategory,
-                            endTime: marketEndTime!,
-                            creatorAddress: address as Address,
-                            transactionHash: txHash
-                        });
+                        const result = await processMarketCreation(
+                            txHash,
+                            generateQuestion(),
+                            selectedCategory,
+                            getMarketEndTimeTimestamp(),
+                            address as Address,
+                            MarketType.USER // User market for enhanced predictions
+                        );
 
                         if (!result.success) {
                             throw new Error(result.error || 'Failed to process market creation');
@@ -341,7 +340,6 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
         setCustomFormData({
             question: '',
             description: '',
-            endDate: '',
             tags: [],
             newTag: ''
         });
@@ -349,7 +347,6 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
             ticker: 'ETH',
             price: '',
             direction: 'above',
-            endDate: '',
         });
     };
 
@@ -568,16 +565,15 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
                                     />
                                 </div>
 
-                                {/* End Date */}
+                                {/* Market Duration - Fixed 24 hours */}
                                 <div>
-                                    <label className="block text-white mb-2 font-medium">End Date</label>
-                                    <input
-                                        type="datetime-local"
-                                        value={cryptoFormData.endDate}
-                                        onChange={(e) => setCryptoFormData({ ...cryptoFormData, endDate: e.target.value })}
-                                        min={new Date(Date.now() + 3600000).toISOString().slice(0, 16)}
-                                        className="w-full px-4 py-3 bg-slate-700/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-base-500/50 border border-slate-600/50"
-                                    />
+                                    <label className="block text-white mb-2 font-medium">Market Duration</label>
+                                    <div className="w-full px-4 py-3 bg-slate-700/30 rounded-xl text-slate-300 border border-slate-600/50">
+                                        Fixed 24 hours from creation
+                                        <div className="text-sm text-slate-400 mt-1">
+                                            Ends: {getMarketEndTime().toLocaleString()}
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <button
@@ -648,16 +644,15 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
                                             />
                                         </div>
 
-                                        {/* End Date */}
+                                        {/* Market Duration - Fixed 24 hours */}
                                         <div className="mb-4">
-                                            <label className="block text-white mb-2 font-medium">End Date</label>
-                                            <input
-                                                type="datetime-local"
-                                                value={customFormData.endDate}
-                                                onChange={(e) => setCustomFormData({ ...customFormData, endDate: e.target.value })}
-                                                min={new Date(Date.now() + 3600000).toISOString().slice(0, 16)}
-                                                className="w-full px-4 py-3 bg-slate-700/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-base-500/50 border border-slate-600/50"
-                                            />
+                                            <label className="block text-white mb-2 font-medium">Market Duration</label>
+                                            <div className="w-full px-4 py-3 bg-slate-700/30 rounded-xl text-slate-300 border border-slate-600/50">
+                                                Fixed 24 hours from creation
+                                                <div className="text-sm text-slate-400 mt-1">
+                                                    Ends: {getMarketEndTime().toLocaleString()}
+                                                </div>
+                                            </div>
                                         </div>
 
                                         {/* Tags */}
@@ -734,16 +729,15 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
                                     />
                                 </div>
 
-                                {/* End Date */}
+                                {/* Market Duration - Fixed 24 hours */}
                                 <div>
-                                    <label className="block text-white mb-2 font-medium">End Date</label>
-                                    <input
-                                        type="datetime-local"
-                                        value={customFormData.endDate}
-                                        onChange={(e) => setCustomFormData({ ...customFormData, endDate: e.target.value })}
-                                        min={new Date(Date.now() + 3600000).toISOString().slice(0, 16)}
-                                        className="w-full px-4 py-3 bg-slate-700/50 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-base-500/50 border border-slate-600/50"
-                                    />
+                                    <label className="block text-white mb-2 font-medium">Market Duration</label>
+                                    <div className="w-full px-4 py-3 bg-slate-700/30 rounded-xl text-slate-300 border border-slate-600/50">
+                                        Fixed 24 hours from creation
+                                        <div className="text-sm text-slate-400 mt-1">
+                                            Ends: {getMarketEndTime().toLocaleString()}
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {/* Tags */}
@@ -836,11 +830,11 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
                             {/* OnchainKit Transaction */}
                             <Transaction
                                 isSponsored={true}
-                                calls={generateCreateMarketCalls({
-                                    question: marketQuestion,
-                                    endTime: marketEndTime!,
-                                    resolverAddress: address as Address
-                                })}
+                                calls={generateCreateMarketCalls(
+                                    marketQuestion,
+                                    getMarketEndTimeTimestamp(),
+                                    false // User market (not platform market)
+                                )}
                                 onStatus={onTransactionStatus}
                             >
                                 <TransactionButton
