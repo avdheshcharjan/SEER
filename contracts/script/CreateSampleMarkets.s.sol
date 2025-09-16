@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "forge-std/Script.sol";
-import "../src/MarketFactory.sol";
-import "../src/MockUSDC.sol";
+import {Script, console} from "forge-std/Script.sol";
+import {MarketFactory} from "../src/MarketFactory.sol";
+import {MockUSDC} from "../src/MockUSDC.sol";
 
 /// @title CreateSampleMarkets
 /// @notice Creates sample prediction markets for demo/testing

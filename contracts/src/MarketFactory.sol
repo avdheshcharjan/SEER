@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "./SimplePredictionMarket.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Context.sol";
+import {SimplePredictionMarket} from "./SimplePredictionMarket.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 
 /// @title MarketFactory
 /// @notice Factory contract for creating SimplePredictionMarket instances
 /// @dev Simplified factory for MVP - no complex features
 contract MarketFactory is Context, Ownable {
     
-    address public immutable usdc;
+    address public immutable USDC;
     address public defaultResolver;
     
     SimplePredictionMarket[] public markets;
@@ -34,7 +34,7 @@ contract MarketFactory is Context, Ownable {
     error InvalidResolver();
     
     constructor(address _usdc, address _defaultResolver) Ownable(_msgSender()) {
-        usdc = _usdc;
+        USDC = _usdc;
         defaultResolver = _defaultResolver;
         
         // Initialize reentrancy protection for EntryPoint
@@ -57,7 +57,7 @@ contract MarketFactory is Context, Ownable {
         if (actualResolver == address(0)) revert InvalidResolver();
         
         market = new SimplePredictionMarket(
-            usdc,
+            USDC,
             question,
             endTime,
             actualResolver
