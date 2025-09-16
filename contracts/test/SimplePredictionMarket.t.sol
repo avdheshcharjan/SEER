@@ -3,37 +3,40 @@ pragma solidity ^0.8.19;
 
 import {Test} from "forge-std/Test.sol";
 import {SimplePredictionMarket} from "../src/SimplePredictionMarket.sol";
-import {MockUSDC} from "../src/MockUSDC.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract SimplePredictionMarketTest is Test {
     SimplePredictionMarket public market;
-    MockUSDC public usdc;
+    IERC20 public usdc;
     
     address public owner = makeAddr("owner");
     address public resolver = makeAddr("resolver");
     address public user1 = makeAddr("user1");
     address public user2 = makeAddr("user2");
     
+    // Base Sepolia USDC contract address
+    address public constant BASE_SEPOLIA_USDC = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
     uint256 public constant INITIAL_BALANCE = 10000e6; // 10,000 USDC
     uint256 public constant BUY_AMOUNT = 100e6; // 100 USDC
     
     function setUp() public {
         vm.startPrank(owner);
         
-        // Deploy mock USDC
-        usdc = new MockUSDC();
+        // Use real Base Sepolia USDC
+        usdc = IERC20(BASE_SEPOLIA_USDC);
         
         // Deploy prediction market
         market = new SimplePredictionMarket(
-            address(usdc),
+            BASE_SEPOLIA_USDC,
             "Will ETH be above $4000 on Dec 31, 2024?",
             block.timestamp + 30 days,
             resolver
         );
         
-        // Give users some USDC
-        usdc.mint(user1, INITIAL_BALANCE);
-        usdc.mint(user2, INITIAL_BALANCE);
+        // Simulate USDC balances for testing (since we can't mint real USDC)
+        // In real tests on testnet, these addresses would need actual USDC
+        deal(BASE_SEPOLIA_USDC, user1, INITIAL_BALANCE);
+        deal(BASE_SEPOLIA_USDC, user2, INITIAL_BALANCE);
         
         vm.stopPrank();
     }

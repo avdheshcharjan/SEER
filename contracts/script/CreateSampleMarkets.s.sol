@@ -3,7 +3,7 @@ pragma solidity ^0.8.19;
 
 import {Script, console} from "forge-std/Script.sol";
 import {MarketFactory} from "../src/MarketFactory.sol";
-import {MockUSDC} from "../src/MockUSDC.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @title CreateSampleMarkets
 /// @notice Creates sample prediction markets for demo/testing
@@ -16,7 +16,7 @@ contract CreateSampleMarkets is Script {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         
         MarketFactory factory = MarketFactory(factoryAddress);
-        MockUSDC usdc = MockUSDC(usdcAddress);
+        IERC20 usdc = IERC20(usdcAddress);
         address deployer = vm.addr(deployerPrivateKey);
         
         console.log("Creating sample markets...");

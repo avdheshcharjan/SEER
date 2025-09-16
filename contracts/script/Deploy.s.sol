@@ -7,7 +7,7 @@ import {SimplePredictionMarket} from "../src/SimplePredictionMarket.sol";
 import {MarketFactory} from "../src/MarketFactory.sol";
 
 /// @title Deploy script for BASED prediction market contracts
-/// @notice Deploys MockUSDC and creates a demo prediction market
+/// @notice Deploys contracts using real Base Sepolia USDC and creates a demo prediction market
 contract DeployScript is Script {
     
     // Base Sepolia Chain ID

@@ -4,17 +4,17 @@ pragma solidity ^0.8.19;
 import {Test} from "forge-std/Test.sol";
 import {SimplePredictionMarket} from "../src/SimplePredictionMarket.sol";
 import {MarketFactory} from "../src/MarketFactory.sol";
-import {MockUSDC} from "../src/MockUSDC.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract MockSmartWallet {
     address public owner;
     SimplePredictionMarket public market;
-    MockUSDC public usdc;
+    IERC20 public usdc;
     
     constructor(address _owner, address _market, address _usdc) {
         owner = _owner;
         market = SimplePredictionMarket(_market);
-        usdc = MockUSDC(_usdc);
+        usdc = IERC20(_usdc);
     }
     
     function buyShares(bool side, uint256 amount) external {
@@ -37,15 +37,19 @@ contract MockSmartWallet {
 contract ERC4337CompatibilityTest is Test {
     SimplePredictionMarket public market;
     MarketFactory public factory;
-    MockUSDC public usdc;
+    IERC20 public usdc;
     MockSmartWallet public smartWallet;
     
     address public user = makeAddr("user");
     address public resolver = makeAddr("resolver");
     
+    // Base Sepolia USDC contract address
+    address public constant BASE_SEPOLIA_USDC = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
+    
     function setUp() public {
-        usdc = new MockUSDC();
-        factory = new MarketFactory(address(usdc), resolver);
+        // Use real Base Sepolia USDC
+        usdc = IERC20(BASE_SEPOLIA_USDC);
+        factory = new MarketFactory(BASE_SEPOLIA_USDC, resolver);
         
         vm.startPrank(user);
         market = factory.createMarket(
@@ -56,11 +60,11 @@ contract ERC4337CompatibilityTest is Test {
         vm.stopPrank();
         
         // Create mock smart wallet
-        smartWallet = new MockSmartWallet(user, address(market), address(usdc));
+        smartWallet = new MockSmartWallet(user, address(market), BASE_SEPOLIA_USDC);
         
-        // Fund both user and smart wallet
-        usdc.mint(user, 10000e6);
-        usdc.mint(address(smartWallet), 10000e6);
+        // Simulate USDC balances for testing (since we can't mint real USDC)
+        deal(BASE_SEPOLIA_USDC, user, 10000e6);
+        deal(BASE_SEPOLIA_USDC, address(smartWallet), 10000e6);
     }
     
     function test_SmartWalletDetection() public {
