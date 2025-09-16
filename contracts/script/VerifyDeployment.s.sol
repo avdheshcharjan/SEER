@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "forge-std/Script.sol";
+import {Script, console} from "forge-std/Script.sol";
 
 contract VerifyDeploymentScript is Script {
     
@@ -12,7 +12,7 @@ contract VerifyDeploymentScript is Script {
         address claimedFactory = 0xfE7440a0C61aE1156E9B759Bb6C7E8BEFa0BCC3C;
         address claimedDemoMarket = 0x688B4b38b8f73878Cd19ef7250FA63D6b36361d1;
         address deployer = 0x817ADecF13045578BDbA571eA204b6B0a1C90Ab8;
-        address realUSDC = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
+        address realUsdc = 0x036CbD53842c5426634e7929541eC2318f3dCF7e;
         
         console.log("Network: Base Sepolia (Chain ID: %d)", block.chainid);
         console.log("Current Block: %d", block.number);
@@ -36,9 +36,9 @@ contract VerifyDeploymentScript is Script {
         
         // Check USDC contract
         console.log("USDC CONTRACT STATUS:");
-        console.log("Real USDC Address: %s", realUSDC);
-        console.log("Real USDC Code Size: %d bytes", realUSDC.code.length);
-        console.log("Real USDC Exists: %s\n", realUSDC.code.length > 0 ? "YES" : "NO");
+        console.log("Real USDC Address: %s", realUsdc);
+        console.log("Real USDC Code Size: %d bytes", realUsdc.code.length);
+        console.log("Real USDC Exists: %s\n", realUsdc.code.length > 0 ? "YES" : "NO");
         
         // Network verification
         require(block.chainid == 84532, "Not on Base Sepolia!");

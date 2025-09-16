@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Context.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Context} from "@openzeppelin/contracts/utils/Context.sol";
 
 /// @title SimplePredictionMarket
 /// @notice A minimal prediction market for binary outcomes with fixed USDC settlement
@@ -12,7 +12,7 @@ import "@openzeppelin/contracts/utils/Context.sol";
 contract SimplePredictionMarket is Context, ReentrancyGuard, Ownable {
     
     // State variables
-    IERC20 public immutable usdc;
+    IERC20 public immutable USDC;
     
     mapping(address => uint256) public yesShares;
     mapping(address => uint256) public noShares;
@@ -86,7 +86,7 @@ contract SimplePredictionMarket is Context, ReentrancyGuard, Ownable {
         uint256 _endTime,
         address _resolver
     ) Ownable(_msgSender()) {
-        usdc = IERC20(_usdc);
+        USDC = IERC20(_usdc);
         question = _question;
         endTime = _endTime;
         resolver = _resolver;
@@ -114,7 +114,7 @@ contract SimplePredictionMarket is Context, ReentrancyGuard, Ownable {
         if (amount == 0) revert InvalidAmountError();
         
         // Transfer USDC from user (works with both EOAs and smart wallets)
-        usdc.transferFrom(_msgSender(), address(this), amount);
+        USDC.transferFrom(_msgSender(), address(this), amount);
         
         // Calculate shares to mint based on AMM formula
         shares = calculateSharesOut(amount, side);
@@ -166,7 +166,7 @@ contract SimplePredictionMarket is Context, ReentrancyGuard, Ownable {
         }
         
         // Transfer USDC to user
-        usdc.transfer(user, usdcOut);
+        USDC.transfer(user, usdcOut);
         
         emit SharesSold(user, side, sharesToSell, usdcOut);
     }
@@ -211,7 +211,7 @@ contract SimplePredictionMarket is Context, ReentrancyGuard, Ownable {
         }
         
         // Transfer payout (1 USDC per winning share)
-        usdc.transfer(user, payout);
+        USDC.transfer(user, payout);
         
         emit RewardsClaimed(user, payout);
     }
@@ -288,9 +288,9 @@ contract SimplePredictionMarket is Context, ReentrancyGuard, Ownable {
     function emergencyWithdraw() external onlyOwner {
         require(resolved && block.timestamp > endTime + 30 days, "Too early for emergency withdrawal");
         
-        uint256 balance = usdc.balanceOf(address(this));
+        uint256 balance = USDC.balanceOf(address(this));
         if (balance > 0) {
-            usdc.transfer(owner(), balance);
+            USDC.transfer(owner(), balance);
         }
     }
     

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "forge-std/Script.sol";
+import {Script, console} from "forge-std/Script.sol";
 // Using real Base Sepolia USDC contract
-import "../src/SimplePredictionMarket.sol";
-import "../src/MarketFactory.sol";
+import {SimplePredictionMarket} from "../src/SimplePredictionMarket.sol";
+import {MarketFactory} from "../src/MarketFactory.sol";
 
 /// @title Deploy script for BASED prediction market contracts
-/// @notice Deploys MockUSDC and creates a demo prediction market
+/// @notice Deploys contracts using real Base Sepolia USDC and creates a demo prediction market
 contract DeployScript is Script {
     
     // Base Sepolia Chain ID
