@@ -5,39 +5,104 @@ import { motion } from 'framer-motion';
 import { toast } from 'react-hot-toast';
 import { useComposeCast } from '@coinbase/onchainkit/minikit';
 import { UnifiedMarket } from '@/lib/types';
+import { useAppStore } from '@/lib/store';
+import SupabaseService from '@/lib/supabase';
 
 interface ShareButtonProps {
     market: UnifiedMarket;
     className?: string;
+    includeUserStats?: boolean;
+    shareType?: 'market' | 'streak' | 'prediction' | 'leaderboard';
+    customText?: string;
 }
 
-export function ShareButton({ market, className = '' }: ShareButtonProps) {
+export function ShareButton({ 
+    market, 
+    className = '', 
+    includeUserStats = false,
+    shareType = 'market',
+    customText
+}: ShareButtonProps) {
     const { composeCast } = useComposeCast();
+    const { user } = useAppStore();
 
-    const handleShare = () => {
+    const handleShare = async () => {
         try {
-            // Generate shareable content with market details
-            const influencerInfo = market.influencer 
-                ? `${market.influencer.name} (@${market.influencer.handle})` 
-                : 'A verified creator';
-                
-            const shareText = `🔮 ${influencerInfo} created: "${market.question}"
+            let shareText = '';
+            let embedUrl = `${window.location.origin}/market/${market.id}`;
 
-Win Rate: ${market.influencer?.winRate || 'N/A'}%
-Total Predictions: ${market.influencer?.totalPredictions || 'N/A'}
+            // Increment share count in database
+            try {
+                await SupabaseService.incrementShareCount(market.id);
+            } catch (error) {
+                console.warn('Failed to increment share count:', error);
+            }
 
-Track their performance on Tomo 👇`;
+            // Generate different share content based on type
+            switch (shareType) {
+                case 'streak':
+                    if (user) {
+                        shareText = `🔥 ON FIRE! I'm on a ${user.currentStreak}-prediction winning streak on @tomo_base!
 
-            // Create embed URL for the specific market
-            const embedUrl = `${window.location.origin}/market/${market.id}`;
+📊 My stats:
+• Win Rate: ${user.totalPredictions > 0 ? ((user.correctPredictions / user.totalPredictions) * 100).toFixed(1) : 0}%
+• Best Streak: ${user.bestStreak || 0}
+• Total Predictions: ${user.totalPredictions}
+
+Can you beat my streak? 👇`;
+                        embedUrl = `${window.location.origin}`;
+                    }
+                    break;
+                    
+                case 'prediction':
+                    const userPrediction = customText || 'YES'; // This would come from the actual prediction
+                    shareText = `🎯 I just predicted "${userPrediction}" on:
+
+"${market.question}"
+
+${includeUserStats && user ? `My current streak: ${user.currentStreak} 🔥\n` : ''}Join me on @tomo_base and make your prediction! 👇`;
+                    break;
+                    
+                case 'leaderboard':
+                    shareText = `🏆 Check out the top predictors on @tomo_base!
+
+🥇 Leading with ${user?.totalPredictions > 0 ? ((user.correctPredictions / user.totalPredictions) * 100).toFixed(1) : 'high'}% accuracy
+🔥 Best streak: ${user?.bestStreak || 'impressive'}
+💰 Community volume: $15k+
+
+Think you can make the leaderboard? 👇`;
+                    embedUrl = `${window.location.origin}`;
+                    break;
+                    
+                case 'market':
+                default:
+                    const influencerInfo = market.influencer 
+                        ? `${market.influencer.name} (@${market.influencer.handle})` 
+                        : 'The community';
+                        
+                    shareText = customText || `🔮 ${influencerInfo} created: "${market.question}"
+
+📊 Market Stats:
+${market.influencer?.winRate ? `• Creator Win Rate: ${market.influencer.winRate}%\n` : ''}• Total Volume: ${market.total_volume || 'Growing'}
+• Participants: ${market.total_participants || 'Join now!'}
+
+${includeUserStats && user ? `My prediction power: ${user.currentStreak} streak 🔥\n` : ''}Make your prediction on @tomo_base 👇`;
+            }
 
             composeCast({
                 text: shareText,
                 url: embedUrl
             });
 
-            // Show success feedback
-            toast.success('Share composer opened! 🚀', {
+            // Show success feedback with context
+            const messages = {
+                market: 'Market shared! 🚀',
+                streak: 'Streak shared! 🔥',
+                prediction: 'Prediction shared! 🎯',
+                leaderboard: 'Leaderboard shared! 🏆'
+            };
+            
+            toast.success(messages[shareType] || 'Shared successfully! 🚀', {
                 duration: 2000,
                 style: {
                     borderRadius: '12px',
@@ -49,7 +114,7 @@ Track their performance on Tomo 👇`;
 
         } catch (error) {
             console.error('Share error:', error);
-            toast.error('Failed to open share composer');
+            toast.error('Failed to share. Try again!');
         }
     };
 

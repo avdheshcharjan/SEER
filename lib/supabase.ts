@@ -14,6 +14,8 @@ export interface UserPrediction {
   amount: number
   // Removed shares_received - not relevant for pari-mutuel
   transaction_hash?: string
+  is_correct?: boolean // Track if prediction was correct after resolution
+  payout_amount?: number // Amount won/lost
   created_at: string
   updated_at: string
 }
@@ -36,6 +38,8 @@ export interface Market {
   resolution_time?: string
   creator_influencer_id?: string
   is_influencer_market?: boolean
+  share_count: number // Track how many times this market was shared
+  total_participants: number // Number of unique users who bet
 }
 
 export interface InfluencerProfile {
@@ -50,6 +54,10 @@ export interface InfluencerProfile {
   total_predictions: number
   total_volume: string
   profit_loss: number
+  current_streak: number
+  best_streak: number
+  last_prediction_date?: string
+  last_streak_reset?: string
   tags: string[]
   farcaster_fid?: number
   twitter_handle?: string
@@ -416,7 +424,9 @@ export class SupabaseService {
     const marketData = {
       ...market,
       creator_influencer_id: influencerId,
-      is_influencer_market: !!influencerId
+      is_influencer_market: !!influencerId,
+      share_count: 0,
+      total_participants: 0
     }
     
     const { data, error } = await supabase
@@ -424,6 +434,233 @@ export class SupabaseService {
       .insert(marketData)
       .select()
       .single()
+    
+    if (error) throw error
+    return data
+  }
+
+  // SOCIAL FEATURES - Leaderboard Functions
+  static async getLeaderboard(limit = 10, sortBy: 'win_rate' | 'total_predictions' | 'current_streak' | 'profit_loss' = 'win_rate') {
+    const { data, error } = await supabase
+      .from('influencer_profiles')
+      .select('*')
+      .order(sortBy, { ascending: false })
+      .limit(limit)
+    
+    if (error) throw error
+    return data
+  }
+
+  static async getUserLeaderboardPosition(userId: string) {
+    const { data, error } = await supabase
+      .rpc('get_user_leaderboard_position', { user_id_param: userId })
+    
+    if (error) throw error
+    return data
+  }
+
+  // SOCIAL FEATURES - Streak Functions
+  static async updateUserStreak(userId: string, isCorrectPrediction: boolean) {
+    const { data: user, error: userError } = await supabase
+      .from('influencer_profiles')
+      .select('current_streak, best_streak')
+      .eq('id', userId)
+      .single()
+    
+    if (userError) throw userError
+    
+    let newStreak = 0
+    let newBestStreak = user?.best_streak || 0
+    
+    if (isCorrectPrediction) {
+      newStreak = (user?.current_streak || 0) + 1
+      newBestStreak = Math.max(newStreak, newBestStreak)
+    } else {
+      newStreak = 0
+    }
+    
+    const updates: any = {
+      current_streak: newStreak,
+      best_streak: newBestStreak,
+      last_prediction_date: new Date().toISOString()
+    }
+    
+    if (!isCorrectPrediction) {
+      updates.last_streak_reset = new Date().toISOString()
+    }
+    
+    const { data, error } = await supabase
+      .from('influencer_profiles')
+      .update(updates)
+      .eq('id', userId)
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  }
+
+  static async getStreakLeaderboard(limit = 10) {
+    const { data, error } = await supabase
+      .from('influencer_profiles')
+      .select('*')
+      .order('current_streak', { ascending: false })
+      .limit(limit)
+    
+    if (error) throw error
+    return data
+  }
+
+  // SOCIAL FEATURES - Sharing Functions
+  static async incrementShareCount(marketId: string) {
+    const { data, error } = await supabase
+      .rpc('increment_share_count', { market_id_param: marketId })
+    
+    if (error) throw error
+    return data
+  }
+
+  static async getMostSharedMarkets(limit = 10) {
+    const { data, error } = await supabase
+      .from('markets')
+      .select('*')
+      .order('share_count', { ascending: false })
+      .limit(limit)
+    
+    if (error) throw error
+    return data
+  }
+
+  // SOCIAL FEATURES - Resolution and Stats Updates
+  static async resolveMarketAndUpdateStats(marketId: string, outcome: boolean) {
+    // First resolve the market
+    const { data: market, error: marketError } = await supabase
+      .from('markets')
+      .update({ 
+        resolved: true, 
+        outcome: outcome, 
+        resolution_time: new Date().toISOString() 
+      })
+      .eq('id', marketId)
+      .select()
+      .single()
+    
+    if (marketError) throw marketError
+    
+    // Get all predictions for this market
+    const { data: predictions, error: predictionsError } = await supabase
+      .from('user_predictions')
+      .select('*')
+      .eq('market_id', marketId)
+    
+    if (predictionsError) throw predictionsError
+    
+    // Update each prediction with correctness and calculate payouts
+    const yesTotal = market.total_yes_bets
+    const noTotal = market.total_no_bets
+    
+    for (const prediction of predictions) {
+      const isCorrect = (prediction.side === 'yes' && outcome) || (prediction.side === 'no' && !outcome)
+      const winningPool = outcome ? yesTotal : noTotal
+      const losingPool = outcome ? noTotal : yesTotal
+      
+      let payout = 0
+      if (isCorrect && winningPool > 0) {
+        // User gets their stake back plus proportional share of losing pool
+        payout = prediction.amount + (prediction.amount / winningPool) * losingPool
+      }
+      
+      // Update prediction record
+      await supabase
+        .from('user_predictions')
+        .update({ 
+          is_correct: isCorrect, 
+          payout_amount: payout 
+        })
+        .eq('id', prediction.id)
+      
+      // Update user streak
+      await this.updateUserStreak(prediction.user_id, isCorrect)
+      
+      // Update user stats (win rate, profit/loss, etc.)
+      await this.updateUserStats(prediction.user_id)
+    }
+    
+    return market
+  }
+
+  static async updateUserStats(userId: string) {
+    // Get all user predictions
+    const { data: predictions, error } = await supabase
+      .from('user_predictions')
+      .select('amount, is_correct, payout_amount')
+      .eq('user_id', userId)
+      .not('is_correct', 'is', null) // Only resolved predictions
+    
+    if (error) throw error
+    
+    const totalPredictions = predictions.length
+    const correctPredictions = predictions.filter(p => p.is_correct).length
+    const winRate = totalPredictions > 0 ? (correctPredictions / totalPredictions) * 100 : 0
+    const totalVolume = predictions.reduce((sum, p) => sum + p.amount, 0)
+    const totalPayout = predictions.reduce((sum, p) => sum + (p.payout_amount || 0), 0)
+    const profitLoss = totalPayout - totalVolume
+    
+    const { data, error: updateError } = await supabase
+      .from('influencer_profiles')
+      .update({
+        total_predictions: totalPredictions,
+        win_rate: winRate,
+        total_volume: totalVolume.toString(),
+        profit_loss: profitLoss
+      })
+      .eq('id', userId)
+      .select()
+      .single()
+    
+    if (updateError) throw updateError
+    return data
+  }
+
+  // SOCIAL FEATURES - User Social Profile
+  static async createOrUpdateUserProfile(userAddress: string, profileData: Partial<InfluencerProfile>) {
+    const { data, error } = await supabase
+      .from('influencer_profiles')
+      .upsert(
+        {
+          id: userAddress,
+          wallet_address: userAddress,
+          current_streak: 0,
+          best_streak: 0,
+          win_rate: 0,
+          total_predictions: 0,
+          total_volume: '0',
+          profit_loss: 0,
+          follower_count: 0,
+          verified_status: false,
+          ...profileData
+        },
+        { onConflict: 'id' }
+      )
+      .select()
+      .single()
+    
+    if (error) throw error
+    return data
+  }
+
+  // SOCIAL FEATURES - Daily/Weekly Stats
+  static async getDailyStats() {
+    const { data, error } = await supabase
+      .rpc('get_daily_stats')
+    
+    if (error) throw error
+    return data
+  }
+
+  static async getWeeklyLeaderboard() {
+    const { data, error } = await supabase
+      .rpc('get_weekly_leaderboard')
     
     if (error) throw error
     return data
