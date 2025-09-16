@@ -1,7 +1,8 @@
 import { Address, encodeFunctionData, type Hex, decodeEventLog } from 'viem';
 import { publicClient } from './viem-client';
 // Updated MarketFactory contract address with resolver system
-const MARKET_FACTORY_ADDRESS = '0x34A1D3fff3958843C43aD80F30b94c510645C316' as const;
+// Updated with latest deployment from DeployUMAContracts.s.sol
+const MARKET_FACTORY_ADDRESS = '0x50ACC2590E8BB702C9A74327D208dE9a9EeF4c9a' as const;
 // import { SupabaseService } from './supabase';
 import { ParimutuelSupabaseService } from './supabase-parimutuel';
 import { MarketType } from './market-resolver';

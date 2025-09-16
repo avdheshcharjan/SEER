@@ -177,6 +177,25 @@ contract MockOptimisticOracle is IOptimisticOracleV2 {
     ) external pure override returns (Request memory) {
         revert("Not implemented");
     }
+
+    function setEventBased(
+        bytes32,
+        uint256,
+        bytes memory
+    ) external pure override {
+        // Mock implementation - do nothing
+    }
+
+    function setCallbacks(
+        bytes32,
+        uint256,
+        bytes memory,
+        bool,
+        bool,
+        bool
+    ) external pure override {
+        // Mock implementation - do nothing
+    }
 }
 
 contract MarketResolverTest is Test {

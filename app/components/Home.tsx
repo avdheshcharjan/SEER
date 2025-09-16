@@ -8,9 +8,10 @@ interface HomeProps {
     onViewProfile: () => void;
     onViewLeaderboard: () => void;
     onCreateMarket: () => void;
+    onViewContracts?: () => void;
 }
 
-export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard, onCreateMarket }: HomeProps) {
+export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard, onCreateMarket, onViewContracts }: HomeProps) {
 
     const features = [
         {
@@ -128,6 +129,24 @@ export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard, onCr
                         </div>
                     </motion.button>
                 </div>
+
+                {/* Contracts Demo Button (Development) */}
+                {onViewContracts && (
+                    <motion.button
+                        onClick={onViewContracts}
+                        className="w-full bg-gradient-to-r from-blue-600/20 to-purple-600/20 hover:from-blue-600/30 hover:to-purple-600/30 text-white font-medium py-3 px-4 rounded-xl transition-colors border border-blue-500/30 ios-button mt-4"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.5, duration: 0.3 }}
+                    >
+                        <div className="flex items-center justify-center space-x-2">
+                            <Zap className="w-4 h-4 text-blue-400" />
+                            <span className="mobile-text-sm">View Contract Integration 🚀</span>
+                        </div>
+                    </motion.button>
+                )}
             </div>
 
             {/* Features Grid */}

@@ -2,15 +2,25 @@ import { base, baseSepolia } from 'wagmi/chains';
 import { encodeFunctionData, parseUnits, Address } from 'viem';
 
 // Pari-mutuel contract addresses on Base Sepolia (replacing AMM system)
-export const MARKET_FACTORY_ADDRESS = '0x34A1D3fff3958843C43aD80F30b94c510645C316' as Address;
-export const DEMO_MARKET_ADDRESS = '0x0Ee1Eaa29418e64b20d53794B26c7C7D1aD02687' as Address;
+// Updated with latest deployment from DeployUMAContracts.s.sol
+export const MARKET_FACTORY_ADDRESS = '0x50ACC2590E8BB702C9A74327D208dE9a9EeF4c9a' as Address;
+export const DEMO_MARKET_ADDRESS = '0xf538f10A2c073ee90e77C648C325a11e6B9Dc527' as Address;
 
 // Legacy AMM addresses (for reference)
 export const AMM_FACTORY_ADDRESS = '0xB788385cf679A69C43CfD9cB35045BBd4c2843f2' as Address;
 export const DEMO_AMM_MARKET_ADDRESS = '0x86F3108947dA0a88170A7AE8E967dAE8ce0a41F9' as Address;
 
-// USDC contract address on Base Sepolia
+// USDC contract address on Base Sepolia (unchanged)
 export const USDC_CONTRACT_ADDRESS = '0x036CbD53842c5426634e7929541eC2318f3dCF7e' as Address;
+
+// Market Resolver contract address (new deployment)
+export const MARKET_RESOLVER_ADDRESS = '0x9dd909cD9F79B1618d9C797dC1b63DA9c9D77cBd' as Address;
+
+// UMA Parimutuel Factory contract address (new deployment)
+export const UMA_PARIMUTUEL_FACTORY_ADDRESS = '0x317A5FAd4F52C147545E0A4A3240dcB560F486c4' as Address;
+
+// UMA Sample Market address (for testing)
+export const UMA_SAMPLE_MARKET_ADDRESS = '0xD5Fc3f213Fe89dF79740676beAaE872ee4bceF05' as Address;
 
 // Legacy addresses (replaced with new deployment)
 // OLD: Factory: 0xfE7440a0C61aE1156E9B759Bb6C7E8BEFa0BCC3C (used MockUSDC)

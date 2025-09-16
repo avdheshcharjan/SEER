@@ -18,13 +18,13 @@ interface IOptimisticOracleV2 {
     }
 
     enum State {
-        Invalid,    // Never requested.
-        Requested,  // Requested, no proposal.
-        Proposed,   // Proposed, but not expired or disputed yet.
-        Expired,    // Proposed, not disputed, past liveness.
-        Disputed,   // Disputed, but no DVM resolution yet.
-        Resolved,   // Disputed and DVM gave a resolution.
-        Settled     // Final price has been set in the contract (can get here from Expired or Resolved).
+        Invalid, // Never requested.
+        Requested, // Requested, no proposal.
+        Proposed, // Proposed, but not expired or disputed yet.
+        Expired, // Proposed, not disputed, past liveness.
+        Disputed, // Disputed, but no DVM resolution yet.
+        Resolved, // Disputed and DVM gave a resolution.
+        Settled // Final price has been set in the contract (can get here from Expired or Resolved).
     }
 
     function requestPrice(
@@ -98,6 +98,21 @@ interface IOptimisticOracleV2 {
         uint256 timestamp,
         bytes memory ancillaryData
     ) external view returns (Request memory);
+
+    function setEventBased(
+        bytes32 identifier,
+        uint256 timestamp,
+        bytes memory ancillaryData
+    ) external;
+
+    function setCallbacks(
+        bytes32 identifier,
+        uint256 timestamp,
+        bytes memory ancillaryData,
+        bool callbackOnPriceProposed,
+        bool callbackOnPriceDisputed,
+        bool callbackOnPriceSettled
+    ) external;
 
     event RequestPrice(
         address indexed requester,

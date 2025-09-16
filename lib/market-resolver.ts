@@ -1,10 +1,10 @@
 import { Address } from 'viem';
 
-// Market Resolver contract address (to be updated after deployment)
-export const MARKET_RESOLVER_ADDRESS = '0x5b73C5498c1E3b4dbA84de0F1833c4a029d90519' as Address;
+// Market Resolver contract address (updated with latest deployment)
+export const MARKET_RESOLVER_ADDRESS = '0x9dd909cD9F79B1618d9C797dC1b63DA9c9D77cBd' as Address;
 
-// UMA Optimistic Oracle V2 address on Base Mainnet
-export const UMA_OPTIMISTIC_ORACLE_V2_ADDRESS = '0xA5B9d8a0B0Fa04Ba71BDD68069661ED5C0848884' as Address;
+// UMA Optimistic Oracle V2 address on Base Sepolia (updated for testnet)
+export const UMA_OPTIMISTIC_ORACLE_V2_ADDRESS = '0x5953f2538F613E05bAeD8a5aEf8b796c9AE2Df85' as Address;
 
 // Market types enum
 export enum MarketType {

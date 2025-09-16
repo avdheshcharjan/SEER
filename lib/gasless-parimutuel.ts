@@ -7,7 +7,11 @@
 import { Address, encodeFunctionData, parseUnits } from 'viem';
 
 // Deployed pari-mutuel factory address on Base Sepolia
-export const PARIMUTUEL_FACTORY_ADDRESS = '0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496' as Address;
+// Updated with latest deployment from DeployUMAContracts.s.sol
+export const PARIMUTUEL_FACTORY_ADDRESS = '0x50ACC2590E8BB702C9A74327D208dE9a9EeF4c9a' as Address;
+
+// UMA Parimutuel Factory (for UMA-based markets)
+export const UMA_PARIMUTUEL_FACTORY_ADDRESS = '0x317A5FAd4F52C147545E0A4A3240dcB560F486c4' as Address;
 
 // USDC contract address on Base Sepolia (must match blockchain.ts)
 const USDC_CONTRACT_ADDRESS = '0x036CbD53842c5426634e7929541eC2318f3dCF7e' as Address;

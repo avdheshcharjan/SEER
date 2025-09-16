@@ -1,8 +1,16 @@
 import { Address } from 'viem';
 
 // Deployed pari-mutuel contract addresses on Base Sepolia
-export const PARIMUTUEL_FACTORY_ADDRESS = '0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496' as Address;
-export const DEMO_PARIMUTUEL_MARKET_ADDRESS = '0x5FbDB2315678afecb367f032d93F642f64180aa3' as Address;
+// Updated with latest deployment from DeployUMAContracts.s.sol
+export const PARIMUTUEL_FACTORY_ADDRESS = '0x50ACC2590E8BB702C9A74327D208dE9a9EeF4c9a' as Address;
+export const DEMO_PARIMUTUEL_MARKET_ADDRESS = '0xf538f10A2c073ee90e77C648C325a11e6B9Dc527' as Address;
+
+// UMA Parimutuel Factory (for UMA-based markets)
+export const UMA_PARIMUTUEL_FACTORY_ADDRESS = '0x317A5FAd4F52C147545E0A4A3240dcB560F486c4' as Address;
+export const UMA_DEMO_PARIMUTUEL_MARKET_ADDRESS = '0xD5Fc3f213Fe89dF79740676beAaE872ee4bceF05' as Address;
+
+// Market Resolver (for market resolution)
+export const MARKET_RESOLVER_ADDRESS = '0x9dd909cD9F79B1618d9C797dC1b63DA9c9D77cBd' as Address;
 
 // USDC contract address on Base Sepolia (unchanged)
 export const USDC_CONTRACT_ADDRESS = '0x036CbD53842c5426634e7929541eC2318f3dCF7e' as Address;
