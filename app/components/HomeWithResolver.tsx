@@ -2,12 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-    TrendingUp, 
-    Plus, 
-    Settings, 
-    Trophy, 
-    Shield, 
+import {
+    TrendingUp,
+    Plus,
+    Trophy,
+    Shield,
     Users,
     Clock,
     CheckCircle,
@@ -15,6 +14,7 @@ import {
     Zap
 } from 'lucide-react';
 import { useAccount } from 'wagmi';
+import { Address } from 'viem';
 import { useAppStore } from '@/lib/store';
 import { ParimutuelPredictionMarket } from './ParimutuelPredictionMarket';
 import { CreateMarketWithResolver } from './CreateMarketWithResolver';
@@ -30,7 +30,7 @@ interface StatsCardProps {
     title: string;
     value: string | number;
     subtitle: string;
-    icon: React.ComponentType<any>;
+    icon: React.ComponentType<{ size?: number | string; className?: string }>;
     color: string;
     trend?: string;
 }
@@ -80,16 +80,16 @@ export function HomeWithResolver() {
         const loadStats = async () => {
             try {
                 setLoading(true);
-                
+
                 // Get all markets from Supabase
                 const allMarkets = await ParimutuelSupabaseService.getMarketsWithInfluencers();
-                
+
                 const now = new Date();
                 const activeMarkets = allMarkets.filter(m => !m.resolved && new Date(m.end_time) > now);
                 const resolvedMarkets = allMarkets.filter(m => m.resolved);
                 const platformMarkets = allMarkets.filter(m => m.market_type === 'platform');
                 const userMarkets = allMarkets.filter(m => m.market_type === 'user');
-                
+
                 // Calculate total volume (sum of all bets across all markets)
                 const totalVolume = allMarkets.reduce((sum, market) => {
                     return sum + (market.total_yes_bets || 0) + (market.total_no_bets || 0);
@@ -103,7 +103,7 @@ export function HomeWithResolver() {
                     platformMarkets: platformMarkets.length,
                     userMarkets: userMarkets.length
                 });
-                
+
             } catch (error) {
                 console.error('Error loading stats:', error);
             } finally {
@@ -127,6 +127,9 @@ export function HomeWithResolver() {
                 rank: 0,
                 joinedAt: new Date().toISOString(),
                 defaultBetAmount: 1,
+                currentStreak: 0,
+                bestStreak: 0,
+                profitLoss: 0,
             });
         }
     }, [isConnected, address, user, setUser]);
@@ -171,6 +174,8 @@ export function HomeWithResolver() {
         }
     ];
 
+    const demoMarketAddress: Address = '0x0000000000000000000000000000000000000000';
+
     const renderMainContent = () => {
         switch (currentView) {
             case 'markets':
@@ -184,7 +189,12 @@ export function HomeWithResolver() {
             case 'profile':
                 return <Profile onBack={() => setCurrentView('home')} />;
             case 'analytics':
-                return <BettingPoolAnalytics onBack={() => setCurrentView('home')} />;
+                return (
+                    <div className="p-4">
+                        <h3 className="text-white font-semibold mb-2">Analytics (Demo)</h3>
+                        <BettingPoolAnalytics marketAddress={demoMarketAddress} />
+                    </div>
+                );
             default:
                 return null;
         }
@@ -218,7 +228,7 @@ export function HomeWithResolver() {
                         Decentralized prediction markets with UMA Oracle integration
                     </p>
                 </div>
-                
+
                 {isConnected && (
                     <button
                         onClick={() => setCurrentView('profile')}
@@ -352,7 +362,7 @@ export function HomeWithResolver() {
                                             Platform Markets (UMA Oracle)
                                         </h3>
                                         <p className="text-blue-200/80 text-sm mb-4">
-                                            Markets resolved by UMA's Optimistic Oracle with economic guarantees and dispute resolution.
+                                            Markets resolved by UMA&apos;s Optimistic Oracle with economic guarantees and dispute resolution.
                                         </p>
                                         <ul className="space-y-2 text-blue-200/70 text-sm">
                                             <li className="flex items-center gap-2">

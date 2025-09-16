@@ -27,8 +27,8 @@ const MARKET_FACTORY_ABI = [
   }
 ] as const;
 
-// Contract address from market-factory-onchainkit.ts (this is the correct one)
-const MARKET_FACTORY_ADDRESS = '0x90193C961A926261B756D1E5bb255e67ff9498A1' as const;
+// Contract address from market-factory-onchainkit.ts (updated)
+const MARKET_FACTORY_ADDRESS = '0x34A1D3fff3958843C43aD80F30b94c510645C316' as const;
 
 // Set up wallet client
 const privateKey = process.env.PRIVATE_KEY as `0x${string}`;
@@ -68,7 +68,7 @@ const cryptoMarkets = [
     duration: 24
   },
   {
-    question: "Will Cardano (ADA) reach $2 by end of 2024?", 
+    question: "Will Cardano (ADA) reach $2 by end of 2024?",
     description: "Cardano's smart contract developments and partnerships may lead to substantial price growth",
     duration: 24
   },
@@ -94,7 +94,7 @@ const cryptoMarkets = [
   },
   {
     question: "Will Binance Coin (BNB) be above $800 by December 2024?",
-    description: "Binance ecosystem growth and BNB utility expansion may push price to new highs", 
+    description: "Binance ecosystem growth and BNB utility expansion may push price to new highs",
     duration: 24
   },
   {
@@ -107,11 +107,11 @@ const cryptoMarkets = [
 async function createMarket(question: string, durationHours: number) {
   try {
     console.log(`\n🚀 Creating market: "${question}"`);
-    
+
     // Calculate end time (24 hours from now)
     const endTimeTimestamp = Math.floor(Date.now() / 1000) + (durationHours * 60 * 60);
     const endTime = BigInt(endTimeTimestamp);
-    
+
     // Create market with UMA resolver (isPlatformMarket = true)
     const hash = await client.writeContract({
       address: MARKET_FACTORY_ADDRESS,
@@ -122,12 +122,12 @@ async function createMarket(question: string, durationHours: number) {
 
     console.log(`✅ Transaction hash: ${hash}`);
     console.log(`🔗 View on Basescan: https://sepolia.basescan.org/tx/${hash}`);
-    
+
     // Wait for transaction confirmation
     console.log('⏳ Waiting for confirmation...');
     const receipt = await publicClient.waitForTransactionReceipt({ hash });
     console.log(`✅ Transaction confirmed in block ${receipt.blockNumber}`);
-    
+
     // Process market creation - register in database
     console.log('📝 Registering market in database...');
     const result = await processMarketCreation(
@@ -138,7 +138,7 @@ async function createMarket(question: string, durationHours: number) {
       account.address,
       MarketType.PLATFORM // UMA resolver
     );
-    
+
     if (result.success) {
       console.log(`✅ Market registered in database with ID: ${result.marketId}`);
       console.log(`📍 Contract address: ${result.contractAddress}`);
@@ -147,7 +147,7 @@ async function createMarket(question: string, durationHours: number) {
       console.error(`❌ Failed to register market in database: ${result.error}`);
       return { success: false, error: `Database registration failed: ${result.error}`, question };
     }
-    
+
   } catch (error) {
     console.error(`❌ Failed to create market:`, error);
     return { success: false, error, question };
@@ -162,14 +162,14 @@ async function createAllMarkets() {
   console.log('\n' + '='.repeat(80) + '\n');
 
   const results = [];
-  
+
   for (let i = 0; i < cryptoMarkets.length; i++) {
     const market = cryptoMarkets[i];
     console.log(`📊 Market ${i + 1}/${cryptoMarkets.length}`);
-    
+
     const result = await createMarket(market.question, market.duration);
     results.push(result);
-    
+
     // Wait between transactions to avoid nonce issues
     if (i < cryptoMarkets.length - 1) {
       console.log('⏱️  Waiting 3 seconds before next transaction...');
@@ -181,13 +181,13 @@ async function createAllMarkets() {
   console.log('\n' + '='.repeat(80));
   console.log('📈 CRYPTO MARKETS CREATION SUMMARY');
   console.log('='.repeat(80));
-  
+
   const successful = results.filter(r => r.success);
   const failed = results.filter(r => !r.success);
-  
+
   console.log(`✅ Successfully created: ${successful.length} markets`);
   console.log(`❌ Failed: ${failed.length} markets`);
-  
+
   if (successful.length > 0) {
     console.log('\n🎉 SUCCESS - Created Markets:');
     successful.forEach((result, index) => {
@@ -197,7 +197,7 @@ async function createAllMarkets() {
       console.log(`   DB ID: ${result.marketId}`);
     });
   }
-  
+
   if (failed.length > 0) {
     console.log('\n💥 FAILED Markets:');
     failed.forEach((result, index) => {
@@ -205,13 +205,13 @@ async function createAllMarkets() {
       console.log(`   Error: ${result.error}`);
     });
   }
-  
+
   console.log('\n🔗 Base Sepolia Network Info:');
   console.log(`   Chain ID: 84532`);
   console.log(`   RPC: https://sepolia.base.org`);
   console.log(`   Factory: ${MARKET_FACTORY_ADDRESS}`);
   console.log(`   Explorer: https://sepolia.basescan.org`);
-  
+
   console.log('\n📋 All markets use:');
   console.log('   ⚡ 24-hour duration');
   console.log('   🔮 UMA Optimistic Oracle resolution');
@@ -219,7 +219,7 @@ async function createAllMarkets() {
   console.log('   ⏱️  2-hour challenge period');
   console.log('   🗄️  Registered in Supabase database');
   console.log('   🌐 Visible in frontend application');
-  
+
   console.log(`\n🎯 Markets created successfully! Total: ${successful.length}/${cryptoMarkets.length}`);
   console.log('\n💡 All markets are now live and tradeable in the frontend!');
 }

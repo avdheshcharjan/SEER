@@ -7,12 +7,16 @@ interface MockMarket extends Omit<Market, 'id' | 'created_at'> {
   targetPrice?: number
   direction?: 'above' | 'below'
   influencer?: Influencer
+  yes_pool?: number  // For backward compatibility with mock data
+  no_pool?: number   // For backward compatibility with mock data
+  total_yes_shares?: number  // For backward compatibility with mock data
+  total_no_shares?: number   // For backward compatibility with mock data
 }
 
 const cryptoTickers = ['ETH', 'BTC', 'SOL', 'BASE', 'USDC', 'LINK', 'UNI', 'AAVE']
 const sportEvents = [
   'Lakers make NBA playoffs',
-  'Chiefs win Super Bowl 2025', 
+  'Chiefs win Super Bowl 2025',
   'Dodgers win World Series',
   'Real Madrid wins Champions League',
   'Warriors win NBA Championship',
@@ -71,7 +75,10 @@ function generateCryptoMarkets(): MockMarket[] {
     const direction = Math.random() > 0.5 ? 'above' : 'below'
     const multiplier = direction === 'above' ? 1.1 + Math.random() * 0.4 : 0.6 + Math.random() * 0.3
     const targetPrice = Math.floor(currentPrice * multiplier)
-    
+
+    const totalYesBets = getRandomPrice(500, 5000)
+    const totalNoBets = getRandomPrice(500, 5000)
+
     return {
       question: `Will ${ticker} be ${direction} $${targetPrice.toLocaleString()} by ${new Date(getRandomDate(7, 90)).toLocaleDateString()}?`,
       category: 'crypto',
@@ -84,68 +91,113 @@ function generateCryptoMarkets(): MockMarket[] {
       no_pool: getRandomPrice(500, 5000),
       total_yes_shares: getRandomPrice(100, 1000),
       total_no_shares: getRandomPrice(100, 1000),
+      total_yes_bets: totalYesBets,
+      total_no_bets: totalNoBets,
+      total_volume: totalYesBets + totalNoBets,
+      share_count: getRandomPrice(10, 100),
+      total_participants: getRandomPrice(5, 50),
       resolved: false
     }
   })
 }
 
 function generateSportsMarkets(): MockMarket[] {
-  return sportEvents.slice(0, 4).map(event => ({
-    question: `Will ${event}?`,
-    category: 'sports',
-    end_time: getRandomDate(30, 365),
-    yes_pool: getRandomPrice(800, 3000),
-    no_pool: getRandomPrice(800, 3000),
-    total_yes_shares: getRandomPrice(150, 800),
-    total_no_shares: getRandomPrice(150, 800),
-    resolved: false
-  }))
+  return sportEvents.slice(0, 4).map(event => {
+    const totalYesBets = getRandomPrice(800, 3000)
+    const totalNoBets = getRandomPrice(800, 3000)
+
+    return {
+      question: `Will ${event}?`,
+      category: 'sports',
+      end_time: getRandomDate(30, 365),
+      yes_pool: getRandomPrice(800, 3000),
+      no_pool: getRandomPrice(800, 3000),
+      total_yes_shares: getRandomPrice(150, 800),
+      total_no_shares: getRandomPrice(150, 800),
+      total_yes_bets: totalYesBets,
+      total_no_bets: totalNoBets,
+      total_volume: totalYesBets + totalNoBets,
+      share_count: getRandomPrice(20, 150),
+      total_participants: getRandomPrice(10, 75),
+      resolved: false
+    }
+  })
 }
 
 function generatePoliticsMarkets(): MockMarket[] {
-  return politicsEvents.slice(0, 3).map(event => ({
-    question: `Will ${event}?`,
-    category: 'politics',
-    end_time: getRandomDate(90, 1460), // 3 months to 4 years
-    yes_pool: getRandomPrice(1000, 8000),
-    no_pool: getRandomPrice(1000, 8000),
-    total_yes_shares: getRandomPrice(200, 1500),
-    total_no_shares: getRandomPrice(200, 1500),
-    resolved: false
-  }))
+  return politicsEvents.slice(0, 3).map(event => {
+    const totalYesBets = getRandomPrice(1000, 8000)
+    const totalNoBets = getRandomPrice(1000, 8000)
+
+    return {
+      question: `Will ${event}?`,
+      category: 'politics',
+      end_time: getRandomDate(90, 1460), // 3 months to 4 years
+      yes_pool: getRandomPrice(1000, 8000),
+      no_pool: getRandomPrice(1000, 8000),
+      total_yes_shares: getRandomPrice(200, 1500),
+      total_no_shares: getRandomPrice(200, 1500),
+      total_yes_bets: totalYesBets,
+      total_no_bets: totalNoBets,
+      total_volume: totalYesBets + totalNoBets,
+      share_count: getRandomPrice(30, 200),
+      total_participants: getRandomPrice(15, 100),
+      resolved: false
+    }
+  })
 }
 
 function generateTechMarkets(): MockMarket[] {
-  return techEvents.slice(0, 4).map(event => ({
-    question: `Will ${event}?`,
-    category: 'tech',
-    end_time: getRandomDate(14, 365),
-    yes_pool: getRandomPrice(600, 4000),
-    no_pool: getRandomPrice(600, 4000),
-    total_yes_shares: getRandomPrice(120, 900),
-    total_no_shares: getRandomPrice(120, 900),
-    resolved: false
-  }))
+  return techEvents.slice(0, 4).map(event => {
+    const totalYesBets = getRandomPrice(600, 4000)
+    const totalNoBets = getRandomPrice(600, 4000)
+
+    return {
+      question: `Will ${event}?`,
+      category: 'tech',
+      end_time: getRandomDate(14, 365),
+      yes_pool: getRandomPrice(600, 4000),
+      no_pool: getRandomPrice(600, 4000),
+      total_yes_shares: getRandomPrice(120, 900),
+      total_no_shares: getRandomPrice(120, 900),
+      total_yes_bets: totalYesBets,
+      total_no_bets: totalNoBets,
+      total_volume: totalYesBets + totalNoBets,
+      share_count: getRandomPrice(15, 120),
+      total_participants: getRandomPrice(8, 60),
+      resolved: false
+    }
+  })
 }
 
 function generateCelebMarkets(): MockMarket[] {
-  return celebEvents.slice(0, 3).map(event => ({
-    question: `Will ${event}?`,
-    category: 'celebrity',
-    end_time: getRandomDate(7, 180),
-    yes_pool: getRandomPrice(300, 2000),
-    no_pool: getRandomPrice(300, 2000),
-    total_yes_shares: getRandomPrice(80, 600),
-    total_no_shares: getRandomPrice(80, 600),
-    resolved: false
-  }))
+  return celebEvents.slice(0, 3).map(event => {
+    const totalYesBets = getRandomPrice(300, 2000)
+    const totalNoBets = getRandomPrice(300, 2000)
+
+    return {
+      question: `Will ${event}?`,
+      category: 'celebrity',
+      end_time: getRandomDate(7, 180),
+      yes_pool: getRandomPrice(300, 2000),
+      no_pool: getRandomPrice(300, 2000),
+      total_yes_shares: getRandomPrice(80, 600),
+      total_no_shares: getRandomPrice(80, 600),
+      total_yes_bets: totalYesBets,
+      total_no_bets: totalNoBets,
+      total_volume: totalYesBets + totalNoBets,
+      share_count: getRandomPrice(5, 80),
+      total_participants: getRandomPrice(3, 40),
+      resolved: false
+    }
+  })
 }
 
 export function generateMockMarkets(): MockMarket[] {
   return [
     ...generateCryptoMarkets(),
     ...generateSportsMarkets(),
-    ...generatePoliticsMarkets(), 
+    ...generatePoliticsMarkets(),
     ...generateTechMarkets(),
     ...generateCelebMarkets()
   ].sort(() => Math.random() - 0.5) // Shuffle the array
@@ -153,17 +205,17 @@ export function generateMockMarkets(): MockMarket[] {
 
 export function generateTrendingMarkets(): MockMarket[] {
   const allMarkets = generateMockMarkets()
-  
+
   // Pick markets with higher activity (higher pools)
   return allMarkets
-    .filter(market => (market.yes_pool + market.no_pool) > 2000)
+    .filter(market => (market.total_yes_bets + market.total_no_bets) > 2000)
     .slice(0, 5)
 }
 
 export function generateRecentActivity() {
   const activities = [
     'Alice bet $50 on YES for "ETH above $4000"',
-    'Bob bet $25 on NO for "Lakers make playoffs"', 
+    'Bob bet $25 on NO for "Lakers make playoffs"',
     'Charlie created "Will Apple release AR glasses?"',
     'Dana bet $100 on YES for "Bitcoin hits $150k"',
     'Eve bet $30 on NO for "Trump wins 2028"',
@@ -171,7 +223,7 @@ export function generateRecentActivity() {
     'Grace created "Will Meta launch VR platform?"',
     'Henry bet $40 on NO for "Chiefs win Super Bowl"'
   ]
-  
+
   return activities
     .sort(() => Math.random() - 0.5)
     .slice(0, 5)
@@ -185,7 +237,7 @@ export function generateRecentActivity() {
 export function calculateMarketOdds(yesPool: number, noPool: number) {
   const total = yesPool + noPool
   if (total === 0) return { yesPercent: 50, noPercent: 50 }
-  
+
   return {
     yesPercent: Math.round((yesPool / total) * 100),
     noPercent: Math.round((noPool / total) * 100)

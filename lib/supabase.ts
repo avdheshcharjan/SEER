@@ -85,7 +85,7 @@ export interface UserPosition {
 
 // Database functions
 export class SupabaseService {
-  
+
   // User Predictions
   static async createPrediction(prediction: Omit<UserPrediction, 'id' | 'created_at' | 'updated_at'>) {
     const { data, error } = await supabase
@@ -93,7 +93,7 @@ export class SupabaseService {
       .insert(prediction)
       .select()
       .single()
-    
+
     if (error) throw error
     return data
   }
@@ -138,7 +138,7 @@ export class SupabaseService {
       `)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
-    
+
     if (error) throw error
     return data
   }
@@ -150,7 +150,7 @@ export class SupabaseService {
       .eq('id', id)
       .select()
       .single()
-    
+
     if (error) throw error
     return data
   }
@@ -162,7 +162,7 @@ export class SupabaseService {
       .insert(market)
       .select()
       .single()
-    
+
     if (error) throw error
     return data
   }
@@ -174,14 +174,14 @@ export class SupabaseService {
       .select('*')
       .eq('id', id)
       .single()
-    
+
     if (error) throw error
-    
+
     // Validate contract address exists for blockchain interactions
     if (!data.contract_address) {
       console.warn(`Market ${id} has no contract address - using demo contract`);
     }
-    
+
     return data
   }
 
@@ -193,7 +193,7 @@ export class SupabaseService {
       .not('contract_address', 'is', null)
       .eq('resolved', false)
       .order('created_at', { ascending: false })
-    
+
     if (error) throw error
     return data
   }
@@ -204,7 +204,7 @@ export class SupabaseService {
       .select('*')
       .order('created_at', { ascending: false })
       .limit(limit)
-    
+
     if (error) throw error
     return data
   }
@@ -215,7 +215,7 @@ export class SupabaseService {
       .select('*')
       .eq('id', id)
       .single()
-    
+
     if (error) throw error
     return data
   }
@@ -227,7 +227,7 @@ export class SupabaseService {
       .eq('id', id)
       .select()
       .single()
-    
+
     if (error) throw error
     return data
   }
@@ -240,7 +240,7 @@ export class SupabaseService {
       .eq('resolved', false)
       .gt('end_time', now)
       .order('created_at', { ascending: false })
-    
+
     if (error) throw error
     return data
   }
@@ -252,7 +252,7 @@ export class SupabaseService {
       .eq('category', category)
       .eq('resolved', false)
       .order('created_at', { ascending: false })
-    
+
     if (error) throw error
     return data
   }
@@ -267,7 +267,7 @@ export class SupabaseService {
       )
       .select()
       .single()
-    
+
     if (error) throw error
     return data
   }
@@ -287,7 +287,7 @@ export class SupabaseService {
       `)
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
-    
+
     if (error) throw error
     return data
   }
@@ -299,7 +299,7 @@ export class SupabaseService {
       .eq('user_id', userId)
       .eq('market_id', marketId)
       .single()
-    
+
     if (error && error.code !== 'PGRST116') throw error // PGRST116 = no rows returned
     return data
   }
@@ -310,13 +310,13 @@ export class SupabaseService {
       .from('user_predictions')
       .select('side, amount')
       .eq('market_id', marketId)
-    
+
     if (error) throw error
-    
+
     const yesTotal = predictions?.filter(p => p.side === 'yes').reduce((sum, p) => sum + p.amount, 0) || 0
     const noTotal = predictions?.filter(p => p.side === 'no').reduce((sum, p) => sum + p.amount, 0) || 0
     const total = yesTotal + noTotal
-    
+
     return {
       yesTotal,
       noTotal,
@@ -332,12 +332,12 @@ export class SupabaseService {
       .from('user_predictions')
       .select('amount')
       .eq('user_id', userId)
-    
+
     if (error) throw error
-    
+
     const totalInvested = data?.reduce((sum, p) => sum + p.amount, 0) || 0
     const totalPredictions = data?.length || 0
-    
+
     return {
       totalInvested,
       totalPredictions
@@ -351,7 +351,7 @@ export class SupabaseService {
       .select('*')
       .eq('id', id)
       .single()
-    
+
     if (error) throw error
     return data
   }
@@ -361,7 +361,7 @@ export class SupabaseService {
       .from('influencer_profiles')
       .select('*')
       .order('win_rate', { ascending: false })
-    
+
     if (error) throw error
     return data
   }
@@ -372,7 +372,7 @@ export class SupabaseService {
       .select('*')
       .order(sortBy, { ascending: false })
       .limit(limit)
-    
+
     if (error) throw error
     return data
   }
@@ -383,7 +383,7 @@ export class SupabaseService {
       .from('markets_with_influencers')
       .select('*')
       .order('created_at', { ascending: false })
-    
+
     if (error) throw error
     return data
   }
@@ -394,7 +394,7 @@ export class SupabaseService {
       .select('*')
       .eq('id', marketId)
       .single()
-    
+
     if (error) throw error
     return data
   }
@@ -402,7 +402,7 @@ export class SupabaseService {
   static async getMarketsByInfluencer(influencerId: string) {
     const { data, error } = await supabase
       .rpc('get_markets_by_influencer', { influencer_id_param: influencerId })
-    
+
     if (error) throw error
     return data
   }
@@ -411,14 +411,14 @@ export class SupabaseService {
     const { data, error } = await supabase
       .rpc('get_influencer_stats')
       .single()
-    
+
     if (error) throw error
     return data
   }
 
   // Create market with influencer attribution
   static async createMarketWithInfluencer(
-    market: Omit<Market, 'id' | 'created_at'>, 
+    market: Omit<Market, 'id' | 'created_at'>,
     influencerId?: string
   ) {
     const marketData = {
@@ -428,13 +428,13 @@ export class SupabaseService {
       share_count: 0,
       total_participants: 0
     }
-    
+
     const { data, error } = await supabase
       .from('markets')
       .insert(marketData)
       .select()
       .single()
-    
+
     if (error) throw error
     return data
   }
@@ -446,7 +446,7 @@ export class SupabaseService {
       .select('*')
       .order(sortBy, { ascending: false })
       .limit(limit)
-    
+
     if (error) throw error
     return data
   }
@@ -454,7 +454,7 @@ export class SupabaseService {
   static async getUserLeaderboardPosition(userId: string) {
     const { data, error } = await supabase
       .rpc('get_user_leaderboard_position', { user_id_param: userId })
-    
+
     if (error) throw error
     return data
   }
@@ -466,36 +466,36 @@ export class SupabaseService {
       .select('current_streak, best_streak')
       .eq('id', userId)
       .single()
-    
+
     if (userError) throw userError
-    
+
     let newStreak = 0
     let newBestStreak = user?.best_streak || 0
-    
+
     if (isCorrectPrediction) {
       newStreak = (user?.current_streak || 0) + 1
       newBestStreak = Math.max(newStreak, newBestStreak)
     } else {
       newStreak = 0
     }
-    
-    const updates: any = {
+
+    const updates: Record<string, unknown> = {
       current_streak: newStreak,
       best_streak: newBestStreak,
       last_prediction_date: new Date().toISOString()
     }
-    
+
     if (!isCorrectPrediction) {
-      updates.last_streak_reset = new Date().toISOString()
+      (updates as { last_streak_reset?: string }).last_streak_reset = new Date().toISOString()
     }
-    
+
     const { data, error } = await supabase
       .from('influencer_profiles')
       .update(updates)
       .eq('id', userId)
       .select()
       .single()
-    
+
     if (error) throw error
     return data
   }
@@ -506,7 +506,7 @@ export class SupabaseService {
       .select('*')
       .order('current_streak', { ascending: false })
       .limit(limit)
-    
+
     if (error) throw error
     return data
   }
@@ -515,7 +515,7 @@ export class SupabaseService {
   static async incrementShareCount(marketId: string) {
     const { data, error } = await supabase
       .rpc('increment_share_count', { market_id_param: marketId })
-    
+
     if (error) throw error
     return data
   }
@@ -526,7 +526,7 @@ export class SupabaseService {
       .select('*')
       .order('share_count', { ascending: false })
       .limit(limit)
-    
+
     if (error) throw error
     return data
   }
@@ -536,56 +536,56 @@ export class SupabaseService {
     // First resolve the market
     const { data: market, error: marketError } = await supabase
       .from('markets')
-      .update({ 
-        resolved: true, 
-        outcome: outcome, 
-        resolution_time: new Date().toISOString() 
+      .update({
+        resolved: true,
+        outcome: outcome,
+        resolution_time: new Date().toISOString()
       })
       .eq('id', marketId)
       .select()
       .single()
-    
+
     if (marketError) throw marketError
-    
+
     // Get all predictions for this market
     const { data: predictions, error: predictionsError } = await supabase
       .from('user_predictions')
       .select('*')
       .eq('market_id', marketId)
-    
+
     if (predictionsError) throw predictionsError
-    
+
     // Update each prediction with correctness and calculate payouts
     const yesTotal = market.total_yes_bets
     const noTotal = market.total_no_bets
-    
+
     for (const prediction of predictions) {
       const isCorrect = (prediction.side === 'yes' && outcome) || (prediction.side === 'no' && !outcome)
       const winningPool = outcome ? yesTotal : noTotal
       const losingPool = outcome ? noTotal : yesTotal
-      
+
       let payout = 0
       if (isCorrect && winningPool > 0) {
         // User gets their stake back plus proportional share of losing pool
         payout = prediction.amount + (prediction.amount / winningPool) * losingPool
       }
-      
+
       // Update prediction record
       await supabase
         .from('user_predictions')
-        .update({ 
-          is_correct: isCorrect, 
-          payout_amount: payout 
+        .update({
+          is_correct: isCorrect,
+          payout_amount: payout
         })
         .eq('id', prediction.id)
-      
+
       // Update user streak
       await this.updateUserStreak(prediction.user_id, isCorrect)
-      
+
       // Update user stats (win rate, profit/loss, etc.)
       await this.updateUserStats(prediction.user_id)
     }
-    
+
     return market
   }
 
@@ -596,16 +596,16 @@ export class SupabaseService {
       .select('amount, is_correct, payout_amount')
       .eq('user_id', userId)
       .not('is_correct', 'is', null) // Only resolved predictions
-    
+
     if (error) throw error
-    
+
     const totalPredictions = predictions.length
     const correctPredictions = predictions.filter(p => p.is_correct).length
     const winRate = totalPredictions > 0 ? (correctPredictions / totalPredictions) * 100 : 0
     const totalVolume = predictions.reduce((sum, p) => sum + p.amount, 0)
     const totalPayout = predictions.reduce((sum, p) => sum + (p.payout_amount || 0), 0)
     const profitLoss = totalPayout - totalVolume
-    
+
     const { data, error: updateError } = await supabase
       .from('influencer_profiles')
       .update({
@@ -617,7 +617,7 @@ export class SupabaseService {
       .eq('id', userId)
       .select()
       .single()
-    
+
     if (updateError) throw updateError
     return data
   }
@@ -644,7 +644,7 @@ export class SupabaseService {
       )
       .select()
       .single()
-    
+
     if (error) throw error
     return data
   }
@@ -653,7 +653,7 @@ export class SupabaseService {
   static async getDailyStats() {
     const { data, error } = await supabase
       .rpc('get_daily_stats')
-    
+
     if (error) throw error
     return data
   }
@@ -661,7 +661,7 @@ export class SupabaseService {
   static async getWeeklyLeaderboard() {
     const { data, error } = await supabase
       .rpc('get_weekly_leaderboard')
-    
+
     if (error) throw error
     return data
   }

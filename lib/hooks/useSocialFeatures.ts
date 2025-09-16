@@ -43,7 +43,7 @@ export function useLeaderboardData(sortBy: 'winRate' | 'currentStreak' | 'totalP
             setLoading(true);
             const response = await fetch(`/api/leaderboard?sortBy=${sortBy}&limit=${limit}&realTime=true`);
             const data = await response.json();
-            
+
             if (data.success) {
                 setLeaderboard(data.data);
                 setLastUpdated(new Date());
@@ -126,10 +126,10 @@ export function useSocialStats() {
 
     useEffect(() => {
         fetchStats();
-        
+
         // Update stats every 5 minutes
         const interval = setInterval(fetchStats, 300000);
-        
+
         return () => clearInterval(interval);
     }, [fetchStats]);
 
@@ -145,11 +145,11 @@ export function useUserStreakUpdates() {
         try {
             // Update local state immediately for responsive UI
             updateStreak(isCorrect);
-            
+
             // Update user stats if we have payout information
             if (payoutAmount !== undefined) {
                 const newProfitLoss = (user.profitLoss || 0) + (payoutAmount - (user.defaultBetAmount || 1));
-                updateUser({ 
+                updateUser({
                     profitLoss: newProfitLoss,
                     totalSpent: user.totalSpent + (user.defaultBetAmount || 1)
                 });
@@ -207,9 +207,9 @@ export function useRealTimeNotifications() {
             message,
             timestamp: new Date()
         };
-        
+
         setNotifications(prev => [notification, ...prev.slice(0, 4)]); // Keep last 5 notifications
-        
+
         // Auto-remove after 5 seconds
         setTimeout(() => {
             setNotifications(prev => prev.filter(n => n.id !== notification.id));
@@ -235,8 +235,7 @@ export function useSocialFeatures(options: {
 } = {}) {
     const {
         leaderboardSort = 'winRate',
-        leaderboardLimit = 10,
-        enableRealTime: _enableRealTime = true
+        leaderboardLimit = 10
     } = options;
 
     const leaderboardData = useLeaderboardData(leaderboardSort, leaderboardLimit);

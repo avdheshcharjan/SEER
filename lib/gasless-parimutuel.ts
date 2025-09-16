@@ -7,7 +7,7 @@
 import { Address, encodeFunctionData, parseUnits } from 'viem';
 
 // Deployed pari-mutuel factory address on Base Sepolia
-export const PARIMUTUEL_FACTORY_ADDRESS = '0xd0a6e763691fe2041aA5eA04deb67AcF888A40dD' as Address;
+export const PARIMUTUEL_FACTORY_ADDRESS = '0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496' as Address;
 
 // USDC contract address on Base Sepolia (must match blockchain.ts)
 const USDC_CONTRACT_ADDRESS = '0x036CbD53842c5426634e7929541eC2318f3dCF7e' as Address;
@@ -374,7 +374,7 @@ export function getRequiredAllowlist() {
 /**
  * Transaction status handler for OnchainKit components
  */
-export type TransactionStatus = 
+export type TransactionStatus =
   | { statusName: 'init'; statusData: null }
   | { statusName: 'error'; statusData: { message: string } }
   | { statusName: 'transactionIdle'; statusData: null }

@@ -12,31 +12,31 @@ export interface UnifiedMarket {
   category: 'crypto' | 'tech' | 'celebrity' | 'sports' | 'politics';
   resolved: boolean;
   outcome?: boolean | null;
-  
+
   // Influencer attribution
   influencer?: Influencer;
-  
+
   // Time fields (normalized to ISO format)
   endTime: string; // Always ISO format
   createdAt: string; // Always ISO format
   resolutionTime?: string; // Always ISO format
-  
+
   // Price/odds fields (normalized)
   yesPrice: number; // 0-1 probability
   noPrice: number; // 0-1 probability
   yesOdds: number; // 0-100 percentage
   noOdds: number; // 0-100 percentage
-  
+
   // Pool data (from Supabase)
   yesPool: number; // Pool amounts
   noPool: number; // Pool amounts
   totalYesShares: number;
   totalNoShares: number;
-  
+
   // Creator info
   creatorAddress?: string;
   contractAddress?: string;
-  
+
   // Legacy display fields (optional)
   endDate?: string; // Display format like "31/12/2024"
   description?: string;
@@ -86,13 +86,13 @@ export interface UnifiedUserPosition {
 
 // Transformation utilities
 export class SchemaTransformer {
-  
+
   // Convert Supabase Market to UnifiedMarket
   static supabaseToUnified(market: SupabaseMarket): UnifiedMarket {
-    const totalPool = market.yes_pool + market.no_pool;
-    const yesPrice = totalPool > 0 ? market.yes_pool / totalPool : 0.5;
-    const noPrice = totalPool > 0 ? market.no_pool / totalPool : 0.5;
-    
+    const totalPool = market.total_yes_bets + market.total_no_bets;
+    const yesPrice = totalPool > 0 ? market.total_yes_bets / totalPool : 0.5;
+    const noPrice = totalPool > 0 ? market.total_no_bets / totalPool : 0.5;
+
     return {
       id: market.id,
       question: market.question,
@@ -106,10 +106,10 @@ export class SchemaTransformer {
       noPrice,
       yesOdds: Math.round(yesPrice * 100),
       noOdds: Math.round(noPrice * 100),
-      yesPool: market.yes_pool,
-      noPool: market.no_pool,
-      totalYesShares: market.total_yes_shares,
-      totalNoShares: market.total_no_shares,
+      yesPool: market.total_yes_bets,
+      noPool: market.total_no_bets,
+      totalYesShares: market.total_yes_bets, // Using bets as shares for parimutuel
+      totalNoShares: market.total_no_bets,   // Using bets as shares for parimutuel
       creatorAddress: market.creator_address,
       contractAddress: market.contract_address,
       transactionHash: market.transaction_hash,
@@ -121,10 +121,10 @@ export class SchemaTransformer {
   // Convert markets_with_influencers view data to UnifiedMarket
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static marketWithInfluencerToUnified(marketData: any): UnifiedMarket {
-    const totalPool = marketData.yes_pool + marketData.no_pool;
-    const yesPrice = totalPool > 0 ? marketData.yes_pool / totalPool : 0.5;
-    const noPrice = totalPool > 0 ? marketData.no_pool / totalPool : 0.5;
-    
+    const totalPool = marketData.total_yes_bets + marketData.total_no_bets;
+    const yesPrice = totalPool > 0 ? marketData.total_yes_bets / totalPool : 0.5;
+    const noPrice = totalPool > 0 ? marketData.total_no_bets / totalPool : 0.5;
+
     // Build influencer object if influencer data exists
     const influencer = marketData.influencer_id ? {
       id: marketData.influencer_id,
@@ -141,7 +141,7 @@ export class SchemaTransformer {
       farcasterFid: undefined,
       twitterHandle: marketData.influencer_id
     } : undefined;
-    
+
     return {
       id: marketData.id,
       question: marketData.question,
@@ -155,10 +155,10 @@ export class SchemaTransformer {
       noPrice,
       yesOdds: Math.round(yesPrice * 100),
       noOdds: Math.round(noPrice * 100),
-      yesPool: marketData.yes_pool,
-      noPool: marketData.no_pool,
-      totalYesShares: marketData.total_yes_shares,
-      totalNoShares: marketData.total_no_shares,
+      yesPool: marketData.total_yes_bets,
+      noPool: marketData.total_no_bets,
+      totalYesShares: marketData.total_yes_bets, // Using bets as shares for parimutuel
+      totalNoShares: marketData.total_no_bets,   // Using bets as shares for parimutuel
       creatorAddress: marketData.creator_address,
       contractAddress: marketData.contract_address,
       transactionHash: marketData.transaction_hash,
@@ -173,7 +173,7 @@ export class SchemaTransformer {
   static legacyToUnified(market: any): UnifiedMarket {
     const yesPrice = (market.yesPrice as number) ?? ((market.yesOdds as number) ? (market.yesOdds as number) / 100 : 0.5);
     const noPrice = (market.noPrice as number) ?? ((market.noOdds as number) ? (market.noOdds as number) / 100 : 0.5);
-    
+
     return {
       id: market.id,
       question: market.question,
@@ -230,10 +230,10 @@ export class SchemaTransformer {
   private static formatDisplayDate(isoDate: string): string {
     try {
       const date = new Date(isoDate);
-      return date.toLocaleDateString('en-GB', { 
-        day: '2-digit', 
-        month: '2-digit', 
-        year: 'numeric' 
+      return date.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
       }).replace(/\//g, '/');
     } catch {
       return '31/12/2024'; // Safe fallback
@@ -254,7 +254,7 @@ export class SchemaTransformer {
 // Type guards
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function isSupabaseMarket(market: any): market is SupabaseMarket {
-  return market && typeof market.end_time === 'string' && typeof market.yes_pool === 'number';
+  return market && typeof market.end_time === 'string' && typeof market.total_yes_bets === 'number';
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

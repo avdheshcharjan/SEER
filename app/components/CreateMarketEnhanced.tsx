@@ -8,7 +8,7 @@ import { UnifiedMarket } from '@/lib/types';
 import { ParimutuelSupabaseService } from '@/lib/supabase-parimutuel';
 import { generateCreateMarketCalls } from '@/lib/market-factory-onchainkit';
 import { processMarketCreation, validateMarketCreation } from '@/lib/market-factory-onchainkit';
-import { getMarketEndTime, getMarketEndTimeTimestamp } from '@/lib/market-duration';
+import { getMarketEndTimeTimestamp } from '@/lib/market-duration';
 import { MarketType } from '@/lib/market-resolver';
 import { Address } from 'viem';
 import toast from 'react-hot-toast';

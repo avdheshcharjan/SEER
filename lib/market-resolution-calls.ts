@@ -85,10 +85,12 @@ export function getResolutionTypeLabel(type: 'request' | 'settle' | 'resolve'): 
     }
 }
 
-export default {
+const MarketResolutionCalls = {
     generateRequestPlatformResolutionCalls,
     generateSettlePlatformResolutionCalls,
     generateResolveUserMarketCalls,
     generateSetCreatorAuthorizationCalls,
     getResolutionTypeLabel
 };
+
+export default MarketResolutionCalls;

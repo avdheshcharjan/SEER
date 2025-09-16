@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, TrendingUp, Shield, Users, Info, Calendar, AlertCircle, Clock } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
-import { ParimutuelSupabaseService } from '@/lib/supabase-parimutuel';
+// import { ParimutuelSupabaseService } from '@/lib/supabase-parimutuel';
 import { generateCreateMarketCalls } from '@/lib/market-factory-onchainkit';
 import { processMarketCreation, validateMarketCreation } from '@/lib/market-factory-onchainkit';
 import { MarketType, getMarketTypeLabel } from '@/lib/market-resolver';
@@ -31,7 +31,7 @@ const CATEGORIES = [
     },
     {
         value: 'tech' as MarketCategory,
-        label: 'Tech', 
+        label: 'Tech',
         icon: Shield,
         color: 'from-blue-500 to-purple-500',
         description: 'Technology companies, products, and innovation'
@@ -40,7 +40,7 @@ const CATEGORIES = [
         value: 'celebrity' as MarketCategory,
         label: 'Celebrity',
         icon: Users,
-        color: 'from-pink-500 to-rose-500', 
+        color: 'from-pink-500 to-rose-500',
         description: 'Celebrity news, relationships, and career moves'
     },
     {
@@ -74,7 +74,7 @@ const MARKET_TYPES = [
         type: MarketType.USER,
         label: 'User Market',
         icon: Users,
-        color: 'from-green-500 to-teal-500', 
+        color: 'from-green-500 to-teal-500',
         description: 'Resolved by market creator - Quick and direct resolution',
         features: ['Instant resolution', 'Creator control', 'No bond required', 'Personal responsibility'],
         bond: 'None',
@@ -85,13 +85,13 @@ const MARKET_TYPES = [
 export function CreateMarketWithResolver({ onBack }: CreateMarketWithResolverProps) {
     const { address } = useAccount();
     const { user } = useAppStore();
-    
+
     // Form state
     const [selectedCategory, setSelectedCategory] = useState<MarketCategory>('crypto');
     const [selectedMarketType, setSelectedMarketType] = useState<MarketType>(MarketType.PLATFORM);
     const [question, setQuestion] = useState('');
     const [isCreating, setIsCreating] = useState(false);
-    
+
     // Market end time is always 24 hours from creation
     const [currentTransaction, setCurrentTransaction] = useState<{
         calls: Array<{
@@ -103,7 +103,7 @@ export function CreateMarketWithResolver({ onBack }: CreateMarketWithResolverPro
 
     // Validation - only question validation needed now
     const isFormValid = question.trim().length >= 10;
-    
+
     // Market end time is always 24 hours from creation
     const marketEndTime = getMarketEndTime();
 
@@ -120,7 +120,7 @@ export function CreateMarketWithResolver({ onBack }: CreateMarketWithResolverPro
             // Validate market creation parameters
             const endTime = Math.floor(marketEndTime.getTime() / 1000);
             const validation = validateMarketCreation(question, endTime);
-            
+
             if (!validation.isValid) {
                 toast.error(validation.error || 'Invalid market parameters');
                 return;
@@ -154,7 +154,7 @@ export function CreateMarketWithResolver({ onBack }: CreateMarketWithResolverPro
                 question,
                 selectedCategory,
                 Math.floor(marketEndTime.getTime() / 1000),
-                address,
+                address as Address,
                 selectedMarketType
             );
 
@@ -203,10 +203,12 @@ export function CreateMarketWithResolver({ onBack }: CreateMarketWithResolverPro
     const onStatus = (status: LifecycleStatus) => {
         console.log('Market creation transaction status:', status.statusName);
 
-        if (status.statusName === 'success' && status.transactionReceipts?.[0]?.transactionHash) {
-            handleSuccessfulTransaction(status.transactionReceipts[0].transactionHash);
+        const receipts = (status as unknown as { transactionReceipts?: Array<{ transactionHash: string }> }).transactionReceipts;
+        if (status.statusName === 'success' && receipts?.[0]?.transactionHash) {
+            handleSuccessfulTransaction(receipts[0].transactionHash);
         } else if (status.statusName === 'error') {
-            handleFailedTransaction(status.error?.message || 'Transaction failed');
+            const err = (status as unknown as { error?: { message?: string } }).error;
+            handleFailedTransaction(err?.message || 'Transaction failed');
         }
     };
 
@@ -232,17 +234,16 @@ export function CreateMarketWithResolver({ onBack }: CreateMarketWithResolverPro
                     <div>
                         <h3 className="text-lg font-semibold text-white mb-4">Resolution Method</h3>
                         <div className="space-y-3">
-                            {MARKET_TYPES.map(({ type, label, icon: Icon, color, description, features, bond, time }) => (
+                            {MARKET_TYPES.map(({ type, label, icon: Icon, color, description, bond, time }) => (
                                 <motion.div
                                     key={type}
                                     whileHover={{ scale: 1.02 }}
                                     whileTap={{ scale: 0.98 }}
                                     onClick={() => setSelectedMarketType(type)}
-                                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                                        selectedMarketType === type
+                                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedMarketType === type
                                             ? 'border-blue-500 bg-blue-500/10'
                                             : 'border-slate-600 bg-slate-800/30 hover:border-slate-500'
-                                    }`}
+                                        }`}
                                 >
                                     <div className="flex items-start gap-3">
                                         <div className={`p-2 rounded-lg bg-gradient-to-r ${color}`}>
@@ -302,11 +303,10 @@ export function CreateMarketWithResolver({ onBack }: CreateMarketWithResolverPro
                                     whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
                                     onClick={() => setSelectedCategory(value)}
-                                    className={`p-4 rounded-xl border-2 transition-all ${
-                                        selectedCategory === value
+                                    className={`p-4 rounded-xl border-2 transition-all ${selectedCategory === value
                                             ? 'border-blue-500 bg-blue-500/10'
                                             : 'border-slate-600 bg-slate-800/30 hover:border-slate-500'
-                                    }`}
+                                        }`}
                                 >
                                     <div className={`w-8 h-8 rounded-lg bg-gradient-to-r ${color} flex items-center justify-center mb-2`}>
                                         <Icon size={16} className="text-white" />
@@ -372,32 +372,30 @@ export function CreateMarketWithResolver({ onBack }: CreateMarketWithResolverPro
                 <div className="space-y-6">
                     <div>
                         <h3 className="text-lg font-semibold text-white mb-4">Market Preview</h3>
-                        
+
                         {/* Market Card Preview */}
                         <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-600">
                             <div className="flex items-start justify-between mb-4">
-                                <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                    selectedCategory === 'crypto' ? 'bg-orange-500/20 text-orange-300' :
-                                    selectedCategory === 'tech' ? 'bg-blue-500/20 text-blue-300' :
-                                    selectedCategory === 'celebrity' ? 'bg-pink-500/20 text-pink-300' :
-                                    selectedCategory === 'sports' ? 'bg-green-500/20 text-green-300' :
-                                    'bg-purple-500/20 text-purple-300'
-                                }`}>
+                                <div className={`px-3 py-1 rounded-full text-xs font-medium ${selectedCategory === 'crypto' ? 'bg-orange-500/20 text-orange-300' :
+                                        selectedCategory === 'tech' ? 'bg-blue-500/20 text-blue-300' :
+                                            selectedCategory === 'celebrity' ? 'bg-pink-500/20 text-pink-300' :
+                                                selectedCategory === 'sports' ? 'bg-green-500/20 text-green-300' :
+                                                    'bg-purple-500/20 text-purple-300'
+                                    }`}>
                                     {selectedCategory.toUpperCase()}
                                 </div>
-                                <div className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                    selectedMarketType === MarketType.PLATFORM 
-                                        ? 'bg-blue-500/20 text-blue-300' 
+                                <div className={`px-3 py-1 rounded-full text-xs font-medium ${selectedMarketType === MarketType.PLATFORM
+                                        ? 'bg-blue-500/20 text-blue-300'
                                         : 'bg-green-500/20 text-green-300'
-                                }`}>
+                                    }`}>
                                     {selectedMarketType === MarketType.PLATFORM ? 'UMA ORACLE' : 'USER RESOLVED'}
                                 </div>
                             </div>
-                            
+
                             <h4 className="text-white font-semibold mb-3">
                                 {question || 'Your market question will appear here...'}
                             </h4>
-                            
+
                             <div className="space-y-2 text-sm text-slate-400">
                                 <div className="flex items-center gap-2">
                                     <Calendar size={14} />
@@ -420,7 +418,7 @@ export function CreateMarketWithResolver({ onBack }: CreateMarketWithResolverPro
                                         <div className="text-xs text-blue-300">
                                             <p className="font-medium">UMA Oracle Resolution</p>
                                             <p className="mt-1 opacity-90">
-                                                This market will be resolved by UMA's decentralized oracle network with economic guarantees.
+                                                This market will be resolved by UMA&apos;s decentralized oracle network with economic guarantees.
                                             </p>
                                         </div>
                                     </div>

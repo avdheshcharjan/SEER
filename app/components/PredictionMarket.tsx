@@ -72,7 +72,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
         const loadMarkets = async () => {
             try {
                 // Load markets with influencer data from Supabase
-                const marketsWithInfluencers = await SupabaseService.getMarketsWithInfluencers();
+                const marketsWithInfluencers = await ParimutuelSupabaseService.getMarketsWithInfluencers();
 
                 // Filter for active markets only
                 const activeMarkets = marketsWithInfluencers.filter(m =>
@@ -113,6 +113,9 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                 rank: 0,
                 joinedAt: new Date().toISOString(),
                 defaultBetAmount: 1, // Default $1 USDC
+                currentStreak: 0,
+                bestStreak: 0,
+                profitLoss: 0,
             });
         }
     }, [address, user, setUser]);
@@ -171,7 +174,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
             // IMPORTANT FIX: Validate market exists in Supabase before proceeding
             let marketExists;
             try {
-                marketExists = await SupabaseService.getMarket(marketId);
+                marketExists = await ParimutuelSupabaseService.getMarket(marketId);
                 if (!marketExists) {
                     console.error(`Market ${marketId} does not exist in database`);
                     toast.error('Invalid market. Please try another one.');
@@ -402,17 +405,14 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                                 });
 
                                 // Update user position in Supabase
-                                const existingPosition = await ParimutuelSupabaseService.getUserPosition(user.id, prediction.marketId);
-                                const currentYesBets = existingPosition?.yes_bet_amount || 0;
-                                const currentNoBets = existingPosition?.no_bet_amount || 0;
-                                const currentInvested = existingPosition?.total_invested || 0;
+                                await ParimutuelSupabaseService.getUserPosition(user.id, prediction.marketId);
 
                                 await ParimutuelSupabaseService.updateUserPosition({
-                                    user_id: user.id,
+                                    user_address: user.id,
                                     market_id: prediction.marketId,
-                                    yes_bet_amount: prediction.direction === 'right' ? currentYesBets + prediction.amount : currentYesBets,
-                                    no_bet_amount: prediction.direction === 'left' ? currentNoBets + prediction.amount : currentNoBets,
-                                    total_invested: currentInvested + prediction.amount
+                                    prediction: prediction.direction === 'right' ? 'yes' : 'no',
+                                    amount_bet: prediction.amount,
+                                    transaction_hash: txHash
                                 });
                             } else {
                                 console.log('🚫 Duplicate prediction detected, skipping database save');

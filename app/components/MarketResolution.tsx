@@ -2,20 +2,18 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { 
-    ArrowLeft, 
-    Shield, 
-    Users, 
-    Clock, 
-    CheckCircle, 
-    XCircle, 
-    AlertCircle, 
-    Info,
-    ExternalLink,
-    RefreshCw
+import {
+    ArrowLeft,
+    Shield,
+    Users,
+    Clock,
+    CheckCircle,
+    XCircle,
+    AlertCircle,
+    Info
 } from 'lucide-react';
 import { useAccount } from 'wagmi';
-import { Address, parseUnits } from 'viem';
+import { Address } from 'viem';
 import { baseSepolia } from 'viem/chains';
 import toast from 'react-hot-toast';
 import {
@@ -26,21 +24,17 @@ import {
     TransactionStatusLabel
 } from '@coinbase/onchainkit/transaction';
 import type { LifecycleStatus } from '@coinbase/onchainkit/transaction';
-import { 
-    MARKET_RESOLVER_ADDRESS, 
-    MARKET_RESOLVER_ABI, 
-    MarketType, 
+import {
+    MarketType,
     OracleState,
     getMarketTypeLabel,
-    getOracleStateLabel,
-    isMarketResolvable
+    getOracleStateLabel
 } from '@/lib/market-resolver';
 import { ParimutuelSupabaseService } from '@/lib/supabase-parimutuel';
 import {
     generateRequestPlatformResolutionCalls,
     generateSettlePlatformResolutionCalls,
-    generateResolveUserMarketCalls,
-    getResolutionTypeLabel
+    generateResolveUserMarketCalls
 } from '@/lib/market-resolution-calls';
 
 interface MarketResolutionProps {
@@ -89,13 +83,13 @@ export function MarketResolution({ onBack }: MarketResolutionProps) {
         const loadExpiredMarkets = async () => {
             try {
                 setLoading(true);
-                
+
                 // Get all markets from Supabase
                 const allMarkets = await ParimutuelSupabaseService.getMarketsWithInfluencers();
-                
+
                 // Filter for expired but unresolved markets
                 const now = new Date();
-                const expiredMarkets = allMarkets.filter(market => 
+                const expiredMarkets = allMarkets.filter(market =>
                     !market.resolved && new Date(market.end_time) <= now
                 );
 
@@ -119,17 +113,17 @@ export function MarketResolution({ onBack }: MarketResolutionProps) {
 
         try {
             setLoading(true);
-            
+
             // This would typically call the smart contract to get resolution info
             // For now, we'll simulate the data based on market properties
-            
+
             // Simulate contract calls to get market info
             // In real implementation, use wagmi/viem to call:
             // - marketResolver.marketTypes(market.contract_address)
             // - marketResolver.canResolveMarket(market.contract_address)
             // - marketResolver.getOracleState(market.contract_address)
             // - marketResolver.authorizedCreators(address)
-            
+
             const mockResolutionInfo: ResolutionInfo = {
                 marketType: market.id.includes('platform') ? MarketType.PLATFORM : MarketType.USER,
                 canResolve: true,
@@ -139,7 +133,7 @@ export function MarketResolution({ onBack }: MarketResolutionProps) {
             };
 
             setResolutionInfo(mockResolutionInfo);
-            
+
         } catch (error) {
             console.error('Error loading resolution info:', error);
             toast.error('Failed to load resolution info');
@@ -164,13 +158,13 @@ export function MarketResolution({ onBack }: MarketResolutionProps) {
         switch (type) {
             case 'request':
                 return generateRequestPlatformResolutionCalls(marketAddress);
-            
+
             case 'settle':
                 return generateSettlePlatformResolutionCalls(marketAddress);
-            
+
             case 'resolve':
                 return generateResolveUserMarketCalls(marketAddress, outcome!);
-            
+
             default:
                 return [];
         }
@@ -205,12 +199,11 @@ export function MarketResolution({ onBack }: MarketResolutionProps) {
 
         try {
             if (selectedMarket && currentTransaction) {
-                // Update market resolution status in database
+                // Update market resolution status in database (reuse generic resolver path)
                 if (currentTransaction.type === 'resolve') {
-                    await ParimutuelSupabaseService.updateMarketResolution(
+                    await ParimutuelSupabaseService.updateMarket(
                         selectedMarket.id,
-                        selectedOutcome!,
-                        txHash
+                        { resolved: true, outcome: selectedOutcome!, resolution_time: new Date().toISOString() }
                     );
                 }
 
@@ -251,10 +244,12 @@ export function MarketResolution({ onBack }: MarketResolutionProps) {
     const onStatus = useCallback((status: LifecycleStatus) => {
         console.log('Resolution transaction status:', status.statusName);
 
-        if (status.statusName === 'success' && status.transactionReceipts?.[0]?.transactionHash) {
-            handleSuccessfulTransaction(status.transactionReceipts[0].transactionHash);
+        const receipts = (status as unknown as { transactionReceipts?: Array<{ transactionHash: string }>; error?: { message?: string } }).transactionReceipts;
+        if (status.statusName === 'success' && receipts?.[0]?.transactionHash) {
+            handleSuccessfulTransaction(receipts[0].transactionHash);
         } else if (status.statusName === 'error') {
-            handleFailedTransaction(status.error?.message || 'Transaction failed');
+            const err = (status as unknown as { error?: { message?: string } }).error;
+            handleFailedTransaction(err?.message || 'Transaction failed');
         }
     }, [handleSuccessfulTransaction, handleFailedTransaction]);
 
@@ -284,7 +279,7 @@ export function MarketResolution({ onBack }: MarketResolutionProps) {
                     {/* Markets List */}
                     <div>
                         <h3 className="text-lg font-semibold text-white mb-4">Expired Markets</h3>
-                        
+
                         {loading ? (
                             <div className="space-y-3">
                                 {[...Array(3)].map((_, i) => (
@@ -307,29 +302,27 @@ export function MarketResolution({ onBack }: MarketResolutionProps) {
                                         key={market.id}
                                         whileHover={{ scale: 1.02 }}
                                         onClick={() => handleSelectMarket(market)}
-                                        className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                                            selectedMarket?.id === market.id
+                                        className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedMarket?.id === market.id
                                                 ? 'border-blue-500 bg-blue-500/10'
                                                 : 'border-slate-600 bg-slate-800/30 hover:border-slate-500'
-                                        }`}
+                                            }`}
                                     >
                                         <div className="flex items-start justify-between mb-2">
-                                            <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                                market.category === 'crypto' ? 'bg-orange-500/20 text-orange-300' :
-                                                market.category === 'tech' ? 'bg-blue-500/20 text-blue-300' :
-                                                market.category === 'celebrity' ? 'bg-pink-500/20 text-pink-300' :
-                                                market.category === 'sports' ? 'bg-green-500/20 text-green-300' :
-                                                'bg-purple-500/20 text-purple-300'
-                                            }`}>
+                                            <span className={`px-2 py-1 rounded text-xs font-medium ${market.category === 'crypto' ? 'bg-orange-500/20 text-orange-300' :
+                                                    market.category === 'tech' ? 'bg-blue-500/20 text-blue-300' :
+                                                        market.category === 'celebrity' ? 'bg-pink-500/20 text-pink-300' :
+                                                            market.category === 'sports' ? 'bg-green-500/20 text-green-300' :
+                                                                'bg-purple-500/20 text-purple-300'
+                                                }`}>
                                                 {market.category.toUpperCase()}
                                             </span>
                                             <Clock size={14} className="text-slate-400" />
                                         </div>
-                                        
+
                                         <h4 className="text-white font-medium mb-2 line-clamp-2">
                                             {market.question}
                                         </h4>
-                                        
+
                                         <div className="text-sm text-slate-400">
                                             Expired: {new Date(market.end_time).toLocaleDateString()}
                                         </div>
@@ -345,7 +338,7 @@ export function MarketResolution({ onBack }: MarketResolutionProps) {
                             <div className="space-y-6">
                                 <div>
                                     <h3 className="text-lg font-semibold text-white mb-4">Resolution Details</h3>
-                                    
+
                                     {/* Market Info */}
                                     <div className="bg-slate-800/30 rounded-xl p-4 border border-slate-600 mb-4">
                                         <h4 className="text-white font-medium mb-2">{selectedMarket.question}</h4>
@@ -376,9 +369,9 @@ export function MarketResolution({ onBack }: MarketResolutionProps) {
                                                     <div>
                                                         <h5 className="text-blue-300 font-medium mb-1">UMA Oracle Resolution</h5>
                                                         <p className="text-blue-200/80 text-sm mb-3">
-                                                            This market will be resolved by UMA's Optimistic Oracle with a 2-hour challenge period.
+                                                            This market will be resolved by UMA&apos;s Optimistic Oracle with a 2-hour challenge period.
                                                         </p>
-                                                        
+
                                                         {resolutionInfo.oracleState === OracleState.Invalid ? (
                                                             <button
                                                                 onClick={handleRequestResolution}
@@ -415,7 +408,7 @@ export function MarketResolution({ onBack }: MarketResolutionProps) {
                                                         <p className="text-green-200/80 text-sm mb-4">
                                                             As the market creator, you can resolve this market immediately.
                                                         </p>
-                                                        
+
                                                         {resolutionInfo.isAuthorized ? (
                                                             <div className="space-y-3">
                                                                 <p className="text-white font-medium">Select the outcome:</p>

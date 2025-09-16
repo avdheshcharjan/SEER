@@ -276,24 +276,24 @@ export class ParimutuelSupabaseService {
     // First get existing position
     const existingPosition = await this.getUserPosition(position.user_address, position.market_id);
 
-    const positionData: any = {
+    const positionData: Record<string, unknown> = {
       user_id: position.user_address,
       market_id: position.market_id,
       // Schema uses yes_shares/no_shares; we store bet amounts here for pari-mutuel
-      yes_shares: (existingPosition as any)?.yes_shares || 0,
-      no_shares: (existingPosition as any)?.no_shares || 0,
-      total_invested: existingPosition?.total_invested || 0,
+      yes_shares: (existingPosition as unknown as { yes_shares?: number })?.yes_shares || 0,
+      no_shares: (existingPosition as unknown as { no_shares?: number })?.no_shares || 0,
+      total_invested: (existingPosition as unknown as { total_invested?: number })?.total_invested || 0,
       updated_at: new Date().toISOString()
     };
 
     // Add the new bet amount to the appropriate side
     if (position.prediction === 'yes') {
-      positionData.yes_shares += position.amount_bet;
+      (positionData as { yes_shares: number }).yes_shares += position.amount_bet;
     } else {
-      positionData.no_shares += position.amount_bet;
+      (positionData as { no_shares: number }).no_shares += position.amount_bet;
     }
 
-    positionData.total_invested = positionData.yes_shares + positionData.no_shares;
+    (positionData as { total_invested: number }).total_invested = (positionData as { yes_shares: number; no_shares: number }).yes_shares + (positionData as { no_shares: number }).no_shares;
 
     const { data, error } = await supabase
       .from('user_positions')

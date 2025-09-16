@@ -24,6 +24,7 @@ import {
     TransactionStatusLabel
 } from '@coinbase/onchainkit/transaction';
 import type { LifecycleStatus } from '@coinbase/onchainkit/transaction';
+import type { TransactionStatus } from '@/lib/gasless-parimutuel';
 
 interface ParimutuelPredictionMarketProps {
     onBack?: () => void;
@@ -56,7 +57,8 @@ export function ParimutuelPredictionMarket({ onBack }: ParimutuelPredictionMarke
         }>;
     } | null>(null);
     const [isProcessingTransaction, setIsProcessingTransaction] = useState(false);
-    const [processedTransactions, setProcessedTransactions] = useState<Set<string>>(new Set());
+    // Track processed transactions if needed for future dedupe logic
+    // const [processedTransactions] = useState<Set<string>>(new Set());
     const [rawSupabaseMarkets, setRawSupabaseMarkets] = useState<Array<{
         id: string;
         contract_address?: string;
@@ -119,6 +121,9 @@ export function ParimutuelPredictionMarket({ onBack }: ParimutuelPredictionMarke
                 rank: 0,
                 joinedAt: new Date().toISOString(),
                 defaultBetAmount: 1, // Default $1 USDC
+                currentStreak: 0,
+                bestStreak: 0,
+                profitLoss: 0,
             });
         }
     }, [address, user, setUser]);
@@ -282,7 +287,7 @@ export function ParimutuelPredictionMarket({ onBack }: ParimutuelPredictionMarke
             clearTimeout(batchTimer);
             setBatchTimer(null);
         }
-    }, [batchTimer]);
+    }, [batchTimer, isPaymasterConfigured]);
 
     // Manual commit function for the commit button
     const handleManualCommit = useCallback(() => {
@@ -324,8 +329,7 @@ export function ParimutuelPredictionMarket({ onBack }: ParimutuelPredictionMarke
         console.log('🎉 Pari-mutuel batch transaction successful:', txHash);
         setIsProcessingTransaction(false);
 
-        // Update processed transactions set
-        setProcessedTransactions(prev => new Set(prev).add(txHash));
+        // Optionally track processed transactions to avoid duplicate handling (omitted)
 
         try {
             // Log each prediction to Supabase (for pari-mutuel, we track bets instead of shares)
@@ -418,7 +422,7 @@ export function ParimutuelPredictionMarket({ onBack }: ParimutuelPredictionMarke
         console.log('Pari-mutuel transaction status:', status.statusName);
 
         handleTransactionStatus(
-            status as any,
+            status as unknown as TransactionStatus,
             handleSuccessfulTransaction,
             handleFailedTransaction
         );

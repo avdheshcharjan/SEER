@@ -1,7 +1,7 @@
 import { Address } from 'viem';
 
 // Market Resolver contract address (to be updated after deployment)
-export const MARKET_RESOLVER_ADDRESS = '0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496' as Address;
+export const MARKET_RESOLVER_ADDRESS = '0x5b73C5498c1E3b4dbA84de0F1833c4a029d90519' as Address;
 
 // UMA Optimistic Oracle V2 address on Base Mainnet
 export const UMA_OPTIMISTIC_ORACLE_V2_ADDRESS = '0xA5B9d8a0B0Fa04Ba71BDD68069661ED5C0848884' as Address;
@@ -46,6 +46,16 @@ export const MARKET_RESOLVER_ABI = [
         inputs: [
             { name: 'market', type: 'address' },
             { name: 'outcome', type: 'bool' }
+        ],
+        outputs: [],
+        stateMutability: 'nonpayable'
+    },
+    {
+        name: 'setCreatorAuthorization',
+        type: 'function',
+        inputs: [
+            { name: 'creator', type: 'address' },
+            { name: 'authorized', type: 'bool' }
         ],
         outputs: [],
         stateMutability: 'nonpayable'
@@ -165,19 +175,19 @@ export const isMarketResolvable = (canResolve: boolean, marketType: MarketType):
     if (!canResolve) {
         return { canResolve: false, reason: 'Market has not expired yet or is already resolved' };
     }
-    
+
     if (marketType === MarketType.PLATFORM) {
         return { canResolve: true, reason: 'Ready for UMA Oracle resolution' };
     }
-    
+
     if (marketType === MarketType.USER) {
         return { canResolve: true, reason: 'Ready for creator resolution' };
     }
-    
+
     return { canResolve: false, reason: 'Invalid market type' };
 };
 
-export default {
+const MarketResolver = {
     MARKET_RESOLVER_ADDRESS,
     UMA_OPTIMISTIC_ORACLE_V2_ADDRESS,
     MARKET_RESOLVER_ABI,
@@ -187,3 +197,5 @@ export default {
     getMarketTypeLabel,
     isMarketResolvable
 };
+
+export default MarketResolver;

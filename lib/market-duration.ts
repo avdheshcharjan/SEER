@@ -26,7 +26,7 @@ export function getMarketEndTimeTimestamp(): number {
 export function isValidMarketDuration(endTimeTimestamp: number, tolerance: number = 60): boolean {
     const now = Math.floor(Date.now() / 1000);
     const expectedEndTime = now + (24 * 60 * 60); // 24 hours from now
-    
+
     return Math.abs(endTimeTimestamp - expectedEndTime) <= tolerance;
 }
 
@@ -43,15 +43,15 @@ export function getTimeRemaining(endTimeTimestamp: number): {
 } {
     const now = Math.floor(Date.now() / 1000);
     const total = endTimeTimestamp - now;
-    
+
     if (total <= 0) {
         return { hours: 0, minutes: 0, seconds: 0, total: 0 };
     }
-    
+
     const hours = Math.floor(total / 3600);
     const minutes = Math.floor((total % 3600) / 60);
     const seconds = total % 60;
-    
+
     return { hours, minutes, seconds, total };
 }
 
@@ -60,11 +60,11 @@ export function getTimeRemaining(endTimeTimestamp: number): {
  */
 export function formatTimeRemaining(endTimeTimestamp: number): string {
     const remaining = getTimeRemaining(endTimeTimestamp);
-    
+
     if (remaining.total <= 0) {
         return 'Expired';
     }
-    
+
     if (remaining.hours > 0) {
         return `${remaining.hours}h ${remaining.minutes}m remaining`;
     } else if (remaining.minutes > 0) {
@@ -83,7 +83,7 @@ export const MARKET_DURATION = {
     MILLISECONDS: 24 * 60 * 60 * 1000,
 } as const;
 
-export default {
+const MarketDuration = {
     getMarketEndTime,
     getMarketEndTimeTimestamp,
     isValidMarketDuration,
@@ -91,3 +91,5 @@ export default {
     formatTimeRemaining,
     MARKET_DURATION
 };
+
+export default MarketDuration;

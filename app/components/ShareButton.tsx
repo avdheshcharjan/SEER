@@ -16,9 +16,9 @@ interface ShareButtonProps {
     customText?: string;
 }
 
-export function ShareButton({ 
-    market, 
-    className = '', 
+export function ShareButton({
+    market,
+    className = '',
     includeUserStats = false,
     shareType = 'market',
     customText
@@ -53,7 +53,7 @@ Can you beat my streak? 👇`;
                         embedUrl = `${window.location.origin}`;
                     }
                     break;
-                    
+
                 case 'prediction':
                     const userPrediction = customText || 'YES'; // This would come from the actual prediction
                     shareText = `🎯 I just predicted "${userPrediction}" on:
@@ -62,29 +62,28 @@ Can you beat my streak? 👇`;
 
 ${includeUserStats && user ? `My current streak: ${user.currentStreak} 🔥\n` : ''}Join me on @tomo_base and make your prediction! 👇`;
                     break;
-                    
+
                 case 'leaderboard':
                     shareText = `🏆 Check out the top predictors on @tomo_base!
 
-🥇 Leading with ${user?.totalPredictions > 0 ? ((user.correctPredictions / user.totalPredictions) * 100).toFixed(1) : 'high'}% accuracy
+🥇 Leading with ${user && user.totalPredictions && user.totalPredictions > 0 ? ((user.correctPredictions / user.totalPredictions) * 100).toFixed(1) : 'high'}% accuracy
 🔥 Best streak: ${user?.bestStreak || 'impressive'}
 💰 Community volume: $15k+
 
 Think you can make the leaderboard? 👇`;
                     embedUrl = `${window.location.origin}`;
                     break;
-                    
+
                 case 'market':
                 default:
-                    const influencerInfo = market.influencer 
-                        ? `${market.influencer.name} (@${market.influencer.handle})` 
+                    const influencerInfo = market.influencer
+                        ? `${market.influencer.name} (@${market.influencer.handle})`
                         : 'The community';
-                        
+
                     shareText = customText || `🔮 ${influencerInfo} created: "${market.question}"
 
 📊 Market Stats:
-${market.influencer?.winRate ? `• Creator Win Rate: ${market.influencer.winRate}%\n` : ''}• Total Volume: ${market.total_volume || 'Growing'}
-• Participants: ${market.total_participants || 'Join now!'}
+${market.influencer?.winRate ? `• Creator Win Rate: ${market.influencer.winRate}%\n` : ''}• Total Volume: ${market.totalVolume || 'Growing'}
 
 ${includeUserStats && user ? `My prediction power: ${user.currentStreak} streak 🔥\n` : ''}Make your prediction on @tomo_base 👇`;
             }
@@ -101,7 +100,7 @@ ${includeUserStats && user ? `My prediction power: ${user.currentStreak} streak 
                 prediction: 'Prediction shared! 🎯',
                 leaderboard: 'Leaderboard shared! 🏆'
             };
-            
+
             toast.success(messages[shareType] || 'Shared successfully! 🚀', {
                 duration: 2000,
                 style: {

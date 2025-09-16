@@ -1,8 +1,8 @@
 import { Address } from 'viem';
 
 // Deployed pari-mutuel contract addresses on Base Sepolia
-export const PARIMUTUEL_FACTORY_ADDRESS = '0xd0a6e763691fe2041aA5eA04deb67AcF888A40dD' as Address;
-export const DEMO_PARIMUTUEL_MARKET_ADDRESS = '0x0Ee1Eaa29418e64b20d53794B26c7C7D1aD02687' as Address;
+export const PARIMUTUEL_FACTORY_ADDRESS = '0x7FA9385bE102ac3EAc297483Dd6233D62b3e1496' as Address;
+export const DEMO_PARIMUTUEL_MARKET_ADDRESS = '0x5FbDB2315678afecb367f032d93F642f64180aa3' as Address;
 
 // USDC contract address on Base Sepolia (unchanged)
 export const USDC_CONTRACT_ADDRESS = '0x036CbD53842c5426634e7929541eC2318f3dCF7e' as Address;
@@ -185,8 +185,8 @@ export const PARIMUTUEL_MARKET_ABI = [
 
 // Helper function to get contract address for a market ID (updated for pari-mutuel)
 export const getParimutuelMarketContractAddress = (
-    marketId: string, 
-    rawSupabaseMarkets: Array<{ id: string; contract_address?: string; [key: string]: unknown }>
+    marketId: string,
+    rawSupabaseMarkets: Array<{ id: string; contract_address?: string;[key: string]: unknown }>
 ): Address => {
     const market = rawSupabaseMarkets.find(m => m.id === marketId);
     if (!market?.contract_address) {
@@ -203,7 +203,7 @@ export const validateParimutuelMarketContract = async (contractAddress: Address)
     return contractAddress !== '0x0000000000000000000000000000000000000000';
 };
 
-export default {
+const ParimutuelBlockchain = {
     PARIMUTUEL_FACTORY_ADDRESS,
     DEMO_PARIMUTUEL_MARKET_ADDRESS,
     USDC_CONTRACT_ADDRESS,
@@ -212,3 +212,5 @@ export default {
     getParimutuelMarketContractAddress,
     validateParimutuelMarketContract,
 };
+
+export default ParimutuelBlockchain;

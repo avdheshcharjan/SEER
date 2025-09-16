@@ -8,7 +8,7 @@ import { UnifiedMarket } from '@/lib/types';
 import { ParimutuelSupabaseService } from '@/lib/supabase-parimutuel';
 import { generateCreateParimutuelMarketCalls } from '@/lib/gasless-parimutuel';
 import { processMarketCreation, validateMarketCreation } from '@/lib/market-factory-onchainkit';
-import { getMarketEndTime, getMarketEndTimeTimestamp } from '@/lib/market-duration';
+import { getMarketEndTimeTimestamp } from '@/lib/market-duration';
 import { MarketType } from '@/lib/market-resolver';
 import { Address } from 'viem';
 import toast from 'react-hot-toast';
@@ -132,87 +132,87 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
                 // On success, process market creation with proper contract address parsing
                 (async () => {
                     try {
-                    // Use the existing processMarketCreation function to handle contract address extraction
-                    const result = await processMarketCreation(
-                        txHash,
-                        generateQuestion(),
-                        'crypto',
-                        getMarketEndTimeTimestamp(),
-                        address as Address,
-                        MarketType.USER // User market for regular predictions
-                    );
+                        // Use the existing processMarketCreation function to handle contract address extraction
+                        const result = await processMarketCreation(
+                            txHash,
+                            generateQuestion(),
+                            'crypto',
+                            getMarketEndTimeTimestamp(),
+                            address as Address,
+                            MarketType.USER // User market for regular predictions
+                        );
 
-                    if (!result.success) {
-                        throw new Error(result.error || 'Failed to process market creation');
-                    }
+                        if (!result.success) {
+                            throw new Error(result.error || 'Failed to process market creation');
+                        }
 
-                    // Get the created market from database (now has proper contract address)
-                    const supabaseMarket = await ParimutuelSupabaseService.getMarket(result.marketId!);
+                        // Get the created market from database (now has proper contract address)
+                        const supabaseMarket = await ParimutuelSupabaseService.getMarket(result.marketId!);
 
-                    const newMarket: UnifiedMarket = {
-                        id: supabaseMarket.id,
-                        question: supabaseMarket.question,
-                        description: `A prediction market for ${formData.ticker} price`,
-                        category: 'crypto',
-                        endTime: supabaseMarket.end_time,
-                        totalVolume: 0,
-                        yesPrice: 0.5,
-                        noPrice: 0.5,
-                        yesOdds: 50,
-                        noOdds: 50,
-                        yesPool: supabaseMarket.yes_pool,
-                        noPool: supabaseMarket.no_pool,
-                        totalYesShares: supabaseMarket.total_yes_shares,
-                        totalNoShares: supabaseMarket.total_no_shares,
-                        yesShares: 0,
-                        noShares: 0,
-                        creatorAddress: supabaseMarket.creator_address,
-                        contractAddress: result.contractAddress!, // Now has the real contract address
-                        createdAt: supabaseMarket.created_at,
-                        resolved: false,
-                        outcome: null,
-                        ticker: formData.ticker,
-                        targetPrice: parseFloat(formData.price),
-                        direction: formData.direction,
-                        transactionHash: txHash,
-                    };
+                        const newMarket: UnifiedMarket = {
+                            id: supabaseMarket.id,
+                            question: supabaseMarket.question,
+                            description: `A prediction market for ${formData.ticker} price`,
+                            category: 'crypto',
+                            endTime: supabaseMarket.end_time,
+                            totalVolume: 0,
+                            yesPrice: 0.5,
+                            noPrice: 0.5,
+                            yesOdds: 50,
+                            noOdds: 50,
+                            yesPool: supabaseMarket.yes_pool,
+                            noPool: supabaseMarket.no_pool,
+                            totalYesShares: supabaseMarket.total_yes_shares,
+                            totalNoShares: supabaseMarket.total_no_shares,
+                            yesShares: 0,
+                            noShares: 0,
+                            creatorAddress: supabaseMarket.creator_address,
+                            contractAddress: result.contractAddress!, // Now has the real contract address
+                            createdAt: supabaseMarket.created_at,
+                            resolved: false,
+                            outcome: null,
+                            ticker: formData.ticker,
+                            targetPrice: parseFloat(formData.price),
+                            direction: formData.direction,
+                            transactionHash: txHash,
+                        };
 
-                    addCreatedMarket(newMarket);
+                        addCreatedMarket(newMarket);
 
-                    toast.success(`Market created successfully! 🎉\nTransaction: ${txHash}`, {
-                        duration: 8000,
-                        style: {
-                            borderRadius: '12px',
-                            background: '#1e293b',
-                            color: '#f1f5f9',
-                            border: '1px solid #10b981',
-                        },
-                    });
+                        toast.success(`Market created successfully! 🎉\nTransaction: ${txHash}`, {
+                            duration: 8000,
+                            style: {
+                                borderRadius: '12px',
+                                background: '#1e293b',
+                                color: '#f1f5f9',
+                                border: '1px solid #10b981',
+                            },
+                        });
 
-                    // Reset form and go back
-                    setStep('form');
-                    setFormData({
-                        ticker: 'ETH',
-                        price: '',
-                        direction: 'above',
-                    });
-                    onBack();
+                        // Reset form and go back
+                        setStep('form');
+                        setFormData({
+                            ticker: 'ETH',
+                            price: '',
+                            direction: 'above',
+                        });
+                        onBack();
 
-                } catch (error) {
-                    console.error('Market creation failed:', error);
-                    toast.error(`Failed to save market: ${error instanceof Error ? error.message : 'Unknown error'}`, {
-                        style: {
-                            borderRadius: '12px',
-                            background: '#1e293b',
-                            color: '#f1f5f9',
-                            border: '1px solid #ef4444',
-                        },
-                    });
+                    } catch (error) {
+                        console.error('Market creation failed:', error);
+                        toast.error(`Failed to save market: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+                            style: {
+                                borderRadius: '12px',
+                                background: '#1e293b',
+                                color: '#f1f5f9',
+                                border: '1px solid #ef4444',
+                            },
+                        });
                     }
                 })();
             }
         }
-        
+
         // Handle error status
         if (status.statusName === 'error' && status.statusData && 'message' in status.statusData) {
             toast.error(`Market creation failed: ${status.statusData.message}`, {

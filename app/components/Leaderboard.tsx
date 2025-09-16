@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { useLeaderboard, useStreakLeaderboard, useSocialStats } from '@/lib/store';
-import { Trophy, Medal, Award, TrendingUp, Target, DollarSign, Flame, Users, Activity } from 'lucide-react';
+import { Trophy, Medal, Award, TrendingUp, Target, DollarSign, Flame, Activity } from 'lucide-react';
 import { useState } from 'react';
 
 interface LeaderboardProps {
@@ -16,7 +16,7 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
     const leaderboardData = useLeaderboard(activeTab === 'winRate' ? 'winRate' : activeTab === 'streaks' ? 'currentStreak' : activeTab === 'volume' ? 'profitLoss' : 'totalPredictions');
     const streakLeaderboard = useStreakLeaderboard();
     const socialStats = useSocialStats();
-    
+
     const currentData = activeTab === 'streaks' ? streakLeaderboard : leaderboardData;
 
     const getRankIcon = (rank: number) => {
@@ -90,7 +90,7 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
                         Compete with the community • Track your progress
                     </p>
                 </div>
-                
+
                 {/* Quick Stats */}
                 <div className="grid grid-cols-3 gap-4 text-center">
                     <div>
@@ -107,7 +107,7 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
                     </div>
                 </div>
             </div>
-            
+
             {/* Leaderboard Tabs */}
             <div className="flex bg-slate-800/30 backdrop-blur-sm rounded-xl p-1 mb-6 border border-slate-700/50">
                 {[
@@ -123,10 +123,9 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
                             onClick={() => setActiveTab(tab.key as LeaderboardTab)}
                             className={`
                                 flex-1 flex items-center justify-center space-x-1 py-2 px-3 rounded-lg text-xs font-medium transition-all duration-200
-                                ${
-                                    activeTab === tab.key
-                                        ? 'bg-base-500/30 text-base-300 border border-base-500/50'
-                                        : 'text-slate-400 hover:text-slate-300 hover:bg-slate-700/30'
+                                ${activeTab === tab.key
+                                    ? 'bg-base-500/30 text-base-300 border border-base-500/50'
+                                    : 'text-slate-400 hover:text-slate-300 hover:bg-slate-700/30'
                                 }
                             `}
                         >
@@ -151,10 +150,10 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
                         <Medal className="w-6 h-6 text-slate-300 mx-auto mb-1" />
                         <div className="text-sm font-bold text-white">{currentData[1]?.username}</div>
                         <div className="text-xs text-slate-300">
-                            {activeTab === 'streaks' ? `🔥${currentData[1]?.currentStreak}` : 
-                             activeTab === 'volume' ? `$${currentData[1]?.profitLoss?.toFixed(1)}` :
-                             activeTab === 'predictions' ? `${currentData[1]?.totalPredictions}` :
-                             `${currentData[1]?.winRate?.toFixed(1)}%`}
+                            {activeTab === 'streaks' ? `🔥${currentData[1]?.currentStreak}` :
+                                activeTab === 'volume' ? `$${currentData[1]?.profitLoss?.toFixed(1)}` :
+                                    activeTab === 'predictions' ? `${currentData[1]?.totalPredictions}` :
+                                        `${currentData[1]?.winRate?.toFixed(1)}%`}
                         </div>
                     </motion.div>
                 </div>
@@ -171,10 +170,10 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
                         <Trophy className="w-8 h-8 text-yellow-400 mx-auto mb-1" />
                         <div className="text-sm font-bold text-white">{currentData[0]?.username}</div>
                         <div className="text-xs text-yellow-300">
-                            {activeTab === 'streaks' ? `🔥${currentData[0]?.currentStreak}` : 
-                             activeTab === 'volume' ? `$${currentData[0]?.profitLoss?.toFixed(1)}` :
-                             activeTab === 'predictions' ? `${currentData[0]?.totalPredictions}` :
-                             `${currentData[0]?.winRate?.toFixed(1)}%`}
+                            {activeTab === 'streaks' ? `🔥${currentData[0]?.currentStreak}` :
+                                activeTab === 'volume' ? `$${currentData[0]?.profitLoss?.toFixed(1)}` :
+                                    activeTab === 'predictions' ? `${currentData[0]?.totalPredictions}` :
+                                        `${currentData[0]?.winRate?.toFixed(1)}%`}
                         </div>
                     </motion.div>
                 </div>
@@ -191,10 +190,10 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
                         <Award className="w-5 h-5 text-amber-600 mx-auto mb-1" />
                         <div className="text-sm font-bold text-white">{currentData[2]?.username}</div>
                         <div className="text-xs text-amber-500">
-                            {activeTab === 'streaks' ? `🔥${currentData[2]?.currentStreak}` : 
-                             activeTab === 'volume' ? `$${currentData[2]?.profitLoss?.toFixed(1)}` :
-                             activeTab === 'predictions' ? `${currentData[2]?.totalPredictions}` :
-                             `${currentData[2]?.winRate?.toFixed(1)}%`}
+                            {activeTab === 'streaks' ? `🔥${currentData[2]?.currentStreak}` :
+                                activeTab === 'volume' ? `$${currentData[2]?.profitLoss?.toFixed(1)}` :
+                                    activeTab === 'predictions' ? `${currentData[2]?.totalPredictions}` :
+                                        `${currentData[2]?.winRate?.toFixed(1)}%`}
                         </div>
                     </motion.div>
                 </div>
@@ -251,10 +250,10 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
                                 </div>
                                 <div className="text-right">
                                     <div className={`text-xl font-bold ${rankStyle.text}`}>
-                                        {activeTab === 'streaks' ? `🔥${user.currentStreak}` : 
-                                         activeTab === 'volume' ? `$${user.profitLoss?.toFixed(1)}` :
-                                         activeTab === 'predictions' ? user.totalPredictions :
-                                         `${user.winRate?.toFixed(1)}%`}
+                                        {activeTab === 'streaks' ? `🔥${user.currentStreak}` :
+                                            activeTab === 'volume' ? `$${user.profitLoss?.toFixed(1)}` :
+                                                activeTab === 'predictions' ? user.totalPredictions :
+                                                    `${user.winRate?.toFixed(1)}%`}
                                     </div>
                                     <div className="text-xs text-slate-400 flex items-center justify-end">
                                         {activeTab === 'streaks' ? (
@@ -287,12 +286,12 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
                                 🔥 {socialStats.topStreaker.streak}
                             </div>
                             <div className="text-sm text-orange-300">
-                                {socialStats.topStreaker.username}'s Best Streak
+                                {socialStats.topStreaker.username}&apos;s Best Streak
                             </div>
                         </div>
                     </div>
                 )}
-                
+
                 <div className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50">
                     <h3 className="text-sm font-semibold text-slate-300 mb-3">Community Stats</h3>
                     <div className="grid grid-cols-2 gap-4 text-center">

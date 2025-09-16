@@ -1,8 +1,8 @@
 import { Address, encodeFunctionData, type Hex, decodeEventLog } from 'viem';
 import { publicClient } from './viem-client';
 // Updated MarketFactory contract address with resolver system
-const MARKET_FACTORY_ADDRESS = '0x90193C961A926261B756D1E5bb255e67ff9498A1' as const;
-import { SupabaseService } from './supabase';
+const MARKET_FACTORY_ADDRESS = '0x34A1D3fff3958843C43aD80F30b94c510645C316' as const;
+// import { SupabaseService } from './supabase';
 import { ParimutuelSupabaseService } from './supabase-parimutuel';
 import { MarketType } from './market-resolver';
 
@@ -174,9 +174,6 @@ export async function processMarketCreation(
             creator_address: creatorAddress,
             contract_address: marketAddress,
             transaction_hash: transactionHash,
-            market_type: marketType === MarketType.PLATFORM ? 'platform' : 'user',
-            yes_pool: 0, // Start with no pool for parimutuel
-            no_pool: 0,  // Start with no pool for parimutuel
             total_yes_bets: 0,
             total_no_bets: 0,
             resolved: false
@@ -226,7 +223,7 @@ export function validateMarketCreation(
     const now = Math.floor(Date.now() / 1000);
     const expectedEndTime = now + (24 * 60 * 60); // Exactly 24 hours from now
     const tolerance = 60; // 1 minute tolerance
-    
+
     if (Math.abs(endTimeTimestamp - expectedEndTime) > tolerance) {
         return { isValid: false, error: 'Market duration must be exactly 24 hours' };
     }

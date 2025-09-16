@@ -63,7 +63,7 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
     userId: p.user_id,
     side: p.side,
     amount: p.amount,
-    sharesReceived: p.shares_received,
+    sharesReceived: undefined,
     transactionHash: p.transaction_hash,
     createdAt: p.created_at,
     updatedAt: p.updated_at,

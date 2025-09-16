@@ -2,7 +2,7 @@ import { base, baseSepolia } from 'wagmi/chains';
 import { encodeFunctionData, parseUnits, Address } from 'viem';
 
 // Pari-mutuel contract addresses on Base Sepolia (replacing AMM system)
-export const MARKET_FACTORY_ADDRESS = '0xd0a6e763691fe2041aA5eA04deb67AcF888A40dD' as Address;
+export const MARKET_FACTORY_ADDRESS = '0x34A1D3fff3958843C43aD80F30b94c510645C316' as Address;
 export const DEMO_MARKET_ADDRESS = '0x0Ee1Eaa29418e64b20d53794B26c7C7D1aD02687' as Address;
 
 // Legacy AMM addresses (for reference)
@@ -164,7 +164,7 @@ export function generateBuySharesTransaction(data: PredictionTransaction) {
     // Encode the function call
     const encodedData = encodeFunctionData({
         abi: PREDICTION_MARKET_ABI,
-        functionName: 'buyShares',
+        functionName: 'placeBet',
         args: [prediction === 'yes', amountFormatted]
     });
 
@@ -192,7 +192,7 @@ export function getMarketContractAddress(marketId: string, supabaseMarkets?: Arr
             return market.contract_address as Address;
         }
     }
-    
+
     // Fallback: Check static mapping
     const supabaseMapping = getSupabaseMarketMapping();
     if (supabaseMapping[marketId]) {
