@@ -216,7 +216,7 @@ export async function GET(request: NextRequest) {
         }));
 
         // Apply limit
-        const limitedLeaderboard = sortedLeaderboard.slice(0, parseInt(limit));
+        const limitedLeaderboard = sortedLeaderboard.slice(0, limit ? parseInt(String(limit)) : sortedLeaderboard.length);
 
         return NextResponse.json({
             success: true,

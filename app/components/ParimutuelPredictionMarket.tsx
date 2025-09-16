@@ -10,7 +10,7 @@ import { SwipeStack } from './SwipeStack';
 import { useAppStore } from '@/lib/store';
 import { UnifiedMarket, SchemaTransformer } from '@/lib/types';
 import { ParimutuelSupabaseService } from '@/lib/supabase-parimutuel';
-import { getParimutuelMarketContractAddress, validateParimutuelMarketContract } from '@/lib/blockchain-parimutuel';
+import { getParimutuelMarketContractAddress, validateParimutuelMarketContract, DEMO_PARIMUTUEL_MARKET_ADDRESS } from '@/lib/blockchain-parimutuel';
 import {
     generateBetCalls,
     validatePaymasterConfig,
@@ -67,6 +67,12 @@ export function ParimutuelPredictionMarket({ onBack }: ParimutuelPredictionMarke
         user,
         setUser
     } = useAppStore();
+
+    // Paymaster configuration check for gasless readiness
+    const isPaymasterConfigured = useCallback(() => {
+        const config = validatePaymasterConfig();
+        return config.valid;
+    }, []);
 
     useEffect(() => {
         const loadMarkets = async () => {
@@ -183,23 +189,31 @@ export function ParimutuelPredictionMarket({ onBack }: ParimutuelPredictionMarke
             }
 
             // Get the correct market contract address
-            const marketAddress = getParimutuelMarketContractAddress(marketId, rawSupabaseMarkets);
+            let marketAddress = getParimutuelMarketContractAddress(marketId, rawSupabaseMarkets);
 
-            // Validate the market contract before proceeding
+            // Validate the market contract before proceeding; gracefully fallback to demo if invalid
             const isValidContract = await validateParimutuelMarketContract(marketAddress);
             if (!isValidContract) {
-                throw new Error(`Invalid market contract: ${marketAddress}`);
+                console.warn(`Invalid market contract ${marketAddress} for ${marketId}, falling back to demo`);
+                marketAddress = DEMO_PARIMUTUEL_MARKET_ADDRESS;
             }
 
             // Log for debugging in development
             console.log(`📋 Adding pari-mutuel bet to batch: market ${marketId} -> contract ${marketAddress}`);
 
             // Generate transaction calls for pari-mutuel betting
-            const calls = generateBetCalls(
-                marketAddress as Address,
-                predictionSide,
-                parseUnits(betAmount.toString(), 6) // USDC has 6 decimals
-            );
+            let calls: Array<{ to: Address; data: `0x${string}`; value: bigint }>;
+            try {
+                calls = generateBetCalls(
+                    marketAddress as Address,
+                    predictionSide,
+                    parseUnits(betAmount.toString(), 6) // USDC has 6 decimals
+                );
+            } catch (genErr) {
+                console.error('Error generating pari-mutuel bet calls:', genErr);
+                toast.error('Problem preparing bet. Please try again.');
+                return;
+            }
 
             // Add to batch instead of executing immediately
             const newPrediction = { marketId, direction, amount: betAmount, calls };
@@ -244,6 +258,12 @@ export function ParimutuelPredictionMarket({ onBack }: ParimutuelPredictionMarke
     // Execute batch transaction for pari-mutuel bets
     const executeBatch = useCallback((batch: typeof pendingBatch) => {
         if (batch.length === 0) return;
+
+        // Guard: avoid attempting execution when gasless config is invalid
+        if (!isPaymasterConfigured()) {
+            toast.error('Gasless not configured. Please set Paymaster/Bundler keys.');
+            return;
+        }
 
         console.log(`🚀 Executing pari-mutuel batch of ${batch.length} bets`);
 
@@ -430,7 +450,13 @@ export function ParimutuelPredictionMarket({ onBack }: ParimutuelPredictionMarke
                     </button>
                 )}
                 <h1 className="text-xl font-bold text-white">Pari-mutuel Predictions</h1>
-                <div className="w-10" /> {/* Spacer */}
+                <div className="flex items-center justify-end w-10">
+                    {isPaymasterConfigured() ? (
+                        <span className="text-xs text-green-400">⚡ Gasless enabled</span>
+                    ) : (
+                        <span className="text-xs text-yellow-400">⚠️ Gasless off</span>
+                    )}
+                </div>
             </div>
 
             {/* Category Filter */}
@@ -440,11 +466,10 @@ export function ParimutuelPredictionMarket({ onBack }: ParimutuelPredictionMarke
                         <button
                             key={category}
                             onClick={() => setSelectedCategory(category)}
-                            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                                selectedCategory === category
-                                    ? 'bg-blue-600 text-white'
-                                    : 'bg-slate-800/50 text-slate-300 hover:text-white'
-                            }`}
+                            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${selectedCategory === category
+                                ? 'bg-blue-600 text-white'
+                                : 'bg-slate-800/50 text-slate-300 hover:text-white'
+                                }`}
                         >
                             {category.charAt(0).toUpperCase() + category.slice(1)}
                         </button>
@@ -462,10 +487,10 @@ export function ParimutuelPredictionMarket({ onBack }: ParimutuelPredictionMarke
                         </div>
                         <button
                             onClick={handleManualCommit}
-                            disabled={isProcessingTransaction}
+                            disabled={isProcessingTransaction || !isPaymasterConfigured()}
                             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 text-white rounded-lg text-sm font-medium transition-colors"
                         >
-                            {isProcessingTransaction ? 'Processing...' : 'Submit Bets'}
+                            {isProcessingTransaction ? 'Processing...' : (!isPaymasterConfigured() ? 'Unavailable' : 'Submit Bets')}
                         </button>
                     </div>
                 </div>
@@ -473,8 +498,8 @@ export function ParimutuelPredictionMarket({ onBack }: ParimutuelPredictionMarke
 
             {/* Swipe Stack */}
             <div className="flex-1 p-4">
-                <SwipeStack 
-                    markets={currentMarkets} 
+                <SwipeStack
+                    markets={currentMarkets}
                     onSwipe={handleSwipe}
                     rawSupabaseMarkets={rawSupabaseMarkets}
                 />

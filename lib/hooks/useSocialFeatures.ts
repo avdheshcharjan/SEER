@@ -139,7 +139,7 @@ export function useSocialStats() {
 export function useUserStreakUpdates() {
     const { user, updateStreak, updateUser } = useAppStore();
 
-    const handlePredictionResult = useCallback(async (marketId: string, isCorrect: boolean, payoutAmount?: number) => {
+    const handlePredictionResult = useCallback(async (_marketId: string, isCorrect: boolean, payoutAmount?: number) => {
         if (!user) return;
 
         try {
@@ -236,7 +236,7 @@ export function useSocialFeatures(options: {
     const {
         leaderboardSort = 'winRate',
         leaderboardLimit = 10,
-        enableRealTime = true
+        enableRealTime: _enableRealTime = true
     } = options;
 
     const leaderboardData = useLeaderboardData(leaderboardSort, leaderboardLimit);

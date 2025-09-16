@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, TrendingUp, Shield, Users, Info, Calendar, AlertCircle } from 'lucide-react';
+import { ArrowLeft, TrendingUp, Shield, Users, Info, Calendar, AlertCircle, Clock } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { ParimutuelSupabaseService } from '@/lib/supabase-parimutuel';
 import { generateCreateMarketCalls } from '@/lib/market-factory-onchainkit';

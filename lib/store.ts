@@ -78,9 +78,14 @@ export const useAppStore = create<AppState>()(
                 currentMarketIndex: state.currentMarketIndex + 1
             })),
 
-            addSwipeHistory: (marketId) => set((state) => ({
-                swipeHistory: [...state.swipeHistory, marketId]
-            })),
+            addSwipeHistory: (marketId) => set((state) => {
+                if (state.swipeHistory.includes(marketId)) {
+                    return state;
+                }
+                return {
+                    swipeHistory: [...state.swipeHistory, marketId]
+                };
+            }),
 
             addCreatedMarket: (market) => set((state) => ({
                 createdMarkets: [...state.createdMarkets, market]
@@ -92,10 +97,10 @@ export const useAppStore = create<AppState>()(
 
             updateStreak: (isCorrect) => set((state) => {
                 if (!state.user) return state;
-                
+
                 const newStreak = isCorrect ? state.user.currentStreak + 1 : 0;
                 const newBestStreak = Math.max(newStreak, state.user.bestStreak);
-                
+
                 return {
                     user: {
                         ...state.user,

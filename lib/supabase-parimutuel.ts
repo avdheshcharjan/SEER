@@ -80,7 +80,7 @@ export interface UserPosition {
 
 // Updated database functions for pari-mutuel system
 export class ParimutuelSupabaseService {
-  
+
   // User Predictions (updated for pari-mutuel)
   static async createPrediction(prediction: Omit<UserPrediction, 'id' | 'created_at' | 'updated_at'>) {
     const { data, error } = await supabase
@@ -88,7 +88,7 @@ export class ParimutuelSupabaseService {
       .insert(prediction)
       .select()
       .single()
-    
+
     if (error) throw error
     return data
   }
@@ -133,7 +133,7 @@ export class ParimutuelSupabaseService {
       `)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
-    
+
     if (error) throw error
     return data
   }
@@ -145,7 +145,7 @@ export class ParimutuelSupabaseService {
       .eq('id', id)
       .select()
       .single()
-    
+
     if (error) throw error
     return data
   }
@@ -162,7 +162,7 @@ export class ParimutuelSupabaseService {
       .insert(marketData)
       .select()
       .single()
-    
+
     if (error) throw error
     return data
   }
@@ -174,14 +174,14 @@ export class ParimutuelSupabaseService {
       .select('*')
       .eq('id', id)
       .single()
-    
+
     if (error) throw error
-    
+
     // Validate contract address exists for blockchain interactions
     if (!data.contract_address) {
       console.warn(`Market ${id} has no contract address - using demo contract`);
     }
-    
+
     return data
   }
 
@@ -193,7 +193,7 @@ export class ParimutuelSupabaseService {
       .not('contract_address', 'is', null)
       .eq('resolved', false)
       .order('created_at', { ascending: false })
-    
+
     if (error) throw error
     return data
   }
@@ -204,7 +204,7 @@ export class ParimutuelSupabaseService {
       .select('*')
       .order('created_at', { ascending: false })
       .limit(limit)
-    
+
     if (error) throw error
     return data
   }
@@ -215,7 +215,7 @@ export class ParimutuelSupabaseService {
       .select('*')
       .eq('id', id)
       .single()
-    
+
     if (error) throw error
     return data
   }
@@ -235,7 +235,7 @@ export class ParimutuelSupabaseService {
       .eq('id', id)
       .select()
       .single()
-    
+
     if (error) throw error
     return data
   }
@@ -248,7 +248,7 @@ export class ParimutuelSupabaseService {
       .eq('resolved', false)
       .gt('end_time', now)
       .order('created_at', { ascending: false })
-    
+
     if (error) throw error
     return data
   }
@@ -260,7 +260,7 @@ export class ParimutuelSupabaseService {
       .eq('category', category)
       .eq('resolved', false)
       .order('created_at', { ascending: false })
-    
+
     if (error) throw error
     return data
   }
@@ -275,24 +275,25 @@ export class ParimutuelSupabaseService {
   }) {
     // First get existing position
     const existingPosition = await this.getUserPosition(position.user_address, position.market_id);
-    
-    const positionData = {
+
+    const positionData: any = {
       user_id: position.user_address,
       market_id: position.market_id,
-      yes_bet_amount: existingPosition?.yes_bet_amount || 0,
-      no_bet_amount: existingPosition?.no_bet_amount || 0,
+      // Schema uses yes_shares/no_shares; we store bet amounts here for pari-mutuel
+      yes_shares: (existingPosition as any)?.yes_shares || 0,
+      no_shares: (existingPosition as any)?.no_shares || 0,
       total_invested: existingPosition?.total_invested || 0,
       updated_at: new Date().toISOString()
     };
 
     // Add the new bet amount to the appropriate side
     if (position.prediction === 'yes') {
-      positionData.yes_bet_amount += position.amount_bet;
+      positionData.yes_shares += position.amount_bet;
     } else {
-      positionData.no_bet_amount += position.amount_bet;
+      positionData.no_shares += position.amount_bet;
     }
-    
-    positionData.total_invested = positionData.yes_bet_amount + positionData.no_bet_amount;
+
+    positionData.total_invested = positionData.yes_shares + positionData.no_shares;
 
     const { data, error } = await supabase
       .from('user_positions')
@@ -302,7 +303,7 @@ export class ParimutuelSupabaseService {
       )
       .select()
       .single()
-    
+
     if (error) throw error
     return data
   }
@@ -322,7 +323,7 @@ export class ParimutuelSupabaseService {
       `)
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
-    
+
     if (error) throw error
     return data
   }
@@ -334,7 +335,7 @@ export class ParimutuelSupabaseService {
       .eq('user_id', userId)
       .eq('market_id', marketId)
       .single()
-    
+
     if (error && error.code !== 'PGRST116') throw error // PGRST116 = no rows returned
     return data
   }
@@ -345,13 +346,13 @@ export class ParimutuelSupabaseService {
       .from('user_predictions')
       .select('side, amount')
       .eq('market_id', marketId)
-    
+
     if (error) throw error
-    
+
     const yesTotal = predictions?.filter(p => p.side === 'yes').reduce((sum, p) => sum + p.amount, 0) || 0
     const noTotal = predictions?.filter(p => p.side === 'no').reduce((sum, p) => sum + p.amount, 0) || 0
     const total = yesTotal + noTotal
-    
+
     return {
       yesTotal,
       noTotal,
@@ -398,12 +399,12 @@ export class ParimutuelSupabaseService {
       .from('user_predictions')
       .select('amount')
       .eq('user_id', userId)
-    
+
     if (error) throw error
-    
+
     const totalInvested = data?.reduce((sum, p) => sum + p.amount, 0) || 0
     const totalPredictions = data?.length || 0
-    
+
     return {
       totalInvested,
       totalPredictions
@@ -417,7 +418,7 @@ export class ParimutuelSupabaseService {
       .select('*')
       .eq('id', id)
       .single()
-    
+
     if (error) throw error
     return data
   }
@@ -427,7 +428,7 @@ export class ParimutuelSupabaseService {
       .from('influencer_profiles')
       .select('*')
       .order('win_rate', { ascending: false })
-    
+
     if (error) throw error
     return data
   }
@@ -438,7 +439,7 @@ export class ParimutuelSupabaseService {
       .select('*')
       .order(sortBy, { ascending: false })
       .limit(limit)
-    
+
     if (error) throw error
     return data
   }
@@ -449,7 +450,7 @@ export class ParimutuelSupabaseService {
       .from('markets_with_influencers')
       .select('*')
       .order('created_at', { ascending: false })
-    
+
     if (error) throw error
     return data
   }
@@ -460,7 +461,7 @@ export class ParimutuelSupabaseService {
       .select('*')
       .eq('id', marketId)
       .single()
-    
+
     if (error) throw error
     return data
   }
@@ -468,7 +469,7 @@ export class ParimutuelSupabaseService {
   static async getMarketsByInfluencer(influencerId: string) {
     const { data, error } = await supabase
       .rpc('get_markets_by_influencer', { influencer_id_param: influencerId })
-    
+
     if (error) throw error
     return data
   }
@@ -477,14 +478,14 @@ export class ParimutuelSupabaseService {
     const { data, error } = await supabase
       .rpc('get_influencer_stats')
       .single()
-    
+
     if (error) throw error
     return data
   }
 
   // Create market with influencer attribution
   static async createMarketWithInfluencer(
-    market: Omit<ParimutuelMarket, 'id' | 'created_at' | 'total_volume'>, 
+    market: Omit<ParimutuelMarket, 'id' | 'created_at' | 'total_volume'>,
     influencerId?: string
   ) {
     const marketData = {
@@ -493,13 +494,13 @@ export class ParimutuelSupabaseService {
       is_influencer_market: !!influencerId,
       total_volume: market.total_yes_bets + market.total_no_bets
     }
-    
+
     const { data, error } = await supabase
       .from('markets')
       .insert(marketData)
       .select()
       .single()
-    
+
     if (error) throw error
     return data
   }

@@ -502,7 +502,13 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
 
             {(() => {
               const predictedMarketIds = new Set(allPredictions.map(p => p.marketId));
-              const uniqueSwiped = (swipeHistory || []).filter(id => !predictedMarketIds.has(id));
+              const seen = new Set<string>();
+              const uniqueSwiped = (swipeHistory || []).filter((id) => {
+                if (predictedMarketIds.has(id)) return false;
+                if (seen.has(id)) return false;
+                seen.add(id);
+                return true;
+              });
               if (uniqueSwiped.length === 0) return null;
               return uniqueSwiped.map((marketId) => {
                 const market = getMarketById(marketId);
