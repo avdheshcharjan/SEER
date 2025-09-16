@@ -88,7 +88,11 @@ const config: Config = {
         'politics-card': 'linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(79, 70, 229, 0.1))',
       },
       fontFamily: {
-        'geist': ['Geist', 'sans-serif'],
+        'satoshi': ['Satoshi-Variable', 'Satoshi-Regular', 'sans-serif'],
+        'satoshi-light': ['Satoshi-Light', 'sans-serif'],
+        'satoshi-medium': ['Satoshi-Medium', 'sans-serif'],
+        'satoshi-bold': ['Satoshi-Bold', 'sans-serif'],
+        'satoshi-black': ['Satoshi-Black', 'sans-serif'],
       },
     },
   },

@@ -97,7 +97,7 @@ export default function App() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen font-geist bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+    <div className="flex flex-col min-h-screen font-satoshi bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
       <Toaster position="top-center" />
 
       <div className="w-full max-w-md mx-auto px-4 py-3">

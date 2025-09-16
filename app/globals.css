@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap");
+@import url("/font-satoshi/Fonts/WEB/css/satoshi.css");
 
 @tailwind base;
 @tailwind components;
@@ -12,7 +12,7 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: 'Geist', system-ui, -apple-system, sans-serif;
+  font-family: 'Satoshi-Variable', 'Satoshi-Regular', system-ui, -apple-system, sans-serif;
   font-optical-sizing: auto;
   font-weight: 400;
   font-style: normal;
