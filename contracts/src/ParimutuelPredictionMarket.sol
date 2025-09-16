@@ -31,6 +31,10 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
     
     address public resolver;
     uint256 public constant RESOLUTION_BUFFER = 1 hours; // Time after endTime before manual resolution
+    uint256 public constant EMERGENCY_TIMELOCK = 48 hours; // Timelock for emergency functions
+    uint256 public emergencyTimelockStart;
+    bool public emergencyResolutionRequested;
+    bool public paused;
     
     address public constant ENTRY_POINT = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789; // ERC-4337 EntryPoint on Base
     
@@ -58,6 +62,10 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
     error BetTooHighError();
     error DivisionByZeroError();
     error MathOverflowError();
+    error MarketPausedError();
+    error EmergencyTimelockNotElapsedError();
+    error EmergencyNotRequestedError();
+    error InvalidQuestionError();
     
     modifier onlyBeforeEnd() {
         if (block.timestamp >= endTime) revert MarketEndedError();
@@ -85,6 +93,11 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
         _;
     }
     
+    modifier notPaused() {
+        if (paused) revert MarketPausedError();
+        _;
+    }
+    
     constructor(
         address _usdc,
         string memory _question,
@@ -95,6 +108,7 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
         if (_resolver == address(0)) revert InvalidAddressError();
         if (_endTime <= block.timestamp + MINIMUM_MARKET_DURATION) revert InvalidMarketDurationError();
         if (_endTime > block.timestamp + MAXIMUM_MARKET_DURATION) revert InvalidMarketDurationError();
+        if (bytes(_question).length < 10 || bytes(_question).length > 500) revert InvalidQuestionError();
         
         usdc = IERC20(_usdc);
         question = _question;
@@ -110,6 +124,7 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
         notResolved 
         nonReentrant 
         validBetAmount(amount)
+        notPaused
     {
         address user = _msgSender();
         
@@ -134,6 +149,7 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
         notResolved 
         nonReentrant 
         validBetAmount(amount)
+        notPaused
     {
         address user = _msgSender();
         
@@ -159,6 +175,7 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
         notResolved 
         nonReentrant 
         validBetAmount(amount)
+        notPaused
     {
         address user = _msgSender();
         
@@ -209,9 +226,18 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
         emit MarketResolved(_outcome, block.timestamp);
     }
     
-    /// @notice Emergency resolve (only owner, any time)
+    /// @notice Request emergency resolution (only owner)
+    function requestEmergencyResolve() external onlyOwner notResolved {
+        emergencyResolutionRequested = true;
+        emergencyTimelockStart = block.timestamp;
+    }
+    
+    /// @notice Emergency resolve (only owner, after timelock)
     /// @param _outcome true if YES wins, false if NO wins
     function emergencyResolve(bool _outcome) external onlyOwner notResolved {
+        if (!emergencyResolutionRequested) revert EmergencyNotRequestedError();
+        if (block.timestamp < emergencyTimelockStart + EMERGENCY_TIMELOCK) revert EmergencyTimelockNotElapsedError();
+        
         resolved = true;
         outcome = _outcome;
         
@@ -220,7 +246,7 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
     
     /// @notice Claim winnings after market resolution
     /// @return payout Amount of USDC claimed
-    function claimRewards() external onlyResolved nonReentrant returns (uint256 payout) {
+    function claimRewards() external onlyResolved nonReentrant notPaused returns (uint256 payout) {
         address user = _msgSender();
         uint256 userBet = outcome ? yesBets[user] : noBets[user];
         
@@ -231,7 +257,18 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
         uint256 totalLosingBets = outcome ? totalNoBets : totalYesBets;
         
         if (totalWinningBets == 0) {
-            revert DivisionByZeroError();
+            // If no winning bets, return the user's original stake
+            payout = userBet;
+            // Clear user's bets on both sides
+            yesBets[user] = 0;
+            noBets[user] = 0;
+            
+            if (payout > 0) {
+                usdc.safeTransfer(user, payout);
+            }
+            
+            emit RewardsClaimed(user, payout);
+            return payout;
         }
         
         // Safe multiplication and division to prevent overflow
@@ -334,15 +371,20 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
         resolvable = block.timestamp >= endTime && !resolved;
     }
     
-    /// @notice Emergency withdraw (owner only, after resolution + 30 days)
+    /// @notice Emergency withdraw (owner only, after resolution + 1 year)
     /// @dev Safety mechanism to recover any stuck funds
     function emergencyWithdraw() external onlyOwner {
-        require(resolved && block.timestamp > endTime + 90 days, "Too early for emergency withdrawal");
+        require(resolved && block.timestamp > endTime + 365 days, "Too early for emergency withdrawal");
         
         uint256 balance = usdc.balanceOf(address(this));
         if (balance > 0) {
             usdc.safeTransfer(owner(), balance);
         }
+    }
+    
+    /// @notice Pause/unpause market (only owner)
+    function setPaused(bool _paused) external onlyOwner {
+        paused = _paused;
     }
     
     /// @notice Get estimated gas for placing a bet (helpful for ERC-4337 gas estimation)

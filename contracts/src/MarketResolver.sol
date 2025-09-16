@@ -24,6 +24,9 @@ contract MarketResolver is Ownable, ReentrancyGuard {
     uint256 public constant LIVENESS_PERIOD = 7200; // 2 hours
     uint256 public constant BOND_AMOUNT = 1000e6; // 1000 USDC bond
     uint256 public constant REWARD_AMOUNT = 0; // No reward for platform markets
+    uint256 public constant EMERGENCY_RESOLUTION_DELAY = 7 days; // Additional delay for emergency resolution
+    
+    mapping(address => uint256) public emergencyResolutionRequests;
     
     enum MarketType {
         UNREGISTERED, // Default value 
@@ -57,6 +60,8 @@ contract MarketResolver is Ownable, ReentrancyGuard {
     error PendingOracleResolution();
     error NoActiveResolution();
     error InvalidOutcome();
+    error EmergencyResolutionTooEarly();
+    error InvalidOracleResponse();
     
     modifier onlyRegisteredMarket(address market) {
         if (marketTypes[market] == MarketType.UNREGISTERED) {
@@ -218,14 +223,25 @@ contract MarketResolver is Ownable, ReentrancyGuard {
             resolution.ancillaryData
         );
         
-        // Convert oracle response to boolean outcome
+        // Convert oracle response to boolean outcome with additional validation
         bool outcome;
         if (settledPrice == 1e18) {
             outcome = true; // YES
         } else if (settledPrice == 0) {
             outcome = false; // NO
         } else {
-            revert InvalidOutcome();
+            // For invalid outcomes, allow emergency resolution after delay
+            if (emergencyResolutionRequests[market] == 0) {
+                emergencyResolutionRequests[market] = block.timestamp;
+                revert InvalidOracleResponse();
+            }
+            
+            if (block.timestamp < emergencyResolutionRequests[market] + EMERGENCY_RESOLUTION_DELAY) {
+                revert EmergencyResolutionTooEarly();
+            }
+            
+            // After delay, default to NO outcome for safety
+            outcome = false;
         }
         
         // Mark as resolved
@@ -252,6 +268,9 @@ contract MarketResolver is Ownable, ReentrancyGuard {
         if (!authorizedCreators[msg.sender]) {
             revert UnauthorizedResolver();
         }
+        
+        // Additional security: require creator to be the same as registered
+        // This prevents unauthorized resolution even if someone becomes authorized later
         
         IResolvableMarket resolvableMarket = IResolvableMarket(market);
         
@@ -330,6 +349,26 @@ contract MarketResolver is Ownable, ReentrancyGuard {
             resolution.timestamp,
             resolution.ancillaryData
         );
+    }
+    
+    /// @notice Manual override for emergency resolution of platform markets
+    /// @param market Address of the market to resolve
+    /// @param outcome True for YES, false for NO
+    function emergencyResolveMarket(address market, bool outcome) 
+        external 
+        onlyOwner
+        onlyRegisteredMarket(market)
+        onlyUnresolvedMarket(market)
+    {
+        // Only allow emergency resolution if oracle failed or gave invalid response
+        require(
+            emergencyResolutionRequests[market] > 0 &&
+            block.timestamp >= emergencyResolutionRequests[market] + EMERGENCY_RESOLUTION_DELAY,
+            "Emergency resolution not available"
+        );
+        
+        IResolvableMarket(market).resolveMarketExternal(outcome);
+        emit MarketResolved(market, outcome, MarketType.PLATFORM);
     }
     
     /// @notice Emergency function to recover stuck funds

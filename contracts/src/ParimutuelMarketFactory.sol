@@ -134,20 +134,27 @@ contract ParimutuelMarketFactory is Context, Ownable, ReentrancyGuard {
         }
     }
     
-    /// @notice Get active markets (not yet ended)
+    /// @notice Get active markets (not yet ended) with pagination
+    /// @param start Starting index
     /// @param limit Maximum number of markets to return
-    function getActiveMarkets(uint256 limit) 
+    function getActiveMarkets(uint256 start, uint256 limit) 
         external 
         view 
         returns (ParimutuelPredictionMarket[] memory result) 
     {
         if (limit > MAX_MARKETS_PER_QUERY) revert QueryLimitExceededError();
+        if (start >= markets.length) {
+            return new ParimutuelPredictionMarket[](0);
+        }
         
-        // Count active markets (limited to prevent gas issues)
+        uint256 end = start + limit;
+        if (end > markets.length) {
+            end = markets.length;
+        }
+        
+        // First pass: count active markets in range
         uint256 activeCount = 0;
-        uint256 maxCheck = markets.length > 1000 ? 1000 : markets.length; // Limit iterations
-        
-        for (uint256 i = 0; i < maxCheck && activeCount < limit; i++) {
+        for (uint256 i = start; i < end; i++) {
             if (markets[i].endTime() > block.timestamp && !markets[i].resolved()) {
                 activeCount++;
             }
@@ -157,10 +164,11 @@ contract ParimutuelMarketFactory is Context, Ownable, ReentrancyGuard {
             return new ParimutuelPredictionMarket[](0);
         }
         
+        // Second pass: collect active markets
         result = new ParimutuelPredictionMarket[](activeCount);
         uint256 resultIndex = 0;
         
-        for (uint256 i = 0; i < maxCheck && resultIndex < activeCount; i++) {
+        for (uint256 i = start; i < end && resultIndex < activeCount; i++) {
             if (markets[i].endTime() > block.timestamp && !markets[i].resolved()) {
                 result[resultIndex] = markets[i];
                 resultIndex++;
@@ -198,15 +206,15 @@ contract ParimutuelMarketFactory is Context, Ownable, ReentrancyGuard {
         uint256 /* endTime */,
         bool /* isPlatformMarket */
     ) external view returns (uint256 gasEstimate) {
-        // Base gas for contract deployment with security improvements: ~1.4M
-        // Storage writes for arrays and mappings: ~120k
-        // Buffer for safety: ~80k
-        gasEstimate = 1600000;
+        // Base gas for contract deployment with security improvements: ~1.6M
+        // Storage writes for arrays and mappings: ~150k
+        // Buffer for safety: ~100k
+        gasEstimate = 1850000;
         
         // Add extra gas if this is the first market for the creator
         address creator = _msgSender();
         if (creatorMarketCount[creator] == 0) {
-            gasEstimate += 50000; // Extra gas for new creator mapping
+            gasEstimate += 75000; // Extra gas for new creator mapping
         }
     }
     

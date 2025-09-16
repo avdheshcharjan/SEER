@@ -345,9 +345,9 @@ contract MarketResolverTest is Test {
             5e17 // 0.5 (invalid)
         );
         
-        // Try to settle - should revert
+        // Try to settle - should revert with new error
         vm.prank(user);
-        vm.expectRevert(MarketResolver.InvalidOutcome.selector);
+        vm.expectRevert(MarketResolver.InvalidOracleResponse.selector);
         resolver.settlePlatformResolution(address(platformMarket));
     }
     

@@ -273,4 +273,81 @@ contract ParimutuelStandaloneTest is Test {
         uint256 expectedUser2 = noBet + yesBet; // Only NO bettor gets all YES pool
         assertEq(user2Potential, expectedUser2);
     }
+    
+    function testPauseFeature() public {
+        // Only owner can pause
+        vm.prank(user1);
+        vm.expectRevert(abi.encodeWithSelector(0x118cdaa7, user1)); // OwnableUnauthorizedAccount selector
+        market.setPaused(true);
+        
+        // Owner pauses market
+        vm.prank(deployer);
+        market.setPaused(true);
+        
+        // Betting should fail when paused
+        vm.startPrank(user1);
+        usdc.approve(address(market), 100e6);
+        vm.expectRevert(ParimutuelPredictionMarket.MarketPausedError.selector);
+        market.betYes(100e6);
+        vm.stopPrank();
+        
+        // Unpause market
+        vm.prank(deployer);
+        market.setPaused(false);
+        
+        // Betting should work again
+        vm.startPrank(user1);
+        market.betYes(100e6);
+        vm.stopPrank();
+        
+        assertEq(market.yesBets(user1), 100e6);
+    }
+    
+    function testEmergencyResolveTimelock() public {
+        // Request emergency resolution
+        vm.prank(deployer);
+        market.requestEmergencyResolve();
+        
+        // Should not be able to resolve immediately
+        vm.prank(deployer);
+        vm.expectRevert(ParimutuelPredictionMarket.EmergencyTimelockNotElapsedError.selector);
+        market.emergencyResolve(true);
+        
+        // Fast forward past timelock
+        vm.warp(block.timestamp + 48 hours + 1);
+        
+        // Now should be able to resolve
+        vm.prank(deployer);
+        market.emergencyResolve(true);
+        
+        assertTrue(market.resolved());
+        assertTrue(market.outcome());
+    }
+    
+    function testInvalidQuestionLength() public {
+        vm.prank(deployer);
+        
+        // Too short question
+        vm.expectRevert(ParimutuelPredictionMarket.InvalidQuestionError.selector);
+        new ParimutuelPredictionMarket(
+            address(usdc),
+            "Short", // Less than 10 characters
+            block.timestamp + 30 days,
+            deployer
+        );
+        
+        // Too long question (over 500 characters)
+        string memory longQuestion = "";
+        for(uint i = 0; i < 51; i++) {
+            longQuestion = string(abi.encodePacked(longQuestion, "0123456789"));
+        }
+        
+        vm.expectRevert(ParimutuelPredictionMarket.InvalidQuestionError.selector);
+        new ParimutuelPredictionMarket(
+            address(usdc),
+            longQuestion,
+            block.timestamp + 30 days,
+            deployer
+        );
+    }
 }
