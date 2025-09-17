@@ -161,6 +161,10 @@ contract UMAEventBasedParimutuelMarketMinimal is ReentrancyGuard, Ownable {
     {
         if (amount < MINIMUM_BET) revert BetTooLowError();
 
+        // Check for overflow before updating state
+        require(yesBets[msg.sender] + amount >= yesBets[msg.sender], "Overflow");
+        require(totalYesBets + amount >= totalYesBets, "Overflow");
+
         collateralToken.safeTransferFrom(msg.sender, address(this), amount);
         yesBets[msg.sender] += amount;
         totalYesBets += amount;
@@ -179,6 +183,10 @@ contract UMAEventBasedParimutuelMarketMinimal is ReentrancyGuard, Ownable {
         notPaused
     {
         if (amount < MINIMUM_BET) revert BetTooLowError();
+
+        // Check for overflow before updating state
+        require(noBets[msg.sender] + amount >= noBets[msg.sender], "Overflow");
+        require(totalNoBets + amount >= totalNoBets, "Overflow");
 
         collateralToken.safeTransferFrom(msg.sender, address(this), amount);
         noBets[msg.sender] += amount;
@@ -219,7 +227,9 @@ contract UMAEventBasedParimutuelMarketMinimal is ReentrancyGuard, Ownable {
         if (totalWinning == 0) {
             payout = userBet;
         } else {
-            payout = userBet + (userBet * totalLosing) / totalWinning;
+            // Use safe math to prevent overflow and ensure precision
+            uint256 winnings = (userBet * totalLosing) / totalWinning;
+            payout = userBet + winnings;
         }
 
         yesBets[user] = 0;
@@ -256,7 +266,7 @@ contract UMAEventBasedParimutuelMarketMinimal is ReentrancyGuard, Ownable {
 
     function priceDisputed(
         bytes32 identifier,
-        uint256 timestamp,
+        uint256 /* timestamp */,
         bytes memory ancillaryData,
         uint256 refund
     ) external {
@@ -324,5 +334,11 @@ contract UMAEventBasedParimutuelMarketMinimal is ReentrancyGuard, Ownable {
 
     function setPaused(bool _paused) external onlyOwner {
         paused = _paused;
+    }
+
+    function emergencyWithdraw() external onlyOwner {
+        require(resolved && block.timestamp > endTime + 365 days, "Too early");
+        uint256 balance = collateralToken.balanceOf(address(this));
+        if (balance > 0) collateralToken.safeTransfer(owner(), balance);
     }
 }

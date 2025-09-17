@@ -82,9 +82,13 @@ contract MarketResolver is Ownable, ReentrancyGuard {
         address _bondCurrency,
         address _owner
     ) Ownable(_owner) {
+        require(_optimisticOracle != address(0), "Invalid oracle address");
+        require(_bondCurrency != address(0), "Invalid currency address");
+        require(_owner != address(0), "Invalid owner address");
+
         optimisticOracle = IOptimisticOracleV2(_optimisticOracle);
         bondCurrency = IERC20(_bondCurrency);
-        
+
         // Authorize contract deployer as platform creator
         authorizedCreators[_owner] = true;
     }
@@ -98,16 +102,22 @@ contract MarketResolver is Ownable, ReentrancyGuard {
         MarketType marketType,
         address creator
     ) external onlyOwner {
+        require(market != address(0), "Invalid market address");
+        require(marketType != MarketType.UNREGISTERED, "Invalid market type");
+        if (marketType == MarketType.USER) {
+            require(creator != address(0), "Invalid creator address");
+        }
+
         if (marketTypes[market] != MarketType.UNREGISTERED) {
             revert MarketAlreadyRegistered();
         }
-        
+
         marketTypes[market] = marketType;
-        
+
         if (marketType == MarketType.USER) {
             authorizedCreators[creator] = true;
         }
-        
+
         emit MarketRegistered(market, marketType, creator);
     }
     
