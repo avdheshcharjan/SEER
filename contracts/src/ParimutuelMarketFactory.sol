@@ -41,7 +41,6 @@ contract ParimutuelMarketFactory is Context, Ownable {
     event FactoryPaused();
     event FactoryUnpaused();
 
-    error InvalidEndTime();
     error InvalidResolver();
     error FactoryPausedError();
 
@@ -69,12 +68,10 @@ contract ParimutuelMarketFactory is Context, Ownable {
 
     /// @notice Create a new parimutuel prediction market
     /// @param question The prediction question
-    /// @param endTime When the market should end (timestamp)
     /// @param resolver Who can resolve the market (use address(0) for default)
     /// @return market The deployed market contract
     function createMarket(
         string memory question,
-        uint256 endTime,
         address resolver
     )
         external
@@ -82,27 +79,23 @@ contract ParimutuelMarketFactory is Context, Ownable {
         entryPointReentrancyGuard
         returns (ParimutuelPredictionMarket market)
     {
-        // Minimum 1 hour duration, maximum 30 days
-        if (
-            endTime <= block.timestamp + 1 hours ||
-            endTime > block.timestamp + 30 days
-        ) {
-            revert InvalidEndTime();
-        }
-
         address actualResolver = resolver == address(0)
             ? defaultResolver
             : resolver;
         if (actualResolver == address(0)) revert InvalidResolver();
 
+        uint256 endTime = block.timestamp + 24 hours;
+
+        address creator = _msgSender();
+
         market = new ParimutuelPredictionMarket(
             USDC,
             question,
             endTime,
-            actualResolver
+            actualResolver,
+            creator
         );
 
-        address creator = _msgSender();
         markets.push(market);
         creatorMarkets[creator].push(market);
 
@@ -117,12 +110,10 @@ contract ParimutuelMarketFactory is Context, Ownable {
 
     /// @notice Batch create multiple markets (gas efficient for daily market creation)
     /// @param questions Array of prediction questions
-    /// @param endTimes Array of end times for each market
     /// @param resolvers Array of resolvers (use address(0) for default)
     /// @return marketAddresses Array of deployed market contract addresses
     function createMarkets(
         string[] memory questions,
-        uint256[] memory endTimes,
         address[] memory resolvers
     )
         external
@@ -130,11 +121,7 @@ contract ParimutuelMarketFactory is Context, Ownable {
         entryPointReentrancyGuard
         returns (address[] memory marketAddresses)
     {
-        require(
-            questions.length == endTimes.length &&
-                questions.length == resolvers.length,
-            "Array length mismatch"
-        );
+        require(questions.length == resolvers.length, "Array length mismatch");
         require(
             questions.length > 0 && questions.length <= 20,
             "Invalid batch size"
@@ -144,24 +131,19 @@ contract ParimutuelMarketFactory is Context, Ownable {
         address creator = _msgSender();
 
         for (uint256 i = 0; i < questions.length; i++) {
-            // Validate each market
-            if (
-                endTimes[i] <= block.timestamp + 1 hours ||
-                endTimes[i] > block.timestamp + 30 days
-            ) {
-                revert InvalidEndTime();
-            }
-
             address actualResolver = resolvers[i] == address(0)
                 ? defaultResolver
                 : resolvers[i];
             if (actualResolver == address(0)) revert InvalidResolver();
 
+            uint256 endTime = block.timestamp + 24 hours;
+
             ParimutuelPredictionMarket market = new ParimutuelPredictionMarket(
                 USDC,
                 questions[i],
-                endTimes[i],
-                actualResolver
+                endTime,
+                actualResolver,
+                creator
             );
 
             markets.push(market);
@@ -172,7 +154,7 @@ contract ParimutuelMarketFactory is Context, Ownable {
                 address(market),
                 creator,
                 questions[i],
-                endTimes[i],
+                endTime,
                 markets.length - 1
             );
         }
@@ -212,9 +194,6 @@ contract ParimutuelMarketFactory is Context, Ownable {
         }
     }
 
-
-
-
     /// @notice Update default resolver (owner only)
     function setDefaultResolver(address _resolver) external onlyOwner {
         if (_resolver == address(0)) revert InvalidResolver();
@@ -236,9 +215,4 @@ contract ParimutuelMarketFactory is Context, Ownable {
         paused = false;
         emit FactoryUnpaused();
     }
-
-
-
-
-
 }

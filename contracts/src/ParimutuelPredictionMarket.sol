@@ -42,6 +42,9 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
     address public constant ENTRY_POINT =
         0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
 
+    // Admin with emergency resolution powers
+    address public constant ADMIN = 0x7579c7457F4151B1ae7078fAf9D4A30Af953bDeE;
+
     uint256 private constant _NOT_ENTERED = 1;
     uint256 private constant _ENTERED = 2;
     uint256 private _entryPointReentrancyStatus;
@@ -97,8 +100,9 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
         address _usdc,
         string memory _question,
         uint256 _endTime,
-        address _resolver
-    ) Ownable(_msgSender()) {
+        address _resolver,
+        address _owner
+    ) Ownable(_owner) {
         USDC = IERC20(_usdc);
         question = _question;
         endTime = _endTime;
@@ -170,7 +174,7 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
     /// @param _outcome true if YES wins, false if NO wins
     function resolveMarket(bool _outcome) external onlyAfterEnd notResolved {
         address sender = _msgSender();
-        if (sender != resolver && sender != owner())
+        if (sender != resolver && sender != owner() && sender != ADMIN)
             revert UnauthorizedResolverError();
 
         resolved = true;
@@ -179,9 +183,12 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
         emit MarketResolved(_outcome, block.timestamp);
     }
 
-    /// @notice Emergency resolve (only owner, any time)
+    /// @notice Emergency resolve (only owner or admin, any time)
     /// @param _outcome true if YES wins, false if NO wins
-    function emergencyResolve(bool _outcome) external onlyOwner notResolved {
+    function emergencyResolve(bool _outcome) external notResolved {
+        address sender = _msgSender();
+        if (sender != owner() && sender != ADMIN)
+            revert UnauthorizedResolverError();
         resolved = true;
         outcome = _outcome;
 
@@ -360,9 +367,14 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
         resolvable = block.timestamp >= endTime && !resolved;
     }
 
-    /// @notice Emergency withdraw unclaimed funds (owner only, after resolution + 30 days)
+    /// @notice Emergency withdraw unclaimed funds (owner or admin only, after resolution + 30 days)
     /// @dev Safety mechanism to recover any unclaimed rewards
-    function emergencyWithdraw() external onlyOwner {
+    function emergencyWithdraw() external {
+        address sender = _msgSender();
+        require(
+            sender == owner() || sender == ADMIN,
+            "Only owner or admin can emergency withdraw"
+        );
         require(
             resolved && block.timestamp > endTime + 30 days,
             "Too early for emergency withdrawal"
