@@ -24,7 +24,7 @@ import { Home } from "./components/Home";
 import { ParimutuelPredictionMarket } from "./components/ParimutuelPredictionMarket";
 import { Profile } from "./components/Profile";
 import { Leaderboard } from "./components/Leaderboard";
-import { CreateMarketEnhanced } from "./components/CreateMarketEnhanced";
+import { CreateMarketFlow } from "./components/CreateMarketFlow";
 import ContractIntegrationDemo from "./components/ContractIntegrationDemo";
 
 // import { Plus, Check } from 'lucide-react';
@@ -84,7 +84,7 @@ export default function App() {
       case 'leaderboard':
         return <Leaderboard onBack={() => setCurrentView('home')} />;
       case 'create':
-        return <CreateMarketEnhanced onBack={() => setCurrentView('home')} />;
+        return <CreateMarketFlow onBack={() => setCurrentView('home')} />;
       case 'contracts':
         return <ContractIntegrationDemo />;
       default:

@@ -1,13 +1,13 @@
 import { Address, encodeFunctionData, type Hex, decodeEventLog } from 'viem';
 import { publicClient } from './viem-client';
-// Updated MarketFactory contract address with resolver system
+// Updated MarketFactory contract address - using UMA factory to avoid resolver registration issues
 // Updated with latest deployment from DeployUMAContracts.s.sol
-const MARKET_FACTORY_ADDRESS = '0x50ACC2590E8BB702C9A74327D208dE9a9EeF4c9a' as const;
+const MARKET_FACTORY_ADDRESS = '0x317A5FAd4F52C147545E0A4A3240dcB560F486c4' as const;
 // import { SupabaseService } from './supabase';
 import { ParimutuelSupabaseService } from './supabase-parimutuel';
 import { MarketType } from './market-resolver';
 
-// Updated MarketFactory ABI for new resolver system
+// Updated MarketFactory ABI for UMA factory
 export const MARKET_FACTORY_ABI = [
     {
         name: 'createMarket',
@@ -15,7 +15,7 @@ export const MARKET_FACTORY_ABI = [
         inputs: [
             { name: 'question', type: 'string' },
             { name: 'endTime', type: 'uint256' },
-            { name: 'isPlatformMarket', type: 'bool' } // true for platform (UMA), false for user
+            { name: 'autoInitialize', type: 'bool' } // true to auto-initialize market
         ],
         outputs: [{ name: 'market', type: 'address' }],
         stateMutability: 'nonpayable'
@@ -29,26 +29,25 @@ export const MARKET_FACTORY_ABI = [
             { name: 'creator', type: 'address', indexed: true },
             { name: 'question', type: 'string', indexed: false },
             { name: 'endTime', type: 'uint256', indexed: false },
-            { name: 'marketIndex', type: 'uint256', indexed: false },
-            { name: 'marketType', type: 'uint8', indexed: false } // 1 = PLATFORM, 2 = USER
+            { name: 'marketIndex', type: 'uint256', indexed: false }
         ]
     }
 ] as const;
 
 /**
- * Generate transaction calls for creating a prediction market with new resolver system
+ * Generate transaction calls for creating a prediction market using UMA factory
  * Returns calls formatted for OnchainKit's Transaction component
  */
 export function generateCreateMarketCalls(
     question: string,
     endTimeTimestamp: number,
-    isPlatformMarket: boolean
+    isPlatformMarket: boolean // This parameter is now used for autoInitialize
 ) {
-    // Encode the createMarket function call
+    // Encode the createMarket function call for UMA factory
     const data = encodeFunctionData({
         abi: MARKET_FACTORY_ABI,
         functionName: 'createMarket',
-        args: [question, BigInt(endTimeTimestamp), isPlatformMarket]
+        args: [question, BigInt(endTimeTimestamp), isPlatformMarket] // Use isPlatformMarket for autoInitialize
     });
 
     // Return the call in OnchainKit format
@@ -117,7 +116,7 @@ async function parseMarketCreatedEvent(transactionHash: string): Promise<Address
 
                 if (decoded.eventName === 'MarketCreated') {
                     const marketAddress = decoded.args.market as Address;
-                    console.log(`✅ Parsed MarketCreated event:`, {
+                    console.log(`✅ Parsed MarketCreated event from UMA factory:`, {
                         market: marketAddress,
                         creator: decoded.args.creator,
                         question: decoded.args.question,
@@ -144,7 +143,7 @@ async function parseMarketCreatedEvent(transactionHash: string): Promise<Address
 }
 
 /**
- * Process successful market creation transaction with resolver system
+ * Process successful market creation transaction with UMA factory
  * Extracts the market address from transaction receipt and creates database entry
  */
 export async function processMarketCreation(

@@ -30,6 +30,7 @@ import {
     getMarketTypeLabel,
     getOracleStateLabel
 } from '@/lib/market-resolver';
+import { getMarketResolutionInfo, getResolutionDescription } from '@/lib/market-authorization';
 import { ParimutuelSupabaseService } from '@/lib/supabase-parimutuel';
 import {
     generateRequestPlatformResolutionCalls,
@@ -109,30 +110,59 @@ export function MarketResolution({ onBack }: MarketResolutionProps) {
 
     // Load resolution info for selected market
     const loadResolutionInfo = useCallback(async (market: MarketInfo) => {
-        if (!market.contract_address) return;
+        if (!market.contract_address || !address) return;
 
         try {
             setLoading(true);
 
-            // This would typically call the smart contract to get resolution info
-            // For now, we'll simulate the data based on market properties
+            // Get the market from database to check creator
+            const marketData = await ParimutuelSupabaseService.getMarket(market.id);
 
-            // Simulate contract calls to get market info
-            // In real implementation, use wagmi/viem to call:
-            // - marketResolver.marketTypes(market.contract_address)
-            // - marketResolver.canResolveMarket(market.contract_address)
-            // - marketResolver.getOracleState(market.contract_address)
-            // - marketResolver.authorizedCreators(address)
+            if (!marketData?.creator_address) {
+                throw new Error('Market creator address not found');
+            }
 
-            const mockResolutionInfo: ResolutionInfo = {
-                marketType: market.id.includes('platform') ? MarketType.PLATFORM : MarketType.USER,
-                canResolve: true,
-                oracleState: market.id.includes('platform') ? OracleState.Invalid : undefined,
-                isAuthorized: true, // In real app, check if user is authorized
+            // Use centralized authorization logic
+            const authInfo = getMarketResolutionInfo(
+                address,
+                marketData.creator_address as Address,
+                new Date(market.end_time),
+                'vote' // Assume vote resolution for now, could be stored in DB
+            );
+
+            const resolutionInfo: ResolutionInfo = {
+                marketType: authInfo.marketType,
+                canResolve: authInfo.canResolve,
+                oracleState: authInfo.marketType === MarketType.PLATFORM ? OracleState.Invalid : undefined,
+                isAuthorized: authInfo.isAuthorized,
                 pendingResolution: undefined
             };
 
-            setResolutionInfo(mockResolutionInfo);
+            setResolutionInfo(resolutionInfo);
+
+            // Show appropriate messages based on authorization
+            const description = getResolutionDescription(
+                address,
+                marketData.creator_address as Address,
+                new Date(market.end_time),
+                'vote'
+            );
+
+            if (!authInfo.isAuthorized) {
+                if (authInfo.hoursUntilResolution) {
+                    toast(description, {
+                        icon: 'ℹ️',
+                        style: {
+                            borderRadius: '12px',
+                            background: '#1e293b',
+                            color: '#f1f5f9',
+                            border: '1px solid #3b82f6',
+                        }
+                    });
+                } else {
+                    toast.error(description);
+                }
+            }
 
         } catch (error) {
             console.error('Error loading resolution info:', error);
@@ -140,7 +170,7 @@ export function MarketResolution({ onBack }: MarketResolutionProps) {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [address]);
 
     // Handle market selection
     const handleSelectMarket = (market: MarketInfo) => {
@@ -303,16 +333,16 @@ export function MarketResolution({ onBack }: MarketResolutionProps) {
                                         whileHover={{ scale: 1.02 }}
                                         onClick={() => handleSelectMarket(market)}
                                         className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedMarket?.id === market.id
-                                                ? 'border-blue-500 bg-blue-500/10'
-                                                : 'border-slate-600 bg-slate-800/30 hover:border-slate-500'
+                                            ? 'border-blue-500 bg-blue-500/10'
+                                            : 'border-slate-600 bg-slate-800/30 hover:border-slate-500'
                                             }`}
                                     >
                                         <div className="flex items-start justify-between mb-2">
                                             <span className={`px-2 py-1 rounded text-xs font-medium ${market.category === 'crypto' ? 'bg-orange-500/20 text-orange-300' :
-                                                    market.category === 'tech' ? 'bg-blue-500/20 text-blue-300' :
-                                                        market.category === 'celebrity' ? 'bg-pink-500/20 text-pink-300' :
-                                                            market.category === 'sports' ? 'bg-green-500/20 text-green-300' :
-                                                                'bg-purple-500/20 text-purple-300'
+                                                market.category === 'tech' ? 'bg-blue-500/20 text-blue-300' :
+                                                    market.category === 'celebrity' ? 'bg-pink-500/20 text-pink-300' :
+                                                        market.category === 'sports' ? 'bg-green-500/20 text-green-300' :
+                                                            'bg-purple-500/20 text-purple-300'
                                                 }`}>
                                                 {market.category.toUpperCase()}
                                             </span>

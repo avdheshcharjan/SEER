@@ -114,23 +114,6 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
 
   const rankBadge = getRankBadge(userStats.rank || 999);
 
-  const handleFaucetRedirect = () => {
-    // Redirect to Circle's official Base Sepolia USDC faucet
-    window.open('https://faucet.circle.com/', '_blank');
-
-    toast.success(
-      'Redirected to Circle Faucet! Get Base Sepolia USDC there.',
-      {
-        duration: 4000,
-        style: {
-          borderRadius: '12px',
-          background: '#1e293b',
-          color: '#f1f5f9',
-          border: '1px solid #22c55e',
-        },
-      }
-    );
-  };
 
   return (
     <div className="w-full mobile-container">
@@ -266,29 +249,6 @@ export function Profile({ onBack, onCreateMarket }: ProfileProps) {
         </div>
       </div>
 
-      {/* Test USDC Faucet */}
-      <div className="bg-slate-800/30 backdrop-blur-sm rounded-2xl p-4 mb-6 border border-slate-700/50">
-        <div className="text-center">
-          <h3 className="text-lg font-semibold text-white mb-2 flex items-center justify-center">
-            <DollarSign className="w-5 h-5 mr-2" />
-            Test USDC Faucet
-          </h3>
-          <p className="text-slate-400 text-sm mb-4">
-            Get test USDC tokens from Circle&apos;s official faucet for Base Sepolia
-          </p>
-          <motion.button
-            onClick={handleFaucetRedirect}
-            className="px-6 py-3 rounded-xl font-semibold transition-all duration-300 w-full bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 text-white shadow-lg hover:shadow-green-500/25"
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            <div className="flex items-center justify-center">
-              <ExternalLink className="w-4 h-4 mr-2" />
-              <span>Get USDC from Circle Faucet</span>
-            </div>
-          </motion.button>
-        </div>
-      </div>
 
       {/* Created Markets Section */}
       {createdMarkets.length > 0 && (

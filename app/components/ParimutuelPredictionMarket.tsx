@@ -44,6 +44,10 @@ export function ParimutuelPredictionMarket({ onBack }: ParimutuelPredictionMarke
             data: `0x${string}`;
             value: bigint;
         }>;
+        userAddress: Address;
+        contractAddress: Address;
+        prediction: 'yes' | 'no';
+        timestamp: number;
     }[]>([]);
     const [batchTimer, setBatchTimer] = useState<NodeJS.Timeout | null>(null);
     const [currentPrediction, setCurrentPrediction] = useState<{
@@ -164,7 +168,7 @@ export function ParimutuelPredictionMarket({ onBack }: ParimutuelPredictionMarke
         }
 
         const betAmount = user.defaultBetAmount ?? 1;
-        const predictionSide = direction === 'right' ? 'yes' : 'no';
+        const predictionSide: 'yes' | 'no' = direction === 'right' ? 'yes' : 'no';
 
         // INSTANT FEEDBACK - no blockchain interaction yet
         toast.success(`${direction === 'right' ? '✅ YES' : '❌ NO'} bet added to batch!`, {
@@ -220,8 +224,17 @@ export function ParimutuelPredictionMarket({ onBack }: ParimutuelPredictionMarke
                 return;
             }
 
-            // Add to batch instead of executing immediately
-            const newPrediction = { marketId, direction, amount: betAmount, calls };
+            // Add to batch instead of executing immediately with user wallet info
+            const newPrediction = {
+                marketId,
+                direction,
+                amount: betAmount,
+                calls,
+                userAddress: address, // Store user wallet address for database tracking
+                contractAddress: marketAddress,
+                prediction: predictionSide,
+                timestamp: Date.now()
+            };
             setPendingBatch(prev => {
                 const updated = [...prev, newPrediction];
 
@@ -332,25 +345,29 @@ export function ParimutuelPredictionMarket({ onBack }: ParimutuelPredictionMarke
         // Optionally track processed transactions to avoid duplicate handling (omitted)
 
         try {
-            // Log each prediction to Supabase (for pari-mutuel, we track bets instead of shares)
-            const predictions = pendingBatch.map(({ marketId, direction, amount }) => ({
+            // Log each prediction to Supabase with complete user wallet information
+            const predictions = pendingBatch.map(({ marketId, amount, userAddress, contractAddress, prediction, timestamp }) => ({
                 market_id: marketId,
-                prediction: (direction === 'right' ? 'yes' : 'no') as 'yes' | 'no',
+                prediction: prediction,
                 amount: amount, // Amount bet in USDC
                 transaction_hash: txHash,
+                user_address: userAddress, // Store user wallet address
+                contract_address: contractAddress, // Store market contract address
+                timestamp: new Date(timestamp).toISOString(),
             }));
 
-            // Insert all predictions at once
+            // Insert all predictions at once with user wallet tracking
             await ParimutuelSupabaseService.insertPredictions(predictions, address!);
 
-            // Update user's position for each market
-            for (const { marketId, direction, amount } of pendingBatch) {
+            // Update user's position for each market with wallet tracking
+            for (const { marketId, direction, amount, userAddress } of pendingBatch) {
                 try {
+                    // Store user position with wallet address for tracking
                     await ParimutuelSupabaseService.updateUserPosition({
+                        user_address: userAddress,
                         market_id: marketId,
-                        user_address: address!,
-                        prediction: (direction === 'right' ? 'yes' : 'no') as 'yes' | 'no',
-                        amount_bet: amount, // Amount bet in USDC (not shares for pari-mutuel)
+                        prediction: direction === 'right' ? 'yes' : 'no',
+                        amount_bet: amount,
                         transaction_hash: txHash
                     });
                 } catch (positionError) {
