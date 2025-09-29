@@ -2,8 +2,7 @@ import { base, baseSepolia } from 'wagmi/chains';
 import { encodeFunctionData, parseUnits, Address } from 'viem';
 
 // Real deployed contract addresses on Base Sepolia (with real USDC integration)
-export const MARKET_FACTORY_ADDRESS = '0xB788385cf679A69C43CfD9cB35045BBd4c2843f2' as Address;
-export const DEMO_MARKET_ADDRESS = '0x86F3108947dA0a88170A7AE8E967dAE8ce0a41F9' as Address;
+export const MARKET_FACTORY_ADDRESS = '0x89332E711B591DEeAC1a67b4ED5086a209a7414E' as Address;
 
 // USDC contract address on Base Sepolia
 export const USDC_CONTRACT_ADDRESS = '0x036CbD53842c5426634e7929541eC2318f3dCF7e' as Address;
@@ -174,7 +173,7 @@ export function getMarketContractAddress(marketId: string, supabaseMarkets?: Arr
             return market.contract_address as Address;
         }
     }
-    
+
     // Fallback: Check static mapping
     const supabaseMapping = getSupabaseMarketMapping();
     if (supabaseMapping[marketId]) {
@@ -183,7 +182,6 @@ export function getMarketContractAddress(marketId: string, supabaseMarkets?: Arr
 
     // Fallback to demo market for development (with warning)
     console.warn(`⚠️  Market ${marketId} not found in Supabase, using demo contract. This should not happen in production!`);
-    return DEMO_MARKET_ADDRESS;
 }
 
 /**

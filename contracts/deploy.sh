@@ -69,3 +69,16 @@ forge script "$SCRIPT_PATH" \
     -vvv
 
 echo -e "${GREEN}Deployment completed!${NC}"
+
+# Auto-sync deployed contracts to Supabase
+echo -e "${BLUE}=== Auto-Sync to Database ===${NC}"
+echo -e "${YELLOW}Syncing deployed markets to Supabase...${NC}"
+
+cd ..
+if npm run sync-markets; then
+    echo -e "${GREEN}✅ Auto-sync completed successfully!${NC}"
+    echo -e "${GREEN}🎉 Markets are now live and ready for trading!${NC}"
+else
+    echo -e "${RED}⚠️  Auto-sync failed. You can manually run: npm run sync-markets${NC}"
+fi
+cd contracts
