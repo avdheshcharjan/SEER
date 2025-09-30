@@ -28,6 +28,7 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
     uint256 public endTime;
     bool public resolved;
     bool public outcome; // true = YES wins, false = NO wins
+    bool public cancelled; // true if market is cancelled
 
     address public resolver;
     uint256 public constant RESOLUTION_BUFFER = 1 hours; // Time after endTime before manual resolution
@@ -41,6 +42,7 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
 
     uint256 public constant MINIMUM_BET = 1e6; // 1 USDC minimum bet
     uint256 public constant MAXIMUM_BET = 1000000e6; // 1M USDC maximum bet
+    uint256 public constant WHALE_PROTECTION_PERCENTAGE = 10; // Max 10% of opposing pool
     uint256 public constant MINIMUM_MARKET_DURATION = 1 hours;
     uint256 public constant MAXIMUM_MARKET_DURATION = 365 days;
 
@@ -48,6 +50,8 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
     event BetPlaced(address indexed bettor, bool side, uint256 amount);
     event MarketResolved(bool outcome, uint256 timestamp);
     event RewardsClaimed(address indexed user, uint256 amount);
+    event MarketCancelled(uint256 timestamp);
+    event RefundClaimed(address indexed user, uint256 amount);
 
     // Errors
     error MarketResolvedError();
@@ -67,6 +71,7 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
     error EmergencyTimelockNotElapsedError();
     error EmergencyNotRequestedError();
     error InvalidQuestionError();
+    error MarketCancelledError();
 
     modifier onlyBeforeEnd() {
         if (block.timestamp >= endTime) revert MarketEndedError();
@@ -96,6 +101,11 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
 
     modifier notPaused() {
         if (paused) revert MarketPausedError();
+        _;
+    }
+
+    modifier notCancelled() {
+        if (cancelled) revert MarketCancelledError();
         _;
     }
 
@@ -131,8 +141,17 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
         nonReentrant
         validBetAmount(amount)
         notPaused
+        notCancelled
     {
         address user = _msgSender();
+
+        // Whale protection: prevent single bet from being >10% of opposing pool
+        if (totalNoBets > 0) {
+            uint256 maxBetVsPool = totalNoBets / WHALE_PROTECTION_PERCENTAGE;
+            if (amount > maxBetVsPool && maxBetVsPool > MINIMUM_BET) {
+                revert BetTooHighError();
+            }
+        }
 
         // Check for overflow before updating state
         if (yesBets[user] > type(uint256).max - amount)
@@ -160,8 +179,17 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
         nonReentrant
         validBetAmount(amount)
         notPaused
+        notCancelled
     {
         address user = _msgSender();
+
+        // Whale protection: prevent single bet from being >10% of opposing pool
+        if (totalYesBets > 0) {
+            uint256 maxBetVsPool = totalYesBets / WHALE_PROTECTION_PERCENTAGE;
+            if (amount > maxBetVsPool && maxBetVsPool > MINIMUM_BET) {
+                revert BetTooHighError();
+            }
+        }
 
         // Check for overflow before updating state
         if (noBets[user] > type(uint256).max - amount)
@@ -191,8 +219,18 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
         nonReentrant
         validBetAmount(amount)
         notPaused
+        notCancelled
     {
         address user = _msgSender();
+
+        // Whale protection: prevent single bet from being >10% of opposing pool
+        uint256 opposingPool = side ? totalNoBets : totalYesBets;
+        if (opposingPool > 0) {
+            uint256 maxBetVsPool = opposingPool / WHALE_PROTECTION_PERCENTAGE;
+            if (amount > maxBetVsPool && maxBetVsPool > MINIMUM_BET) {
+                revert BetTooHighError();
+            }
+        }
 
         // Check for overflow before updating state
         if (side) {
@@ -442,6 +480,45 @@ contract ParimutuelPredictionMarket is Context, ReentrancyGuard, Ownable {
     /// @notice Pause/unpause market (only owner)
     function setPaused(bool _paused) external onlyOwner {
         paused = _paused;
+    }
+
+    /// @notice Cancel market (only resolver or owner) - allows refunds for all bettors
+    function cancelMarket() external {
+        address sender = _msgSender();
+        if (sender != resolver && sender != owner())
+            revert UnauthorizedResolverError();
+        if (resolved) revert MarketResolvedError();
+        if (cancelled) revert MarketCancelledError();
+
+        cancelled = true;
+        emit MarketCancelled(block.timestamp);
+    }
+
+    /// @notice Claim refund if market is cancelled
+    /// @return refundAmount Total amount refunded to user
+    function claimRefund()
+        external
+        nonReentrant
+        notPaused
+        returns (uint256 refundAmount)
+    {
+        if (!cancelled) revert MarketNotResolvedError();
+
+        address user = _msgSender();
+        uint256 userYes = yesBets[user];
+        uint256 userNo = noBets[user];
+        refundAmount = userYes + userNo;
+
+        if (refundAmount == 0) revert NothingToClaimError();
+
+        // Clear user's bets
+        yesBets[user] = 0;
+        noBets[user] = 0;
+
+        // Transfer refund using SafeERC20
+        usdc.safeTransfer(user, refundAmount);
+
+        emit RefundClaimed(user, refundAmount);
     }
 
     /// @notice Get estimated gas for placing a bet (helpful for ERC-4337 gas estimation)

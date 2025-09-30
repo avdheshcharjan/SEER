@@ -453,4 +453,45 @@ contract MarketResolverTest is Test {
         state = resolver.getOracleState(address(platformMarket));
         assertEq(uint256(state), uint256(IOptimisticOracleV2.State.Requested));
     }
+
+    function testCreatorCannotResolveOtherCreatorsMarket() public {
+        address creator2 = address(0x5);
+
+        // Give USDC to creator2
+        usdc.transfer(creator2, 10000e6);
+
+        // Create market by creator2
+        ParimutuelPredictionMarket market2 = new ParimutuelPredictionMarket(
+            address(usdc),
+            "Creator 2's market",
+            block.timestamp + 1 days,
+            address(resolver)
+        );
+
+        vm.prank(owner);
+        resolver.registerMarket(address(market2), MarketResolver.MarketType.USER, creator2);
+
+        vm.warp(market2.endTime() + 1);
+
+        // Original creator tries to resolve creator2's market
+        vm.prank(creator);
+        vm.expectRevert(MarketResolver.UnauthorizedResolver.selector);
+        resolver.resolveUserMarket(address(market2), true);
+
+        // Verify market is still unresolved
+        assertFalse(market2.resolved());
+
+        // Creator2 should be able to resolve their own market
+        vm.prank(creator2);
+        resolver.resolveUserMarket(address(market2), true);
+        assertTrue(market2.resolved());
+    }
+
+    function testMarketCreatorMapping() public {
+        // Verify creator mappings are set correctly
+        assertEq(resolver.marketCreators(address(userMarket)), creator);
+
+        // Platform markets should not have creator mapping
+        assertEq(resolver.marketCreators(address(platformMarket)), address(0));
+    }
 }
