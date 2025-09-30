@@ -14,8 +14,8 @@
  */
 
 import { Address, encodeFunctionData, parseUnits, EstimateGasParameters } from 'viem';
-import { PREDICTION_MARKET_ABI, USDC_CONTRACT_ADDRESS, getMarketContractAddress, isValidAddress } from './blockchain';
-import { generateOptimizedApprovalCalls, calculateBatchRequirement, USDC_CONFIG } from './usdc-allowance';
+import { PREDICTION_MARKET_ABI, USDC_CONTRACT_ADDRESS, getMarketContractAddress } from './blockchain';
+import { generateOptimizedApprovalCalls, calculateBatchRequirement } from './usdc-allowance';
 import { publicClient } from './viem-client';
 
 // ERC20 ABI for USDC operations
@@ -187,10 +187,11 @@ export class EnhancedBatchOptimizer {
     }
 
     // Get and validate contract address
-    const contractAddress = getMarketContractAddress(marketId, supabaseMarkets);
-    if (!contractAddress || !isValidAddress(contractAddress)) {
-      throw new Error(`Invalid or missing contract address for market ${marketId}`);
+    const contractAddressResult = getMarketContractAddress(marketId, supabaseMarkets);
+    if (!contractAddressResult.isValid || !contractAddressResult.address) {
+      throw new Error(`Invalid or missing contract address for market ${marketId}: ${contractAddressResult.reason || 'Unknown error'}`);
     }
+    const contractAddress = contractAddressResult.address;
 
     // Convert amount to USDC format (6 decimals)
     const amountBigInt = parseUnits(amount.toString(), 6);
@@ -459,7 +460,7 @@ export class EnhancedBatchOptimizer {
           // Add call to current batch
           currentBatch = testBatch;
         }
-      } catch (error) {
+      } catch {
         console.warn('⚠️ Gas estimation failed during batch splitting, using size-based splitting');
 
         // Fallback: split based on size only
@@ -696,10 +697,10 @@ export const EnhancedBatchUtils = {
   ): { valid: boolean; error?: string } {
     try {
       // Validate market has contract address
-      const contractAddress = getMarketContractAddress(marketId, supabaseMarkets);
+      const contractAddressResult = getMarketContractAddress(marketId, supabaseMarkets);
 
-      if (!contractAddress || !isValidAddress(contractAddress)) {
-        return { valid: false, error: `Market ${marketId} does not have a valid contract address` };
+      if (!contractAddressResult.isValid || !contractAddressResult.address) {
+        return { valid: false, error: `Market ${marketId} does not have a valid contract address: ${contractAddressResult.reason || 'Unknown error'}` };
       }
 
       // Validate amount

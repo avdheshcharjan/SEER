@@ -36,6 +36,15 @@ export interface Market {
   resolution_time?: string
   creator_influencer_id?: string
   is_influencer_market?: boolean
+  // Event tracking fields for smart contract integration
+  chain_id?: bigint
+  market_id?: string
+  opening_block?: bigint
+  closing_block?: bigint
+  created_tx_hash?: Uint8Array
+  created_log_index?: number
+  created_block_number?: bigint
+  is_reorged?: boolean
 }
 
 export interface InfluencerProfile {
@@ -73,6 +82,29 @@ export interface UserPosition {
   total_invested: number
   created_at: string
   updated_at: string
+}
+
+export interface SyncJob {
+  id: bigint
+  job_type: string
+  chain_id: bigint
+  tx_hash: Uint8Array
+  log_index: number
+  retries: number
+  payload: Record<string, unknown>
+  status: 'pending' | 'processing' | 'done' | 'dead'
+  created_at: string
+}
+
+export interface ContractEvent {
+  chain_id: bigint
+  contract_address: Uint8Array
+  topic0: Uint8Array
+  tx_hash: Uint8Array
+  log_index: number
+  block_number: bigint
+  payload: Record<string, unknown>
+  created_at: string
 }
 
 // Database functions
@@ -427,6 +459,182 @@ export class SupabaseService {
 
     if (error) throw error
     return data
+  }
+
+  // Sync Jobs methods for event processing
+  static async createSyncJob(job: Omit<SyncJob, 'id' | 'created_at'>) {
+    const { data, error } = await supabase
+      .from('sync_jobs')
+      .insert(job)
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  }
+
+  static async getSyncJob(id: bigint) {
+    const { data, error } = await supabase
+      .from('sync_jobs')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (error) throw error
+    return data
+  }
+
+  static async updateSyncJob(id: bigint, updates: Partial<SyncJob>) {
+    const { data, error } = await supabase
+      .from('sync_jobs')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  }
+
+  static async getPendingSyncJobs(limit = 10) {
+    const { data, error } = await supabase
+      .from('sync_jobs')
+      .select('*')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true })
+      .limit(limit)
+
+    if (error) throw error
+    return data
+  }
+
+  static async getFailedSyncJobs(maxRetries = 10) {
+    const { data, error } = await supabase
+      .from('sync_jobs')
+      .select('*')
+      .in('status', ['dead'])
+      .or(`retries.gte.${maxRetries}`)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+    return data
+  }
+
+  // Enhanced contract management methods
+  static async updateMarketContractAddress(marketId: string, contractAddress: string, transactionHash?: string) {
+    const { data, error } = await supabase
+      .from('markets')
+      .update({
+        contract_address: contractAddress.toLowerCase(),
+        transaction_hash: transactionHash
+      })
+      .eq('id', marketId)
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  }
+
+  static async getMarketsWithoutContracts(limit = 50) {
+    const { data, error } = await supabase
+      .from('markets')
+      .select('*')
+      .is('contract_address', null)
+      .eq('resolved', false)
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (error) throw error
+    return data
+  }
+
+  static async getMarketsWithInvalidContracts() {
+    const { data, error } = await supabase
+      .from('markets')
+      .select('*')
+      .not('contract_address', 'is', null)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    // Filter for invalid addresses on the client side
+    return data?.filter(market => {
+      if (!market.contract_address) return false
+      // Check if it's a zero address or invalid format
+      return market.contract_address === '0x0000000000000000000000000000000000000000' ||
+             !/^0x[a-fA-F0-9]{40}$/.test(market.contract_address)
+    }) || []
+  }
+
+  static async batchUpdateMarketContracts(updates: Array<{ marketId: string; contractAddress: string; transactionHash?: string }>) {
+    const promises = updates.map(update =>
+      this.updateMarketContractAddress(update.marketId, update.contractAddress, update.transactionHash)
+    )
+
+    const results = await Promise.allSettled(promises)
+
+    const successful = results.filter(result => result.status === 'fulfilled').length
+    const failed = results.filter(result => result.status === 'rejected').length
+
+    return { successful, failed, results }
+  }
+
+  // Contract Events methods for deduplication
+  static async createContractEvent(event: Omit<ContractEvent, 'created_at'>) {
+    const { data, error } = await supabase
+      .from('contract_events')
+      .insert(event)
+      .select()
+      .single()
+
+    if (error) throw error
+    return data
+  }
+
+  static async getContractEvents(
+    chainId: bigint,
+    contractAddress?: Uint8Array,
+    fromBlock?: bigint,
+    toBlock?: bigint,
+    limit = 100
+  ) {
+    let query = supabase
+      .from('contract_events')
+      .select('*')
+      .eq('chain_id', chainId)
+
+    if (contractAddress) {
+      query = query.eq('contract_address', contractAddress)
+    }
+
+    if (fromBlock) {
+      query = query.gte('block_number', fromBlock)
+    }
+
+    if (toBlock) {
+      query = query.lte('block_number', toBlock)
+    }
+
+    const { data, error } = await query
+      .order('block_number', { ascending: false })
+      .limit(limit)
+
+    if (error) throw error
+    return data
+  }
+
+  static async eventExists(txHash: Uint8Array, logIndex: number, chainId: bigint) {
+    const { data, error } = await supabase
+      .from('contract_events')
+      .select('tx_hash')
+      .eq('tx_hash', txHash)
+      .eq('log_index', logIndex)
+      .eq('chain_id', chainId)
+      .limit(1)
+
+    if (error) throw error
+    return data && data.length > 0
   }
 }
 

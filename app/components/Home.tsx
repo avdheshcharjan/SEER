@@ -1,16 +1,17 @@
 "use client";
 
 import { motion } from 'framer-motion';
-import { TrendingUp, Users, Zap, Trophy, Plus } from 'lucide-react';
+import { TrendingUp, Users, Zap, Trophy, Plus, Settings } from 'lucide-react';
 
 interface HomeProps {
     onStartPredicting: () => void;
     onViewProfile: () => void;
     onViewLeaderboard: () => void;
     onCreateMarket: () => void;
+    onViewAdmin: () => void;
 }
 
-export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard, onCreateMarket }: HomeProps) {
+export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard, onCreateMarket, onViewAdmin }: HomeProps) {
 
     const features = [
         {
@@ -97,7 +98,7 @@ export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard, onCr
                     </motion.button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                <div className="grid grid-cols-3 gap-3">
                     <motion.button
                         onClick={onViewProfile}
                         className="bg-slate-800/50 hover:bg-slate-700/50 text-white font-medium py-4 px-3 rounded-xl transition-colors border border-slate-700/50 ios-button min-h-[80px]"
@@ -118,13 +119,30 @@ export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard, onCr
                         className="bg-slate-800/50 hover:bg-slate-700/50 text-white font-medium py-4 px-3 rounded-xl transition-colors border border-slate-700/50 ios-button min-h-[80px]"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.4, duration: 0.3 }}
                     >
                         <div className="text-center">
                             <div className="text-2xl mb-1">🏆</div>
                             <div className="mobile-text-sm">Leaderboard</div>
+                        </div>
+                    </motion.button>
+
+                    <motion.button
+                        onClick={onViewAdmin}
+                        className="bg-slate-800/50 hover:bg-slate-700/50 text-white font-medium py-4 px-3 rounded-xl transition-colors border border-slate-700/50 ios-button min-h-[80px]"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.4, duration: 0.3 }}
+                    >
+                        <div className="text-center">
+                            <div className="text-2xl mb-1">
+                                <Settings className="w-6 h-6 mx-auto text-blue-400" />
+                            </div>
+                            <div className="mobile-text-sm">Admin</div>
                         </div>
                     </motion.button>
                 </div>

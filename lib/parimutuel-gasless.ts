@@ -4,11 +4,10 @@
  * Supports fixed bet amounts: 1, 5, or 10 USDC
  */
 
-import { Address, encodeFunctionData, parseUnits } from 'viem';
+import { Address, encodeFunctionData } from 'viem';
 import {
   PARIMUTUEL_FACTORY_ADDRESS,
   PARIMUTUEL_MARKET_ABI,
-  PARIMUTUEL_FACTORY_ABI,
   USDC_CONTRACT_ADDRESS,
   validateBetAmount,
   formatBetAmount,

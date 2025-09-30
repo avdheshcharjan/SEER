@@ -15,8 +15,7 @@ import { getMarketContractAddress, validateMarketContract, getMarketsWithContrac
 import {
     smartBatchingManager,
     validatePaymasterConfig,
-    GaslessOptimizationUtils,
-    handleEnhancedTransactionStatus
+    GaslessOptimizationUtils
 } from '@/lib/gasless-onchainkit';
 import {
     enhancedBatchOptimizer,
@@ -320,13 +319,14 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
             }
 
             // ✅ SECURITY FIX: Enhanced market address validation
-            const marketAddress = getMarketContractAddress(marketId, rawSupabaseMarkets);
-            if (!marketAddress || !validateMarketContract) {
-                console.error(`Invalid market contract address: ${marketAddress} for market ${marketId}`);
+            const marketAddressResult = getMarketContractAddress(marketId, rawSupabaseMarkets);
+            if (!marketAddressResult.isValid || !marketAddressResult.address) {
+                console.error(`Invalid market contract address: ${marketAddressResult.reason || 'Unknown error'} for market ${marketId}`);
                 toast.error('Invalid market contract. This market is not ready for betting.');
                 return;
             }
 
+            const marketAddress = marketAddressResult.address;
             // Additional contract validation for security
             const isValidContract = await validateMarketContract(marketAddress);
             if (!isValidContract) {
@@ -470,22 +470,12 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
         console.log(`🔄 Batch transaction status: ${status.statusName}`);
 
         // Handle specific status cases
-        if (status.statusName === 'success') {
-            handleEnhancedTransactionStatus(
-                status as any, // Type assertion needed for OnchainKit compatibility
-                {
-                    batchNumber: currentPrediction?.batchNumber,
-                    totalBatches: currentPrediction?.totalBatches
-                },
-                async (txHash, batchNumber) => {
-                    // Handle successful transaction
-                    await handleSuccessfulBatch(txHash, batchNumber);
-                },
-                (error, batchNumber) => {
-                    // Handle failed transaction
-                    handleFailedBatch(error, batchNumber);
-                }
-            );
+        if (status.statusName === 'success' && status.statusData && 'transactionReceipts' in status.statusData) {
+            // Handle successful transaction directly
+            const txHash = status.statusData.transactionReceipts?.[0]?.transactionHash;
+            if (txHash) {
+                await handleSuccessfulBatch(txHash, currentPrediction?.batchNumber);
+            }
         }
     };
 
@@ -620,37 +610,6 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
         }
     };
 
-    // Handle failed batch transaction
-    const handleFailedBatch = (error: string, batchNumber?: number) => {
-        console.error(`❌ Enhanced batch transaction failed (batch ${batchNumber}):`, error);
-
-        // Debug ERC-4337 specific errors
-        logERC4337Debug(baseSepolia.id, { message: error });
-
-        // Check for signature validation errors
-        const sigDebug = debugSignatureValidation({ message: error });
-
-        // Provide more specific error messages based on common failure patterns
-        let userMessage = `Batch prediction failed${batchNumber ? ` (batch ${batchNumber})` : ''}. `;
-        if (sigDebug.isSignatureError) {
-            userMessage += 'ERC-4337 signature validation failed. Please check your wallet connection and try again.';
-        } else if (error.includes('insufficient allowance') || error.includes('ERC20: insufficient allowance')) {
-            userMessage += 'USDC allowance issue detected. Please try approving more USDC.';
-        } else if (error.includes('gas') || error.includes('Gas')) {
-            userMessage += 'Gas estimation failed. The transaction may be too large or markets may be invalid.';
-        } else if (error.includes('execution reverted')) {
-            userMessage += 'Transaction reverted. Please check that all markets are still active.';
-        } else {
-            userMessage += 'Please try again or contact support if the issue persists.';
-        }
-
-        toast.error(userMessage, { duration: 8000 });
-
-        // Clear batch and reset state
-        smartBatchingManager.clearBatch();
-        setCurrentPrediction(null);
-        setIsProcessingTransaction(false);
-    };
 
     // Check if paymaster is configured
     const isPaymasterConfigured = () => {

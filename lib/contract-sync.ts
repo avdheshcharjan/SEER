@@ -1,10 +1,9 @@
-import { createPublicClient, http, parseAbiItem, Log, Address } from 'viem';
+import { createPublicClient, http, parseAbiItem, Address } from 'viem';
 import { baseSepolia } from 'viem/chains';
 import { SupabaseService } from './supabase';
 
 // Contract addresses from deployment
 const FACTORY_CONTRACT_ADDRESS = "0x89332E711B591DEeAC1a67b4ED5086a209a7414E" as Address;
-const USDC_ADDRESS = "0x036CbD53842c5426634e7929541eC2318f3dCF7e" as Address;
 
 // ABI events for the ParimutuelMarketFactory
 const FACTORY_ABI_EVENTS = [
@@ -67,8 +66,8 @@ interface MarketResolvedEvent {
 }
 
 export class ContractSyncService {
-  private static readonly SYNC_BLOCK_RANGE = 1000n; // Process in chunks of 1000 blocks
-  private static readonly FACTORY_DEPLOY_BLOCK = 0n; // Will be set to actual deployment block
+  private static readonly SYNC_BLOCK_RANGE = BigInt(1000); // Process in chunks of 1000 blocks
+  private static readonly FACTORY_DEPLOY_BLOCK = BigInt(0); // Will be set to actual deployment block
 
   /**
    * Sync all markets created by the factory contract to database
@@ -164,13 +163,13 @@ export class ContractSyncService {
         });
 
         for (const log of logs) {
-          if (log.eventName === 'MarketCreated') {
+          if (log.eventName === 'MarketCreated' && log.args.market && log.args.creator) {
             events.push({
-              market: log.args.market,
-              creator: log.args.creator,
-              question: log.args.question,
-              endTime: log.args.endTime,
-              marketIndex: log.args.marketIndex,
+              market: log.args.market as Address,
+              creator: log.args.creator as Address,
+              question: log.args.question as string,
+              endTime: log.args.endTime as bigint,
+              marketIndex: log.args.marketIndex as bigint,
               transactionHash: log.transactionHash,
               blockNumber: log.blockNumber,
             });
@@ -233,12 +232,12 @@ export class ContractSyncService {
 
       // Process bet events
       for (const log of betLogs) {
-        if (log.eventName === 'BetPlaced') {
+        if (log.eventName === 'BetPlaced' && log.args.bettor) {
           await this.processBetEvent({
             market: marketAddress,
-            bettor: log.args.bettor,
-            side: log.args.side,
-            amount: log.args.amount,
+            bettor: log.args.bettor as Address,
+            side: log.args.side as boolean,
+            amount: log.args.amount as bigint,
             transactionHash: log.transactionHash,
             blockNumber: log.blockNumber,
           });
@@ -247,11 +246,11 @@ export class ContractSyncService {
 
       // Process resolution events
       for (const log of resolutionLogs) {
-        if (log.eventName === 'MarketResolved') {
+        if (log.eventName === 'MarketResolved' && log.args.outcome !== undefined) {
           await this.processResolutionEvent({
             market: marketAddress,
-            outcome: log.args.outcome,
-            timestamp: log.args.timestamp,
+            outcome: log.args.outcome as boolean,
+            timestamp: log.args.timestamp as bigint,
             transactionHash: log.transactionHash,
             blockNumber: log.blockNumber,
           });

@@ -124,18 +124,18 @@ export function CurrentAffairsCard({ market, style, className, isActive, suppres
                     <div className="text-center">
                         <div className="text-white/60 text-xs mb-1">YES Pool</div>
                         <div className="text-white font-semibold text-xs">
-                            {market.contract_address ?
-                                `$${(market.yes_pool || 0).toFixed(0)}` :
-                                `${(market.yesPercentage || 50).toFixed(0)}%`
+                            {market.contractAddress ?
+                                `$${(market.yesPool || 0).toFixed(0)}` :
+                                `${(market.yesOdds || 50).toFixed(0)}%`
                             }
                         </div>
                     </div>
                     <div className="text-center">
                         <div className="text-white/60 text-xs mb-1">NO Pool</div>
                         <div className="text-white font-semibold text-xs">
-                            {market.contract_address ?
-                                `$${(market.no_pool || 0).toFixed(0)}` :
-                                `${(market.noPercentage || 50).toFixed(0)}%`
+                            {market.contractAddress ?
+                                `$${(market.noPool || 0).toFixed(0)}` :
+                                `${(market.noOdds || 50).toFixed(0)}%`
                             }
                         </div>
                     </div>
@@ -143,7 +143,7 @@ export function CurrentAffairsCard({ market, style, className, isActive, suppres
             </div>
 
             {/* Contract Status Indicator */}
-            {market.contract_address && (
+            {market.contractAddress && (
                 <div className="bg-green-500/20 backdrop-blur-sm rounded-lg p-2 flex-shrink-0">
                     <div className="text-center">
                         <div className="text-green-400 text-xs mb-1 flex items-center justify-center">
@@ -158,7 +158,7 @@ export function CurrentAffairsCard({ market, style, className, isActive, suppres
             )}
 
             {/* Breaking News Badge for urgent events */}
-            {timeInfo?.urgent && market.contract_address && (
+            {timeInfo?.urgent && market.contractAddress && (
                 <div className="absolute top-3 right-3">
                     <div className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-bold animate-pulse">
                         URGENT

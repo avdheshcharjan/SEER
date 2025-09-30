@@ -6,7 +6,7 @@
 
 import { Address, encodeFunctionData, parseUnits, EstimateGasParameters } from 'viem';
 import {
-  MARKET_FACTORY_ADDRESS,
+  FACTORY_CONTRACT_ADDRESS as MARKET_FACTORY_ADDRESS,
   PREDICTION_MARKET_ABI,
   MARKET_FACTORY_ABI,
   getMarketContractAddress,
@@ -14,16 +14,13 @@ import {
 } from './blockchain';
 import {
   generateOptimizedApprovalCalls,
-  generateBulkApprovalCall,
   checkUSDCAllowance,
   calculateBatchRequirement,
-  USDC_CONFIG,
-  AllowanceStatus
+  USDC_CONFIG
 } from './usdc-allowance';
 import {
   enhancedBatchOptimizer,
   EnhancedBatchOptimizer,
-  SwipeAction,
   BatchCall,
   BatchEstimation,
   BatchExecutionResult,

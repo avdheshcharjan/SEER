@@ -25,20 +25,25 @@ function validateMarketForSwipe(market: UnifiedMarket, allMarkets: UnifiedMarket
         return false;
     }
 
-    // Use the blockchain validation function to ensure contract address is valid
-    const contractAddress = getMarketContractAddress(market.id, allMarkets);
-    if (!contractAddress) {
-        console.log(`❌ Market ${market.id} rejected: invalid contract address mapping`);
+    // Use the enhanced blockchain validation function to ensure contract address is valid
+    const contractResult = getMarketContractAddress(market.id, allMarkets as unknown as Array<{
+        id: string;
+        contract_address?: string;
+        contractAddress?: string;
+        [key: string]: unknown;
+    }>);
+    if (!contractResult.isValid || !contractResult.address) {
+        console.log(`❌ Market ${market.id} rejected: ${contractResult.reason || 'invalid contract address mapping'}`);
         return false;
     }
 
-    console.log(`✅ Market ${market.id} validated for swipe -> ${contractAddress}`);
+    console.log(`✅ Market ${market.id} validated for swipe -> ${contractResult.address}`);
     return true;
 }
 
 const SWIPE_THRESHOLD = 100;
 
-export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard, disabled = false }: SwipeStackProps) {
+export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }: SwipeStackProps) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isAnimating, setIsAnimating] = useState(false);
     const [isTimerActive, setIsTimerActive] = useState(true);
@@ -49,7 +54,12 @@ export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard, 
     // Filter markets to only include those with valid contract addresses - memoized to prevent infinite loops
     const validMarkets = React.useMemo(() => {
         console.log(`📊 Filtering ${markets.length} markets for valid contracts...`);
-        const filtered = getMarketsWithContracts(markets as any);
+        const filtered = getMarketsWithContracts(markets as unknown as Array<{
+            id: string;
+            contract_address?: string;
+            contractAddress?: string;
+            [key: string]: unknown;
+        }>);
         console.log(`✅ Found ${filtered.length} markets with valid contracts`);
         return filtered;
     }, [markets]);
@@ -115,7 +125,7 @@ export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard, 
         if (!currentMarket) return;
 
         // Double-check market validation before allowing swipe
-        if (!validateMarketForSwipe(currentMarket as UnifiedMarket, markets)) {
+        if (!validateMarketForSwipe(currentMarket as unknown as UnifiedMarket, markets as unknown as UnifiedMarket[])) {
             console.error(`❌ Swipe blocked: Market ${currentMarket.id} failed validation`);
             toast.error('This market is not available for betting');
             return;
@@ -258,7 +268,7 @@ export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard, 
                                 whileDrag={{ scale: 1.02 }}
                                 transition={{ type: 'spring', stiffness: 400, damping: 40 }}
                             >
-                                <SmartPredictionCard market={market as UnifiedMarket} isActive={true} forceMarketCard={forceMarketCard} suppressEntranceAnimation={true} />
+                                <SmartPredictionCard market={market as unknown as UnifiedMarket} isActive={true} forceMarketCard={forceMarketCard} suppressEntranceAnimation={true} />
                             </motion.div>
                         );
                     }
@@ -277,7 +287,7 @@ export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard, 
                             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                         >
                             <div className="opacity-20 blur-[1px]">
-                                <SmartPredictionCard market={market as UnifiedMarket} isActive={false} forceMarketCard={forceMarketCard} suppressEntranceAnimation={true} />
+                                <SmartPredictionCard market={market as unknown as UnifiedMarket} isActive={false} forceMarketCard={forceMarketCard} suppressEntranceAnimation={true} />
                             </div>
                         </motion.div>
                     );

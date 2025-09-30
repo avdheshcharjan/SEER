@@ -1,5 +1,5 @@
-import { base, baseSepolia } from 'wagmi/chains';
-import { encodeFunctionData, parseUnits, Address } from 'viem';
+import { baseSepolia } from 'wagmi/chains';
+import { parseUnits, Address } from 'viem';
 
 // Parimutuel contract addresses (will be updated after deployment)
 export const PARIMUTUEL_FACTORY_ADDRESS = '0x0000000000000000000000000000000000000000' as Address; // To be updated
@@ -265,6 +265,10 @@ export function getParimutuelMarketAddress(marketData: { contract_address?: stri
 // Helper to validate if a contract is a parimutuel market
 export async function validateParimutuelMarket(marketAddress: Address): Promise<boolean> {
     try {
+        // Basic validation - check if address is valid
+        if (!marketAddress || marketAddress === '0x0000000000000000000000000000000000000000') {
+            return false;
+        }
         // Try to call a function that only exists on parimutuel markets
         // This is a basic check - you might want to add more validation
         return true;

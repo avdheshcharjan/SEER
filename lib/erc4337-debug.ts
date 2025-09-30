@@ -3,8 +3,6 @@
  * Helps diagnose signature validation and paymaster issues
  */
 
-import { Address } from 'viem';
-import { validatePaymasterConfig } from './gasless-onchainkit';
 
 export interface ERC4337Config {
     paymasterUrl: string | undefined;
@@ -89,7 +87,7 @@ export function validateERC4337Config(chainId: number = 84532): ERC4337Validatio
 /**
  * Debug signature validation failures
  */
-export function debugSignatureValidation(error: any): {
+export function debugSignatureValidation(error: Error | unknown): {
     isSignatureError: boolean;
     possibleCauses: string[];
     recommendations: string[];
@@ -131,7 +129,7 @@ export function debugSignatureValidation(error: any): {
 /**
  * Generate ERC-4337 debug report
  */
-export function generateERC4337DebugReport(chainId: number = 84532, error?: any): string {
+export function generateERC4337DebugReport(chainId: number = 84532, error?: Error | unknown): string {
     const validation = validateERC4337Config(chainId);
     const signatureDebug = error ? debugSignatureValidation(error) : null;
 
@@ -195,7 +193,7 @@ export function generateERC4337DebugReport(chainId: number = 84532, error?: any)
 /**
  * Log ERC-4337 debug information to console
  */
-export function logERC4337Debug(chainId: number = 84532, error?: any): void {
+export function logERC4337Debug(chainId: number = 84532, error?: Error | unknown): void {
     const report = generateERC4337DebugReport(chainId, error);
     console.log(report);
 }

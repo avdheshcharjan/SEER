@@ -1,0 +1,232 @@
+Recommended architecture (TL;DR)
+
+Emit events from a Factory contract on creation: event MarketCreated(address market, bytes32 marketId, ...);
+
+Primary ingestion = provider webhooks → Supabase Edge Function
+(Alchemy/Infura/QuickNode/Moralis Streams send POSTs when your event fires)
+
+Edge Function does quick validation + enqueues a job (Supabase Queue or a “jobs” table)
+
+Worker (Node/TS, e.g., on Fly/Render/Vercel Cron) consumes jobs, re-fetches the tx/log by hash (for integrity), waits N confirmations, upserts into Postgres
+
+Backfill + healing poller runs every few minutes to ensure no gaps and handle reorgs
+
+Realtime to clients comes from Supabase Realtime (DB → clients), not from onchain directly
+
+Why this:
+
+Not frontend listeners: browsers are ephemeral, unreliable, and can be spoofed.
+
+Webhooks beat raw polling on latency/cost, and you still add a poller for safety.
+
+Edge Function + queue gives at-least-once delivery with idempotent DB writes.
+
+Smart contract tips (crucial for indexing)
+
+Use a Factory to deploy markets. Always emit:
+
+event MarketCreated(address indexed market, bytes32 marketId, address creator, uint256 openingBlock, uint256 closingBlock);
+
+
+Each Market contract should emit canonical events:
+
+event OrderPlaced(address indexed user, bool sideYes, uint256 amount, uint256 odds, bytes32 orderId);
+event OrderCancelled(bytes32 indexed orderId);
+event Resolved(uint8 outcome, uint256 resolvedAt);
+
+
+Prefer CREATE2 (optional) so the address is deterministic from (salt, bytecodeHash). This lets you predict and pre-seed rows if helpful.
+
+Supabase schema (idempotent & reorg-safe)
+-- Markets
+create table markets (
+  market_address bytea primary key,  -- store as 20-byte bytes or text checksum
+  market_id text not null,
+  creator bytea not null,
+  opening_block bigint not null,
+  closing_block bigint not null,
+  created_tx_hash bytea not null,
+  created_log_index int not null,
+  created_block_number bigint not null,
+  chain_id bigint not null,
+  inserted_at timestamptz default now()
+);
+
+-- Unique guard so the same event can’t be inserted twice:
+create unique index markets_unique_origin
+  on markets(created_tx_hash, created_log_index, chain_id);
+
+-- Generic onchain events (optional event log table)
+create table contract_events (
+  chain_id bigint not null,
+  contract_address bytea not null,
+  topic0 bytea not null,
+  tx_hash bytea not null,
+  log_index int not null,
+  block_number bigint not null,
+  payload jsonb not null,
+  primary key (tx_hash, log_index, chain_id) -- idempotency!
+);
+
+-- Simple jobs queue
+create table sync_jobs (
+  id bigserial primary key,
+  job_type text not null, -- 'market_created', 'order_placed', etc.
+  chain_id bigint not null,
+  tx_hash bytea not null,
+  log_index int not null,
+  retries int not null default 0,
+  payload jsonb not null,
+  status text not null default 'pending', -- 'pending'|'processing'|'done'|'dead'
+  created_at timestamptz default now(),
+  unique (job_type, chain_id, tx_hash, log_index) -- idempotent enqueue
+);
+
+Ingestion options (your Q11)
+
+Don’t do it in the frontend. Use one (or both) of these backend patterns:
+
+A) Webhook-based (RECOMMENDED as primary)
+
+Use Alchemy Notify / Infura / QuickNode / Moralis Streams to watch:
+
+Factory’s MarketCreated
+
+relevant Market event signatures (you can add addresses dynamically as you create markets)
+
+Provider POSTs to a Supabase Edge Function (fast, serverless).
+
+Edge Function verifies chainId, signature (if supported), basic schema, then upserts a job to sync_jobs.
+
+Pros: real-time, low infra, cheap.
+Cons: vendor dependency; still need a backstop for missed webhooks.
+
+B) Backend polling (RECOMMENDED as secondary/backstop)
+
+A small indexer worker (Node + viem/ethers) keeps a last_processed_block checkpoint in Postgres, and every X seconds:
+
+scans logs for your event topics
+
+enqueues any missing jobs
+
+Also handles reorgs by rewinding last_processed_block by K blocks (e.g., 12), reconciling changes.
+
+Pros: self-reliant, heals gaps, reorg-aware.
+Cons: slightly slower; more RPC calls.
+
+Hybrid = best of both: webhooks for speed; poller for correctness.
+
+Worker flow (high level)
+
+Dequeue job (e.g., market_created).
+
+Refetch the tx receipt & log via RPC (viem/ethers) to trust-but-verify provider payloads.
+
+Wait confirmations (e.g., 5–12 blocks) to reduce reorg risk (store job in “processing” until then).
+
+Upsert rows using unique constraints (idempotent).
+
+Insert a normalized copy of the raw log into contract_events.
+
+Acknowledge job, else retry with exponential backoff and dead-letter after N tries.
+
+Pseudocode (Node + viem):
+
+import { createPublicClient, http, decodeEventLog } from 'viem';
+import { base, mainnet } from 'viem/chains';
+import { sql } from './db';
+
+const client = createPublicClient({ chain: mainnet, transport: http(process.env.RPC_URL) });
+
+async function processMarketCreated(job) {
+  const { chain_id, tx_hash, log_index } = job;
+  const r = await client.getTransactionReceipt({ hash: tx_hash as `0x${string}` });
+  const log = r.logs.find(l => l.logIndex === BigInt(log_index));
+  // decode event using your ABI
+  const { args } = decodeEventLog({ abi: FactoryABI, data: log.data, topics: log.topics });
+  const { market, marketId, creator, openingBlock, closingBlock } = args;
+
+  // Wait confirmations
+  const head = await client.getBlockNumber();
+  if (head - r.blockNumber! < 6n) return 'retry-soon';
+
+  // Idempotent upsert
+  await sql.begin(async (trx) => {
+    await trx`insert into markets (...) values (...) on conflict (created_tx_hash, created_log_index, chain_id) do nothing`;
+    await trx`insert into contract_events (...) values (...) on conflict do nothing`;
+  });
+
+  return 'ok';
+}
+
+Handling reorgs
+
+Confirmations: delay finalizing DB writes until ≥ N confirmations (store interim state if you need instant UI).
+
+Rewind the poller by K blocks each run and diff logs; if a previously inserted event disappears, mark rows as reorged or soft-delete with an audit trail.
+
+DB tip:
+
+alter table markets add column is_reorged boolean not null default false;
+
+Real-time to clients
+
+Once data lands in Postgres, Supabase Realtime can fan out updates to your app instantly (on('postgres_changes', ...)).
+
+This keeps your UI snappy without talking to the chain directly.
+
+Your Q12: What if contract creation succeeds but DB sync fails?
+
+Design for at-least-once delivery + idempotency:
+
+Idempotent keys
+
+Use (chain_id, tx_hash, log_index) as a natural unique key for any log-backed row.
+
+All inserts are UPSERT ... ON CONFLICT DO NOTHING/UPDATE.
+
+Retries with backoff
+
+Edge Function enqueues the job.
+
+Worker increments retries, uses exponential backoff (e.g., 1m, 2m, 5m, 15m, 1h).
+
+Network hiccups or transient DB issues get auto-healed.
+
+Dead-letter queue (DLQ) + Alerts
+
+After N failures (e.g., 10), mark status='dead' and write the error.
+
+Fire a PagerDuty/Slack alert via another Edge Function or a cron job that scans for dead jobs or pending jobs older than X minutes.
+
+Backfill poller safety net
+
+Even if the webhook job failed and died, the poller will re-discover the event and re-enqueue (idempotently).
+
+Manual intervention path
+
+Create an admin page: search by tx_hash, click “requeue.”
+
+Since writes are idempotent, reprocessing is safe.
+
+Minimal event list you should index
+
+MarketCreated (factory) → insert markets row
+
+OrderPlaced/Cancelled → append to contract_events + derived “order book” tables if you keep them
+
+Resolved → update markets with outcome, timestamp; trigger downstream payout processes
+
+Security & correctness checklist
+
+Verify chainId on every payload.
+
+Dedupe strictly by (tx_hash, log_index, chain_id).
+
+Normalize addresses (checksum) and store consistently (either text or 20-byte bytea).
+
+Log all failures with tx hash and a short error code (helps oncall).
+
+Keep RPC provider redundancy (primary + fallback) for the worker.
+
+Version your ABIs; if events change, run a migration and dual-decode during rollout.

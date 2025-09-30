@@ -13,6 +13,8 @@
     "sync-markets": "tsx scripts/sync-contract-markets.ts",
     "audit-markets": "tsx scripts/audit-markets.ts",
     "cleanup-markets": "tsx scripts/cleanup-unmapped-markets.ts",
+    "event-worker": "tsx scripts/event-worker.ts",
+    "event-monitor": "tsx scripts/example-event-monitor.ts",
     "deploy-markets": "cd contracts && ./deploy.sh CreateMarkets",
     "deploy-factory": "cd contracts && ./deploy.sh DeployFactory"
   },

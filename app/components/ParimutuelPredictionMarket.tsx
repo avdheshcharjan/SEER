@@ -19,7 +19,6 @@ import {
 import {
     generateParimutuelBetCalls,
     generateParimutuelBatchCalls,
-    validateParimutuelPaymasterConfig,
     formatBetSummary,
     estimateParimutuelGas
 } from '@/lib/parimutuel-gasless';
@@ -195,8 +194,6 @@ export function ParimutuelPredictionMarket({ onBack }: ParimutuelPredictionMarke
 
             // Show immediate feedback
             const sideText = betSide === 'yes' ? 'YES' : 'NO';
-            const market = allMarkets.find(m => m.id === marketId);
-            const question = market?.question || 'Unknown question';
 
             toast(`$${betAmount} on ${sideText}`, {
                 icon: direction === 'right' ? '✅' : '❌',
@@ -209,10 +206,10 @@ export function ParimutuelPredictionMarket({ onBack }: ParimutuelPredictionMarke
 
             // Log to Supabase immediately (optimistic update)
             try {
-                await SupabaseService.logPrediction({
+                await SupabaseService.createPrediction({
                     user_id: address,
                     market_id: marketId,
-                    prediction: betSide === 'yes',
+                    side: betSide,
                     amount: betAmount,
                     shares_received: betAmount, // In parimutuel, shares = amount for simplicity
                     transaction_hash: 'pending',
@@ -259,7 +256,7 @@ export function ParimutuelPredictionMarket({ onBack }: ParimutuelPredictionMarke
                 };
             });
 
-            const { calls, totalAmount, betCount } = generateParimutuelBatchCalls(bets, true);
+            const { calls, betCount } = generateParimutuelBatchCalls(bets, true);
             const gasEstimate = estimateParimutuelGas(betCount, true);
             const betSummary = formatBetSummary(bets.map((bet, index) => ({
                 ...bet,

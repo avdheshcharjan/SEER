@@ -458,7 +458,6 @@ export class AllowanceTracker {
    * Record allowance consumption after successful batch
    */
   recordUsage(usedAmount: bigint): void {
-    const previousRemaining = this.state.remaining;
     this.state.remaining = this.state.remaining > usedAmount
       ? this.state.remaining - usedAmount
       : BigInt(0);

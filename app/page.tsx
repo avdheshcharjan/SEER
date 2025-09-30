@@ -25,10 +25,11 @@ import { PredictionMarket } from "./components/PredictionMarket";
 import { Profile } from "./components/Profile";
 import { Leaderboard } from "./components/Leaderboard";
 import { CreateMarketEnhanced } from "./components/CreateMarketEnhanced";
+import AdminPage from "./admin/page";
 
 // import { Plus, Check } from 'lucide-react';
 
-type ViewType = 'home' | 'predict' | 'profile' | 'leaderboard' | 'create';
+type ViewType = 'home' | 'predict' | 'profile' | 'leaderboard' | 'create' | 'admin';
 
 export default function App() {
   // const { setFrameReady, isFrameReady, context } = useMiniKit();
@@ -84,6 +85,8 @@ export default function App() {
         return <Leaderboard onBack={() => setCurrentView('home')} />;
       case 'create':
         return <CreateMarketEnhanced onBack={() => setCurrentView('home')} />;
+      case 'admin':
+        return <AdminPage />;
       default:
         return (
           <Home
@@ -91,6 +94,7 @@ export default function App() {
             onViewProfile={() => setCurrentView('profile')}
             onViewLeaderboard={() => setCurrentView('leaderboard')}
             onCreateMarket={() => setCurrentView('create')}
+            onViewAdmin={() => setCurrentView('admin')}
           />
         );
     }

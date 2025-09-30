@@ -3,7 +3,7 @@
  * Helper functions to debug USDC allowance and approval issues
  */
 
-import { Address } from 'viem';
+import { Address, encodeFunctionData } from 'viem';
 import { checkUSDCAllowance, formatUSDC, parseUSDC, USDC_CONFIG } from './usdc-allowance';
 import { publicClient } from './viem-client';
 
@@ -95,7 +95,7 @@ export async function checkUSDCBalance(userAddress: Address): Promise<{
  * Generate approval transaction data for debugging
  */
 export function generateApprovalTxData(spenderAddress: Address, amount: bigint = parseUSDC('100')) {
-    const { encodeFunctionData } = require('viem');
+    // encodeFunctionData is already imported at the top of the file
 
     const approvalData = encodeFunctionData({
         abi: USDC_CONFIG.ABI,

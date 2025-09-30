@@ -1,7 +1,7 @@
 import { Address, encodeFunctionData, type Hex, decodeEventLog } from 'viem';
 import { publicClient } from './viem-client';
-// Updated MarketFactory contract address (deployed with real USDC)
-const MARKET_FACTORY_ADDRESS = '0xB788385cf679A69C43CfD9cB35045BBd4c2843f2' as const;
+// Updated MarketFactory contract address from requirements
+const MARKET_FACTORY_ADDRESS = '0xe23c501f11F6a072cEeCAA08eC4b0E4B33bBEe7C' as const;
 import { SupabaseService } from './supabase';
 
 // MarketFactory ABI for contract interaction
