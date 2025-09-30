@@ -10,6 +10,7 @@ import { ShareButton } from '../ShareButton';
 import { getParimutuelMarketContractAddress } from '@/lib/blockchain-parimutuel';
 import { useMarketStats } from '@/lib/hooks/useMarketStats';
 import { Address } from 'viem';
+import { BasenameAvatar, BasenameName } from '../BasenameIdentity';
 
 interface BaseCardProps {
     market: UnifiedMarket;
@@ -225,9 +226,15 @@ function BaseCardComponent({ market, style, className = '', isActive = false, ch
                             
                             {/* Creator Info Popover */}
                             {showCreatorInfo && (
-                                <div className="absolute top-full mt-2 left-0 bg-slate-800/95 backdrop-blur-sm border border-slate-600/50 rounded-lg p-3 text-xs whitespace-nowrap z-30 shadow-lg min-w-[200px]">
-                                    <div className="text-white font-semibold mb-2">
-                                        {influencer ? 'Verified Creator' : 'Verified Creator'}
+                                <div className="absolute top-full mt-2 left-0 bg-slate-800/95 backdrop-blur-sm border border-slate-600/50 rounded-lg p-3 text-xs whitespace-nowrap z-30 shadow-lg min-w-[250px]">
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <BasenameAvatar address={market.creatorAddress as Address} size={32} />
+                                        <div>
+                                            <div className="text-white font-semibold">
+                                                <BasenameName address={market.creatorAddress as Address} className="text-white text-sm" />
+                                            </div>
+                                            <div className="text-slate-400 text-xs">{influencer ? 'Verified Creator' : 'Market Creator'}</div>
+                                        </div>
                                     </div>
                                     {influencer && (
                                         <div className="space-y-1 mb-3">

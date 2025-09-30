@@ -9,7 +9,8 @@
     "lint": "next lint",
     "test:config": "node scripts/check-config.js",
     "test:paymaster": "echo 'Run test:config first to verify setup'",
-    "test:production": "echo 'Production testing - check your configuration first'"
+    "test:production": "echo 'Production testing - check your configuration first'",
+    "seed:test-basenames": "tsx scripts/seed-test-basenames.ts"
   },
   "dependencies": {
     "@coinbase/onchainkit": "latest",

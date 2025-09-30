@@ -2,7 +2,8 @@
 
 import { Influencer } from '@/lib/influencers';
 import { CheckCircle } from 'lucide-react';
-import Image from 'next/image';
+import { BasenameAvatar, BasenameName } from './BasenameIdentity';
+import { Address } from 'viem';
 
 interface InfluencerAttributionProps {
     influencer: Influencer;
@@ -13,17 +14,28 @@ export function InfluencerAttribution({ influencer, className = '' }: Influencer
     return (
         <div className={`flex items-center justify-between mt-4 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50 ${className}`}>
             <div className="flex items-center gap-2">
-                <Image 
-                    src={influencer.avatar} 
-                    alt={influencer.name}
-                    width={32}
-                    height={32}
-                    className="w-8 h-8 rounded-full object-cover"
-                />
+                {/* Show Basename avatar if wallet address exists, otherwise fallback to image */}
+                {influencer.walletAddress ? (
+                    <BasenameAvatar address={influencer.walletAddress as Address} size={32} />
+                ) : (
+                    <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-white text-sm font-bold">
+                        {influencer.name.charAt(0)}
+                    </div>
+                )}
                 <div>
                     <div className="flex items-center gap-1">
-                        <span className="text-sm font-medium text-white">{influencer.name}</span>
-                        {influencer.verifiedStatus && <CheckCircle className="w-4 h-4 text-blue-500" />}
+                        {influencer.walletAddress ? (
+                            <BasenameName
+                                address={influencer.walletAddress as Address}
+                                className="text-sm font-medium text-white"
+                                showBadge={influencer.verifiedStatus}
+                            />
+                        ) : (
+                            <>
+                                <span className="text-sm font-medium text-white">{influencer.name}</span>
+                                {influencer.verifiedStatus && <CheckCircle className="w-4 h-4 text-blue-500" />}
+                            </>
+                        )}
                     </div>
                     <span className="text-xs text-slate-400">{influencer.winRate}% win rate</span>
                 </div>
