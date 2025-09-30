@@ -45,6 +45,7 @@ contract MarketResolver is Ownable, ReentrancyGuard {
     mapping(address => MarketType) public marketTypes;
     mapping(address => PendingResolution) public pendingResolutions;
     mapping(address => bool) public authorizedCreators;
+    mapping(address => address) public marketCreators; // market => creator mapping
     
     event MarketRegistered(address indexed market, MarketType marketType, address indexed creator);
     event ResolutionRequested(address indexed market, uint256 timestamp, bytes ancillaryData);
@@ -116,6 +117,7 @@ contract MarketResolver is Ownable, ReentrancyGuard {
 
         if (marketType == MarketType.USER) {
             authorizedCreators[creator] = true;
+            marketCreators[market] = creator;
         }
 
         emit MarketRegistered(market, marketType, creator);
@@ -278,10 +280,12 @@ contract MarketResolver is Ownable, ReentrancyGuard {
         if (!authorizedCreators[msg.sender]) {
             revert UnauthorizedResolver();
         }
-        
-        // Additional security: require creator to be the same as registered
-        // This prevents unauthorized resolution even if someone becomes authorized later
-        
+
+        // Verify msg.sender is the actual creator of this specific market
+        if (marketCreators[market] != msg.sender) {
+            revert UnauthorizedResolver();
+        }
+
         IResolvableMarket resolvableMarket = IResolvableMarket(market);
         
         // Check if market has ended
