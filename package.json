@@ -11,6 +11,8 @@
     "test:paymaster": "echo 'Run test:config first to verify setup'",
     "test:production": "echo 'Production testing - check your configuration first'",
     "sync-markets": "tsx scripts/sync-contract-markets.ts",
+    "audit-markets": "tsx scripts/audit-markets.ts",
+    "cleanup-markets": "tsx scripts/cleanup-unmapped-markets.ts",
     "deploy-markets": "cd contracts && ./deploy.sh CreateMarkets",
     "deploy-factory": "cd contracts && ./deploy.sh DeployFactory"
   },

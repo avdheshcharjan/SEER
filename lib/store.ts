@@ -26,6 +26,16 @@ interface AppState {
     isLoading: boolean;
     error: string | null;
 
+    // USDC Allowance tracking for batch optimization
+    usdcAllowance: {
+        remaining: string; // Store as string to avoid BigInt serialization issues
+        lastUpdated: number; // timestamp
+        needsRefresh: boolean;
+        spenderAddress: string | null; // Track which spender this allowance is for
+        lastCheckedOnChain: number; // Last time we actually checked the blockchain
+        pendingApproval: boolean; // Track if approval transaction is in progress
+    };
+
     // Temporary data (before blockchain confirmation)
     createdMarkets: UnifiedMarket[]; // Markets created by user, not yet persisted
 
@@ -41,6 +51,12 @@ interface AppState {
     setLoading: (loading: boolean) => void;
     setError: (error: string | null) => void;
     clearSwipeHistory: () => void;
+    updateUSDCAllowance: (remaining: string, needsRefresh?: boolean, spenderAddress?: string) => void;
+    markAllowanceForRefresh: () => void;
+    setPendingApproval: (pending: boolean) => void;
+    consumeAllowance: (amount: string) => void;
+    checkAllowanceSufficient: (requiredAmount: string) => boolean;
+    forceRefreshAllowance: () => void;
     reset: () => void;
 }
 
@@ -52,12 +68,20 @@ const initialState = {
     swipeHistory: [],
     isLoading: false,
     error: null,
+    usdcAllowance: {
+        remaining: '0',
+        lastUpdated: 0,
+        needsRefresh: true,
+        spenderAddress: null,
+        lastCheckedOnChain: 0,
+        pendingApproval: false,
+    },
     createdMarkets: [],
 };
 
 export const useAppStore = create<AppState>()(
     persist(
-        (set) => ({
+        (set, get) => ({
             ...initialState,
 
             setUser: (user) => set({ user }),
@@ -90,6 +114,80 @@ export const useAppStore = create<AppState>()(
 
             clearSwipeHistory: () => set({ swipeHistory: [] }),
 
+            updateUSDCAllowance: (remaining, needsRefresh = false, spenderAddress) => set((state) => ({
+                usdcAllowance: {
+                    ...state.usdcAllowance,
+                    remaining,
+                    lastUpdated: Date.now(),
+                    lastCheckedOnChain: Date.now(),
+                    needsRefresh,
+                    spenderAddress: spenderAddress || state.usdcAllowance.spenderAddress,
+                    pendingApproval: false, // Clear pending status on successful update
+                }
+            })),
+
+            markAllowanceForRefresh: () => set((state) => ({
+                usdcAllowance: {
+                    ...state.usdcAllowance,
+                    needsRefresh: true
+                }
+            })),
+
+            setPendingApproval: (pending) => set((state) => ({
+                usdcAllowance: {
+                    ...state.usdcAllowance,
+                    pendingApproval: pending
+                }
+            })),
+
+            consumeAllowance: (amount) => set((state) => {
+                try {
+                    const currentRemaining = BigInt(state.usdcAllowance.remaining);
+                    const consumeAmount = BigInt(amount);
+                    const newRemaining = currentRemaining > consumeAmount
+                        ? currentRemaining - consumeAmount
+                        : BigInt(0);
+
+                    return {
+                        usdcAllowance: {
+                            ...state.usdcAllowance,
+                            remaining: newRemaining.toString(),
+                            lastUpdated: Date.now(),
+                            needsRefresh: newRemaining < BigInt('10000000'), // Less than 10 USDC (6 decimals)
+                        }
+                    };
+                } catch (error) {
+                    console.error('Failed to consume allowance:', error);
+                    // Mark for refresh if we can't parse amounts
+                    return {
+                        usdcAllowance: {
+                            ...state.usdcAllowance,
+                            needsRefresh: true
+                        }
+                    };
+                }
+            }),
+
+            checkAllowanceSufficient: (requiredAmount) => {
+                try {
+                    const state = get();
+                    const currentRemaining = BigInt(state.usdcAllowance.remaining);
+                    const required = BigInt(requiredAmount);
+                    return currentRemaining >= required;
+                } catch (error) {
+                    console.error('Failed to check allowance sufficiency:', error);
+                    return false; // Assume insufficient if we can't parse
+                }
+            },
+
+            forceRefreshAllowance: () => set((state) => ({
+                usdcAllowance: {
+                    ...state.usdcAllowance,
+                    needsRefresh: true,
+                    lastCheckedOnChain: 0, // Force fresh check from blockchain
+                }
+            })),
+
             reset: () => set(initialState),
         }),
         {
@@ -98,6 +196,7 @@ export const useAppStore = create<AppState>()(
                 user: state.user,
                 swipeHistory: state.swipeHistory,
                 createdMarkets: state.createdMarkets,
+                usdcAllowance: state.usdcAllowance,
             }),
         }
     )

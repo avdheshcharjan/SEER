@@ -8,7 +8,7 @@ import { OnchainKitProvider } from "@coinbase/onchainkit";
 export function Providers(props: { children: ReactNode }) {
   // Use Base Sepolia for testing, Base for production
   const chain = process.env.NEXT_PUBLIC_ENVIRONMENT === 'production' ? base : baseSepolia;
-  
+
   return (
     <OnchainKitProvider
       apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY!}
@@ -16,7 +16,10 @@ export function Providers(props: { children: ReactNode }) {
       config={{
         appearance: {
           mode: 'dark'
-        }
+        },
+        // Add paymaster and bundler configuration for gasless transactions
+        paymaster: process.env.NEXT_PUBLIC_PAYMASTER_URL,
+        bundlerUrl: process.env.NEXT_PUBLIC_BUNDLER_URL,
       }}
     >
       <MiniKitProvider

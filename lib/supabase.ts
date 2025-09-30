@@ -77,7 +77,7 @@ export interface UserPosition {
 
 // Database functions
 export class SupabaseService {
-  
+
   // User Predictions
   static async createPrediction(prediction: Omit<UserPrediction, 'id' | 'created_at' | 'updated_at'>) {
     const { data, error } = await supabase
@@ -85,7 +85,7 @@ export class SupabaseService {
       .insert(prediction)
       .select()
       .single()
-    
+
     if (error) throw error
     return data
   }
@@ -103,7 +103,7 @@ export class SupabaseService {
       `)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
-    
+
     if (error) throw error
     return data
   }
@@ -115,7 +115,7 @@ export class SupabaseService {
       .eq('id', id)
       .select()
       .single()
-    
+
     if (error) throw error
     return data
   }
@@ -127,7 +127,7 @@ export class SupabaseService {
       .insert(market)
       .select()
       .single()
-    
+
     if (error) throw error
     return data
   }
@@ -139,14 +139,14 @@ export class SupabaseService {
       .select('*')
       .eq('id', id)
       .single()
-    
+
     if (error) throw error
-    
+
     // Validate contract address exists for blockchain interactions
     if (!data.contract_address) {
       console.warn(`Market ${id} has no contract address - using demo contract`);
     }
-    
+
     return data
   }
 
@@ -158,7 +158,7 @@ export class SupabaseService {
       .not('contract_address', 'is', null)
       .eq('resolved', false)
       .order('created_at', { ascending: false })
-    
+
     if (error) throw error
     return data
   }
@@ -169,7 +169,7 @@ export class SupabaseService {
       .select('*')
       .order('created_at', { ascending: false })
       .limit(limit)
-    
+
     if (error) throw error
     return data
   }
@@ -180,7 +180,7 @@ export class SupabaseService {
       .select('*')
       .eq('id', id)
       .single()
-    
+
     if (error) throw error
     return data
   }
@@ -192,7 +192,7 @@ export class SupabaseService {
       .eq('id', id)
       .select()
       .single()
-    
+
     if (error) throw error
     return data
   }
@@ -205,7 +205,7 @@ export class SupabaseService {
       .eq('resolved', false)
       .gt('end_time', now)
       .order('created_at', { ascending: false })
-    
+
     if (error) throw error
     return data
   }
@@ -217,7 +217,7 @@ export class SupabaseService {
       .eq('category', category)
       .eq('resolved', false)
       .order('created_at', { ascending: false })
-    
+
     if (error) throw error
     return data
   }
@@ -232,7 +232,7 @@ export class SupabaseService {
       )
       .select()
       .single()
-    
+
     if (error) throw error
     return data
   }
@@ -252,7 +252,7 @@ export class SupabaseService {
       `)
       .eq('user_id', userId)
       .order('updated_at', { ascending: false })
-    
+
     if (error) throw error
     return data
   }
@@ -264,7 +264,7 @@ export class SupabaseService {
       .eq('user_id', userId)
       .eq('market_id', marketId)
       .single()
-    
+
     if (error && error.code !== 'PGRST116') throw error // PGRST116 = no rows returned
     return data
   }
@@ -275,13 +275,13 @@ export class SupabaseService {
       .from('user_predictions')
       .select('side, amount')
       .eq('market_id', marketId)
-    
+
     if (error) throw error
-    
+
     const yesTotal = predictions?.filter(p => p.side === 'yes').reduce((sum, p) => sum + p.amount, 0) || 0
     const noTotal = predictions?.filter(p => p.side === 'no').reduce((sum, p) => sum + p.amount, 0) || 0
     const total = yesTotal + noTotal
-    
+
     return {
       yesTotal,
       noTotal,
@@ -297,12 +297,12 @@ export class SupabaseService {
       .from('user_predictions')
       .select('amount')
       .eq('user_id', userId)
-    
+
     if (error) throw error
-    
+
     const totalInvested = data?.reduce((sum, p) => sum + p.amount, 0) || 0
     const totalPredictions = data?.length || 0
-    
+
     return {
       totalInvested,
       totalPredictions
@@ -316,7 +316,7 @@ export class SupabaseService {
       .select('*')
       .eq('id', id)
       .single()
-    
+
     if (error) throw error
     return data
   }
@@ -326,7 +326,7 @@ export class SupabaseService {
       .from('influencer_profiles')
       .select('*')
       .order('win_rate', { ascending: false })
-    
+
     if (error) throw error
     return data
   }
@@ -337,20 +337,47 @@ export class SupabaseService {
       .select('*')
       .order(sortBy, { ascending: false })
       .limit(limit)
-    
+
     if (error) throw error
     return data
   }
 
   // Markets with influencer data
   static async getMarketsWithInfluencers() {
-    const { data, error } = await supabase
-      .from('markets_with_influencers')
-      .select('*')
-      .order('created_at', { ascending: false })
-    
-    if (error) throw error
-    return data
+    try {
+      console.log('🔍 Attempting to fetch markets with influencers...');
+
+      // Try to get from the view first
+      const { data, error } = await supabase
+        .from('markets_with_influencers')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (error) {
+        console.warn('⚠️ markets_with_influencers view error:', error.message);
+        console.log('🔄 Falling back to regular markets table...');
+
+        // Fallback to regular markets table if view doesn't exist
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('markets')
+          .select('*')
+          .order('created_at', { ascending: false })
+
+        if (fallbackError) {
+          console.error('❌ Fallback markets table also failed:', fallbackError.message);
+          throw new Error(`Both markets_with_influencers view and markets table failed: ${fallbackError.message}`);
+        }
+
+        console.log(`✅ Fallback successful: loaded ${fallbackData?.length || 0} markets`);
+        return fallbackData
+      }
+
+      console.log(`✅ Successfully loaded ${data?.length || 0} markets with influencer data`);
+      return data
+    } catch (error) {
+      console.error('💥 getMarketsWithInfluencers failed completely:', error);
+      throw error;
+    }
   }
 
   static async getMarketWithInfluencer(marketId: string) {
@@ -359,7 +386,7 @@ export class SupabaseService {
       .select('*')
       .eq('id', marketId)
       .single()
-    
+
     if (error) throw error
     return data
   }
@@ -367,7 +394,7 @@ export class SupabaseService {
   static async getMarketsByInfluencer(influencerId: string) {
     const { data, error } = await supabase
       .rpc('get_markets_by_influencer', { influencer_id_param: influencerId })
-    
+
     if (error) throw error
     return data
   }
@@ -376,14 +403,14 @@ export class SupabaseService {
     const { data, error } = await supabase
       .rpc('get_influencer_stats')
       .single()
-    
+
     if (error) throw error
     return data
   }
 
   // Create market with influencer attribution
   static async createMarketWithInfluencer(
-    market: Omit<Market, 'id' | 'created_at'>, 
+    market: Omit<Market, 'id' | 'created_at'>,
     influencerId?: string
   ) {
     const marketData = {
@@ -391,13 +418,13 @@ export class SupabaseService {
       creator_influencer_id: influencerId,
       is_influencer_market: !!influencerId
     }
-    
+
     const { data, error } = await supabase
       .from('markets')
       .insert(marketData)
       .select()
       .single()
-    
+
     if (error) throw error
     return data
   }

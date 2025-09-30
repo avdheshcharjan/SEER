@@ -1,20 +1,44 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { toast } from 'react-hot-toast';
 import { motion, useMotionValue, useTransform, PanInfo, animate } from 'framer-motion';
 import { UnifiedMarket } from '@/lib/types';
 import { SmartPredictionCard } from './cards/SmartPredictionCard';
+import { getMarketContractAddress, getMarketsWithContracts } from '@/lib/blockchain';
 
 interface SwipeStackProps {
     markets: UnifiedMarket[];
     onSwipe: (marketId: string, direction: 'left' | 'right' | 'up') => void;
     className?: string;
     forceMarketCard?: boolean; // New prop to force using MarketCard
+    disabled?: boolean; // Prop to disable swiping
+}
+
+/**
+ * Validates that a market has a valid contract address before allowing swipes
+ */
+function validateMarketForSwipe(market: UnifiedMarket, allMarkets: UnifiedMarket[]): boolean {
+    // Check if market has contract_address field
+    if (!market.contractAddress) {
+        console.log(`❌ Market ${market.id} rejected: no contract address`);
+        return false;
+    }
+
+    // Use the blockchain validation function to ensure contract address is valid
+    const contractAddress = getMarketContractAddress(market.id, allMarkets);
+    if (!contractAddress) {
+        console.log(`❌ Market ${market.id} rejected: invalid contract address mapping`);
+        return false;
+    }
+
+    console.log(`✅ Market ${market.id} validated for swipe -> ${contractAddress}`);
+    return true;
 }
 
 const SWIPE_THRESHOLD = 100;
 
-export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }: SwipeStackProps) {
+export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard, disabled = false }: SwipeStackProps) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isAnimating, setIsAnimating] = useState(false);
     const [isTimerActive, setIsTimerActive] = useState(true);
@@ -22,19 +46,34 @@ export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }
     const timerRef = useRef<NodeJS.Timeout | null>(null);
     const timeLeftRef = useRef<number>(60);
 
+    // Filter markets to only include those with valid contract addresses - memoized to prevent infinite loops
+    const validMarkets = React.useMemo(() => {
+        console.log(`📊 Filtering ${markets.length} markets for valid contracts...`);
+        const filtered = getMarketsWithContracts(markets as any);
+        console.log(`✅ Found ${filtered.length} markets with valid contracts`);
+        return filtered;
+    }, [markets]);
+
+    // Log the filtering result for debugging
+    React.useEffect(() => {
+        if (validMarkets.length === 0 && markets.length > 0) {
+            console.warn('⚠️ No markets with valid contracts available for swiping');
+        }
+    }, [markets.length, validMarkets.length]);
+
     const x = useMotionValue(0);
     const y = useMotionValue(0);
     const rotate = useTransform(x, [-400, 400], [-15, 15]);
 
     // Timer effect - uses ref to avoid re-renders
     useEffect(() => {
-        if (isTimerActive && !isAnimating && currentIndex < markets.length) {
+        if (isTimerActive && !isAnimating && currentIndex < validMarkets.length) {
             timeLeftRef.current = 60; // Reset timer for new card
             timerRef.current = setInterval(() => {
                 timeLeftRef.current -= 1;
                 if (timeLeftRef.current <= 0) {
                     // Time's up - auto skip
-                    const currentMarket = markets[currentIndex];
+                    const currentMarket = validMarkets[currentIndex];
                     if (currentMarket) {
                         onSwipe(currentMarket.id, 'up');
                         setCurrentIndex(prevIndex => prevIndex + 1);
@@ -48,7 +87,7 @@ export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }
                 clearInterval(timerRef.current);
             }
         };
-    }, [currentIndex, isTimerActive, isAnimating, markets, onSwipe]);
+    }, [currentIndex, isTimerActive, isAnimating, validMarkets, onSwipe]);
 
     // Reset timer active state when card changes
     useEffect(() => {
@@ -72,8 +111,15 @@ export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }
         const swipeThreshold = SWIPE_THRESHOLD;
         const swipeVelocityThreshold = 500;
 
-        const currentMarket = markets[currentIndex];
+        const currentMarket = validMarkets[currentIndex];
         if (!currentMarket) return;
+
+        // Double-check market validation before allowing swipe
+        if (!validateMarketForSwipe(currentMarket as UnifiedMarket, markets)) {
+            console.error(`❌ Swipe blocked: Market ${currentMarket.id} failed validation`);
+            toast.error('This market is not available for betting');
+            return;
+        }
 
         setIsAnimating(true);
         setIsTimerActive(false); // Pause timer during animation
@@ -90,18 +136,21 @@ export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }
             // Swipe up - SKIP with smooth upward motion and slight scale
             animYTarget = -1200;
             animXTarget = offset.x * 0.3; // Slight horizontal drift based on drag
+            console.log(`⬆️ Skip swipe on validated market ${currentMarket.id}`);
             onSwipe(currentMarket.id, 'up');
             didSwipe = true;
         } else if (isHorizontalSwipe && (offset.x > swipeThreshold || velocity.x > swipeVelocityThreshold)) {
             // Swipe right - YES with tilt and smooth exit
             animXTarget = 1200;
             animYTarget = offset.y * 0.2; // Slight vertical drift
+            console.log(`➡️ YES swipe on validated market ${currentMarket.id}`);
             onSwipe(currentMarket.id, 'right');
             didSwipe = true;
         } else if (isHorizontalSwipe && (offset.x < -swipeThreshold || velocity.x < -swipeVelocityThreshold)) {
             // Swipe left - NO with tilt and smooth exit
             animXTarget = -1200;
             animYTarget = offset.y * 0.2; // Slight vertical drift
+            console.log(`⬅️ NO swipe on validated market ${currentMarket.id}`);
             onSwipe(currentMarket.id, 'left');
             didSwipe = true;
         } else {
@@ -136,19 +185,40 @@ export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }
 
 
     // Show message when no more markets
-    if (currentIndex >= markets.length) {
+    if (currentIndex >= validMarkets.length) {
         return (
             <div className={`flex items-center justify-center h-[500px] sm:h-[600px] ${className}`}>
                 <div className="text-center">
                     <div className="text-5xl sm:text-6xl mb-4">🎉</div>
                     <h3 className="mobile-text-2xl font-bold text-white mb-2">All done!</h3>
-                    <p className="text-slate-400 mobile-text-sm">You&apos;ve swiped through all available markets.</p>
+                    <p className="text-slate-400 mobile-text-sm">
+                        {validMarkets.length === 0
+                            ? "No markets with deployed contracts are available right now."
+                            : "You've swiped through all available markets."
+                        }
+                    </p>
                 </div>
             </div>
         );
     }
 
-    const visibleMarkets = markets.slice(currentIndex, currentIndex + 3);
+    // Show message if no valid markets are available
+    if (validMarkets.length === 0) {
+        return (
+            <div className={`flex items-center justify-center h-[500px] sm:h-[600px] ${className}`}>
+                <div className="text-center">
+                    <div className="text-5xl sm:text-6xl mb-4">📊</div>
+                    <h3 className="mobile-text-2xl font-bold text-white mb-2">No Markets Available</h3>
+                    <p className="text-slate-400 mobile-text-sm max-w-md">
+                        There are currently no prediction markets with deployed smart contracts.
+                        Markets need to be deployed to the blockchain before they can accept bets.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    const visibleMarkets = validMarkets.slice(currentIndex, currentIndex + 3);
 
     return (
         <div className={`relative w-full h-[520px] sm:h-[600px] ${className}`}>
@@ -188,7 +258,7 @@ export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }
                                 whileDrag={{ scale: 1.02 }}
                                 transition={{ type: 'spring', stiffness: 400, damping: 40 }}
                             >
-                                <SmartPredictionCard market={market} isActive={true} forceMarketCard={forceMarketCard} suppressEntranceAnimation={true} />
+                                <SmartPredictionCard market={market as UnifiedMarket} isActive={true} forceMarketCard={forceMarketCard} suppressEntranceAnimation={true} />
                             </motion.div>
                         );
                     }
@@ -207,7 +277,7 @@ export function SwipeStack({ markets, onSwipe, className = '', forceMarketCard }
                             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                         >
                             <div className="opacity-20 blur-[1px]">
-                                <SmartPredictionCard market={market} isActive={false} forceMarketCard={forceMarketCard} suppressEntranceAnimation={true} />
+                                <SmartPredictionCard market={market as UnifiedMarket} isActive={false} forceMarketCard={forceMarketCard} suppressEntranceAnimation={true} />
                             </div>
                         </motion.div>
                     );

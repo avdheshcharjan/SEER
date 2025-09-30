@@ -163,25 +163,46 @@ export function generateBuySharesTransaction(data: PredictionTransaction) {
 export function getMarketContractAddress(marketId: string, supabaseMarkets?: Array<{
     id: string;
     contract_address?: string;
+    contractAddress?: string;
     [key: string]: unknown;
-}>): Address {
+}>): Address | undefined {
     // Check if it's a Supabase market with contract address
     if (supabaseMarkets) {
         const market = supabaseMarkets.find(m => m.id === marketId);
-        if (market && market.contract_address) {
-            console.log(`✅ Found Supabase market ${marketId} -> ${market.contract_address}`);
-            return market.contract_address as Address;
+        if (market) {
+            // Check both snake_case (raw Supabase) and camelCase (UnifiedMarket) formats
+            const contractAddr = market.contract_address || market.contractAddress;
+            if (contractAddr) {
+                // Validate the address before returning it
+                if (!isValidAddress(contractAddr)) {
+                    console.error(`❌ Market ${marketId} has invalid contract address: ${contractAddr}`);
+                    return undefined;
+                }
+                console.log(`✅ Found market ${marketId} -> ${contractAddr}`);
+                return contractAddr as Address;
+            }
         }
     }
 
     // Fallback: Check static mapping
     const supabaseMapping = getSupabaseMarketMapping();
     if (supabaseMapping[marketId]) {
-        return supabaseMapping[marketId];
+        const mappedAddress = supabaseMapping[marketId];
+        // Validate the mapped address too
+        if (!isValidAddress(mappedAddress)) {
+            console.error(`❌ Market ${marketId} has invalid mapped contract address: ${mappedAddress}`);
+            return undefined;
+        }
+        return mappedAddress;
     }
 
-    // Fallback to demo market for development (with warning)
-    console.warn(`⚠️  Market ${marketId} not found in Supabase, using demo contract. This should not happen in production!`);
+    // No valid contract found - return undefined
+    console.error(`❌ Market ${marketId} missing contract address. Available markets:`,
+        supabaseMarkets?.filter(m => {
+            const addr = m.contract_address || m.contractAddress;
+            return addr && isValidAddress(addr);
+        }).map(m => m.id) || 'none');
+    return undefined;
 }
 
 /**
@@ -194,6 +215,35 @@ function getSupabaseMarketMapping(): Record<string, Address> {
     return {
         // 'supabase-market-id': '0xContractAddress'
     };
+}
+
+/**
+ * Filter markets to only include those with valid contract addresses
+ * This prevents swipes on markets that can't execute transactions
+ */
+export function getMarketsWithContracts<T extends { id: string; contract_address?: string; contractAddress?: string }>(
+    markets: T[]
+): T[] {
+    return markets.filter(market => {
+        // Check both snake_case (raw Supabase) and camelCase (transformed UnifiedMarket) formats
+        const contractAddr = market.contract_address || market.contractAddress;
+
+        // First check: does the market have a contract address field?
+        if (!contractAddr) {
+            console.log(`Filtering out market ${market.id}: no contract address field`);
+            return false;
+        }
+
+        // Second check: is the contract address valid?
+        if (!isValidAddress(contractAddr)) {
+            console.log(`Filtering out market ${market.id}: invalid contract address ${contractAddr}`);
+            return false;
+        }
+
+        // Market has a valid contract address, no need for additional mapping checks
+        console.log(`✅ Market ${market.id} has valid contract address: ${contractAddr}`);
+        return true;
+    });
 }
 
 // Static market mappings removed - now using only Supabase markets with contract addresses
@@ -241,7 +291,54 @@ export function getBlockExplorerUrl(hash: string, testnet: boolean = true): stri
  * Validate Ethereum address
  */
 export function isValidAddress(address: string): boolean {
-    return /^0x[a-fA-F0-9]{40}$/.test(address);
+    // Check basic format
+    if (!/^0x[a-fA-F0-9]{40}$/.test(address)) {
+        return false;
+    }
+
+    // Reject zero address and other invalid addresses
+    const invalidAddresses = [
+        '0x0000000000000000000000000000000000000000', // Zero address
+        '0x0000000000000000000000000000000000000001', // Common invalid
+        '0x0000000000000000000000000000000000000002',
+        '0x0000000000000000000000000000000000000003',
+        '0x0000000000000000000000000000000000000004',
+        '0x0000000000000000000000000000000000000005',
+        '0x0000000000000000000000000000000000000006',
+        '0x0000000000000000000000000000000000000007',
+        '0x0000000000000000000000000000000000000008',
+        '0x0000000000000000000000000000000000000009',
+        '0x000000000000000000000000000000000000000a',
+        '0x000000000000000000000000000000000000000b',
+        '0x000000000000000000000000000000000000000c',
+        '0x000000000000000000000000000000000000000d',
+        '0x000000000000000000000000000000000000000e',
+        '0x000000000000000000000000000000000000000f',
+        '0x0000000000000000000000000000000000000010',
+        '0x0000000000000000000000000000000000000011',
+        '0x0000000000000000000000000000000000000012',
+        '0x0000000000000000000000000000000000000013',
+        '0x0000000000000000000000000000000000000014',
+        '0x0000000000000000000000000000000000000015',
+        '0x0000000000000000000000000000000000000016',
+        '0x0000000000000000000000000000000000000017', // The specific invalid address from the error
+        '0x0000000000000000000000000000000000000018',
+        '0x0000000000000000000000000000000000000019',
+        '0x000000000000000000000000000000000000001a',
+        '0x000000000000000000000000000000000000001b',
+        '0x000000000000000000000000000000000000001c',
+        '0x000000000000000000000000000000000000001d',
+        '0x000000000000000000000000000000000000001e',
+        '0x000000000000000000000000000000000000001f'
+    ];
+
+    // Check if address is in the invalid list (case-insensitive)
+    const normalizedAddress = address.toLowerCase();
+    if (invalidAddresses.some(invalid => invalid.toLowerCase() === normalizedAddress)) {
+        return false;
+    }
+
+    return true;
 }
 
 /**

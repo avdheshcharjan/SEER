@@ -14,7 +14,7 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PU
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Contract addresses from deployment
-const FACTORY_ADDRESS = '0x89332E711B591DEeAC1a67b4ED5086a209a7414E' as Address;
+const FACTORY_ADDRESS = '0xe23c501f11F6a072cEeCAA08eC4b0E4B33bBEe7C' as Address;
 const DEPLOYMENT_BLOCK = BigInt(31699964); // Latest deployment block
 
 interface DeployedMarket {

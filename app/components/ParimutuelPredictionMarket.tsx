@@ -11,17 +11,17 @@ import { useAppStore } from '@/lib/store';
 import { UnifiedMarket, SchemaTransformer } from '@/lib/types';
 import { SupabaseService } from '@/lib/supabase';
 import {
-  getParimutuelMarketAddress,
-  validateParimutuelMarket,
-  type ParimutuelBetAmount,
-  type ParimutuelBetSide
+    getParimutuelMarketAddress,
+    validateParimutuelMarket,
+    type ParimutuelBetAmount,
+    type ParimutuelBetSide
 } from '@/lib/parimutuel-blockchain';
 import {
-  generateParimutuelBetCalls,
-  generateParimutuelBatchCalls,
-  validateParimutuelPaymasterConfig,
-  formatBetSummary,
-  estimateParimutuelGas
+    generateParimutuelBetCalls,
+    generateParimutuelBatchCalls,
+    validateParimutuelPaymasterConfig,
+    formatBetSummary,
+    estimateParimutuelGas
 } from '@/lib/parimutuel-gasless';
 import {
     Transaction,
@@ -373,11 +373,10 @@ export function ParimutuelPredictionMarket({ onBack }: ParimutuelPredictionMarke
                             <button
                                 key={amount}
                                 onClick={() => user && setUser({ ...user, defaultBetAmount: amount })}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                                    user?.defaultBetAmount === amount
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${user?.defaultBetAmount === amount
                                         ? 'bg-purple-600 text-white'
                                         : 'text-white/70 hover:text-white hover:bg-white/10'
-                                }`}
+                                    }`}
                             >
                                 ${amount}
                             </button>
@@ -392,11 +391,10 @@ export function ParimutuelPredictionMarket({ onBack }: ParimutuelPredictionMarke
                             <button
                                 key={category.id}
                                 onClick={() => setSelectedCategory(category.id)}
-                                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                                    selectedCategory === category.id
+                                className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${selectedCategory === category.id
                                         ? 'bg-white text-purple-900'
                                         : 'bg-white/10 text-white hover:bg-white/20'
-                                }`}
+                                    }`}
                             >
                                 {category.icon} {category.label}
                             </button>

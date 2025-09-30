@@ -12,7 +12,7 @@ remappings = [
 ]
 
 [rpc_endpoints]
-base-sepolia = "https://sepolia.base.org"
+base-sepolia = "https://base-sepolia.gateway.tenderly.co"
 
 [etherscan]
 base-sepolia = { key = "${BASESCAN_API_KEY}" }
