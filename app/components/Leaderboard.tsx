@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import { useLeaderboard, useStreakLeaderboard, useSocialStats } from '@/lib/store';
 import { Trophy, Medal, Award, TrendingUp, Target, DollarSign, Flame, Activity } from 'lucide-react';
 import { useState } from 'react';
+import { BasenameIdentityCompact } from './BasenameIdentity';
+import { Address } from 'viem';
 
 interface LeaderboardProps {
     onBack?: () => void;
@@ -148,7 +150,13 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
                         transition={{ delay: 0.2, duration: 0.6 }}
                     >
                         <Medal className="w-6 h-6 text-slate-300 mx-auto mb-1" />
-                        <div className="text-sm font-bold text-white">{currentData[1]?.username}</div>
+                        {currentData[1]?.address ? (
+                            <div className="text-xs">
+                                <BasenameIdentityCompact address={currentData[1].address as Address} />
+                            </div>
+                        ) : (
+                            <div className="text-sm font-bold text-white">{currentData[1]?.username}</div>
+                        )}
                         <div className="text-xs text-slate-300">
                             {activeTab === 'streaks' ? `🔥${currentData[1]?.currentStreak}` :
                                 activeTab === 'volume' ? `$${currentData[1]?.profitLoss?.toFixed(1)}` :
@@ -168,7 +176,13 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
                         transition={{ delay: 0.1, duration: 0.6 }}
                     >
                         <Trophy className="w-8 h-8 text-yellow-400 mx-auto mb-1" />
-                        <div className="text-sm font-bold text-white">{currentData[0]?.username}</div>
+                        {currentData[0]?.address ? (
+                            <div className="text-xs">
+                                <BasenameIdentityCompact address={currentData[0].address as Address} />
+                            </div>
+                        ) : (
+                            <div className="text-sm font-bold text-white">{currentData[0]?.username}</div>
+                        )}
                         <div className="text-xs text-yellow-300">
                             {activeTab === 'streaks' ? `🔥${currentData[0]?.currentStreak}` :
                                 activeTab === 'volume' ? `$${currentData[0]?.profitLoss?.toFixed(1)}` :
@@ -188,7 +202,13 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
                         transition={{ delay: 0.3, duration: 0.6 }}
                     >
                         <Award className="w-5 h-5 text-amber-600 mx-auto mb-1" />
-                        <div className="text-sm font-bold text-white">{currentData[2]?.username}</div>
+                        {currentData[2]?.address ? (
+                            <div className="text-xs">
+                                <BasenameIdentityCompact address={currentData[2].address as Address} />
+                            </div>
+                        ) : (
+                            <div className="text-sm font-bold text-white">{currentData[2]?.username}</div>
+                        )}
                         <div className="text-xs text-amber-500">
                             {activeTab === 'streaks' ? `🔥${currentData[2]?.currentStreak}` :
                                 activeTab === 'volume' ? `$${currentData[2]?.profitLoss?.toFixed(1)}` :
@@ -220,7 +240,11 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
                                     </div>
                                     <div>
                                         <div className="flex items-center space-x-2">
-                                            <h3 className="font-bold text-white">{user.username}</h3>
+                                            {user.address ? (
+                                                <BasenameIdentityCompact address={user.address as Address} />
+                                            ) : (
+                                                <h3 className="font-bold text-white">{user.username}</h3>
+                                            )}
                                             {user.currentStreak >= 5 && (
                                                 <div className="bg-orange-500/20 px-2 py-0.5 rounded-full text-xs text-orange-300 flex items-center">
                                                     <Flame className="w-3 h-3 mr-1" />
