@@ -1,25 +1,20 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { ArrowLeft, TrendingUp, TrendingDown } from 'lucide-react';
-import { useAppStore } from '@/lib/store';
-import { UnifiedMarket } from '@/lib/types';
-import { SupabaseService } from '@/lib/supabase';
 import { generateCreateMarketCalls } from '@/lib/gasless-onchainkit';
 import { processMarketCreation, validateMarketCreation } from '@/lib/market-factory-onchainkit';
-import { Address } from 'viem';
-import toast from 'react-hot-toast';
-import { useAccount } from 'wagmi';
-import { Transaction, TransactionButton, TransactionSponsor, TransactionStatusLabel, TransactionStatusAction } from '@coinbase/onchainkit/transaction';
+import { useAppStore } from '@/lib/store';
+import { SupabaseService } from '@/lib/supabase';
+import { UnifiedMarket } from '@/lib/types';
 import type { LifecycleStatus } from '@coinbase/onchainkit/transaction';
-
-
-
-
-interface CreateMarketProps {
-    onBack: () => void;
-}
+import { Transaction, TransactionButton, TransactionSponsor, TransactionStatusAction, TransactionStatusLabel } from '@coinbase/onchainkit/transaction';
+import { motion } from 'framer-motion';
+import { TrendingDown, TrendingUp } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
+import { Address } from 'viem';
+import { useAccount } from 'wagmi';
+import { BackButton } from './BackButton';
 
 const TICKERS = [
     { value: 'ETH', label: 'Ethereum (ETH)', symbol: 'ETH', coinGeckoId: 'ethereum' },
@@ -34,7 +29,8 @@ interface TokenData {
     volume: string;
 }
 
-export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
+export function CreateMarketOnchainKit() {
+    const router = useRouter();
     const { addCreatedMarket } = useAppStore();
     const { address } = useAccount();
     const [step, setStep] = useState<'form' | 'preview' | 'creating'>('form');
@@ -128,87 +124,87 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
                 // On success, process market creation with proper contract address parsing
                 (async () => {
                     try {
-                    // Use the existing processMarketCreation function to handle contract address extraction
-                    const result = await processMarketCreation({
-                        question: generateQuestion(),
-                        category: 'crypto',
-                        endTime: new Date(formData.endDate),
-                        creatorAddress: address as Address,
-                        transactionHash: txHash
-                    });
+                        // Use the existing processMarketCreation function to handle contract address extraction
+                        const result = await processMarketCreation({
+                            question: generateQuestion(),
+                            category: 'crypto',
+                            endTime: new Date(formData.endDate),
+                            creatorAddress: address as Address,
+                            transactionHash: txHash
+                        });
 
-                    if (!result.success) {
-                        throw new Error(result.error || 'Failed to process market creation');
-                    }
+                        if (!result.success) {
+                            throw new Error(result.error || 'Failed to process market creation');
+                        }
 
-                    // Get the created market from database (now has proper contract address)
-                    const supabaseMarket = await SupabaseService.getMarket(result.marketId!);
+                        // Get the created market from database (now has proper contract address)
+                        const supabaseMarket = await SupabaseService.getMarket(result.marketId!);
 
-                    const newMarket: UnifiedMarket = {
-                        id: supabaseMarket.id,
-                        question: supabaseMarket.question,
-                        description: `A prediction market for ${formData.ticker} price`,
-                        category: 'crypto',
-                        endTime: supabaseMarket.end_time,
-                        totalVolume: 0,
-                        yesPrice: 0.5,
-                        noPrice: 0.5,
-                        yesOdds: 50,
-                        noOdds: 50,
-                        yesPool: supabaseMarket.yes_pool,
-                        noPool: supabaseMarket.no_pool,
-                        totalYesShares: supabaseMarket.total_yes_shares,
-                        totalNoShares: supabaseMarket.total_no_shares,
-                        yesShares: 0,
-                        noShares: 0,
-                        creatorAddress: supabaseMarket.creator_address,
-                        contractAddress: result.contractAddress!, // Now has the real contract address
-                        createdAt: supabaseMarket.created_at,
-                        resolved: false,
-                        outcome: null,
-                        ticker: formData.ticker,
-                        targetPrice: parseFloat(formData.price),
-                        direction: formData.direction,
-                        transactionHash: txHash,
-                    };
+                        const newMarket: UnifiedMarket = {
+                            id: supabaseMarket.id,
+                            question: supabaseMarket.question,
+                            description: `A prediction market for ${formData.ticker} price`,
+                            category: 'crypto',
+                            endTime: supabaseMarket.end_time,
+                            totalVolume: 0,
+                            yesPrice: 0.5,
+                            noPrice: 0.5,
+                            yesOdds: 50,
+                            noOdds: 50,
+                            yesPool: supabaseMarket.yes_pool,
+                            noPool: supabaseMarket.no_pool,
+                            totalYesShares: supabaseMarket.total_yes_shares,
+                            totalNoShares: supabaseMarket.total_no_shares,
+                            yesShares: 0,
+                            noShares: 0,
+                            creatorAddress: supabaseMarket.creator_address,
+                            contractAddress: result.contractAddress!, // Now has the real contract address
+                            createdAt: supabaseMarket.created_at,
+                            resolved: false,
+                            outcome: null,
+                            ticker: formData.ticker,
+                            targetPrice: parseFloat(formData.price),
+                            direction: formData.direction,
+                            transactionHash: txHash,
+                        };
 
-                    addCreatedMarket(newMarket);
+                        addCreatedMarket(newMarket);
 
-                    toast.success(`Market created successfully! 🎉\nTransaction: ${txHash}`, {
-                        duration: 8000,
-                        style: {
-                            borderRadius: '12px',
-                            background: '#1e293b',
-                            color: '#f1f5f9',
-                            border: '1px solid #10b981',
-                        },
-                    });
+                        toast.success(`Market created successfully! 🎉\nTransaction: ${txHash}`, {
+                            duration: 8000,
+                            style: {
+                                borderRadius: '12px',
+                                background: '#1e293b',
+                                color: '#f1f5f9',
+                                border: '1px solid #10b981',
+                            },
+                        });
 
-                    // Reset form and go back
-                    setStep('form');
-                    setFormData({
-                        ticker: 'ETH',
-                        price: '',
-                        direction: 'above',
-                        endDate: '',
-                    });
-                    onBack();
+                        // Reset form and go back
+                        setStep('form');
+                        setFormData({
+                            ticker: 'ETH',
+                            price: '',
+                            direction: 'above',
+                            endDate: '',
+                        });
+                        router.push('/');
 
-                } catch (error) {
-                    console.error('Market creation failed:', error);
-                    toast.error(`Failed to save market: ${error instanceof Error ? error.message : 'Unknown error'}`, {
-                        style: {
-                            borderRadius: '12px',
-                            background: '#1e293b',
-                            color: '#f1f5f9',
-                            border: '1px solid #ef4444',
-                        },
-                    });
+                    } catch (error) {
+                        console.error('Market creation failed:', error);
+                        toast.error(`Failed to save market: ${error instanceof Error ? error.message : 'Unknown error'}`, {
+                            style: {
+                                borderRadius: '12px',
+                                background: '#1e293b',
+                                color: '#f1f5f9',
+                                border: '1px solid #ef4444',
+                            },
+                        });
                     }
                 })();
             }
         }
-        
+
         // Handle error status
         if (status.statusName === 'error' && status.statusData && 'message' in status.statusData) {
             toast.error(`Market creation failed: ${status.statusData.message}`, {
@@ -232,20 +228,10 @@ export function CreateMarketOnchainKit({ onBack }: CreateMarketProps) {
     }
 
     return (
-        <div className="min-h-screen">
-            <div className="container mx-auto px-4 py-6">
+        <div className="min-h-screen flex flex-col items-center">
+            <div className="max-w-md pt-4 w-full">
                 {/* Header */}
-                <div className="flex items-center justify-between mb-8">
-                    <button
-                        onClick={onBack}
-                        className="flex items-center gap-2 text-white hover:text-slate-300 transition-colors"
-                    >
-                        <ArrowLeft className="w-5 h-5" />
-                        <span>Back</span>
-                    </button>
-                    <h1 className="text-2xl font-bold text-white">Create Market</h1>
-                    <div className="w-20" />
-                </div>
+                <BackButton title='Create Market' />
 
                 {step === 'form' && (
                     <motion.div

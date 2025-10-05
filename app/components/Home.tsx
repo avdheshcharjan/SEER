@@ -2,16 +2,10 @@
 
 import { motion } from 'framer-motion';
 import { Plus, Settings, TrendingUp, Trophy, Users, Zap } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
-interface HomeProps {
-    onStartPredicting: () => void;
-    onViewProfile: () => void;
-    onViewLeaderboard: () => void;
-    onCreateMarket: () => void;
-    onViewAdmin: () => void;
-}
-
-export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard, onCreateMarket, onViewAdmin }: HomeProps) {
+export function Home() {
+    const router = useRouter();
 
     const features = [
         {
@@ -68,7 +62,7 @@ export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard, onCr
             <div className="space-y-4 mb-8">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <motion.button
-                        onClick={onStartPredicting}
+                        onClick={() => router.push('/predict')}
                         className="bg-gradient-to-r from-base-500 to-base-600 hover:from-base-600 hover:to-base-700 text-white font-bold py-4 px-4 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-base-500/25 ios-button min-h-[56px]"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
@@ -83,7 +77,7 @@ export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard, onCr
                     </motion.button>
 
                     <motion.button
-                        onClick={onCreateMarket}
+                        onClick={() => router.push('/create')}
                         className="bg-gradient-to-r from-slate-700 to-indigo-700 hover:from-slate-600 hover:to-indigo-600 text-white font-bold py-4 px-4 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-indigo-500/25 ios-button min-h-[56px]"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
@@ -100,7 +94,7 @@ export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard, onCr
 
                 <div className="grid grid-cols-3 gap-3">
                     <motion.button
-                        onClick={onViewProfile}
+                        onClick={() => router.push('/profile')}
                         className="liquid-glass-card text-white font-medium py-4 px-3 rounded-xl ios-button min-h-[80px] bg-white/5"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
@@ -115,7 +109,7 @@ export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard, onCr
                     </motion.button>
 
                     <motion.button
-                        onClick={onViewLeaderboard}
+                        onClick={() => router.push('/leaderboard')}
                         className="liquid-glass-card text-white font-medium py-4 px-3 rounded-xl ios-button min-h-[80px] bg-white/5"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
@@ -130,7 +124,7 @@ export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard, onCr
                     </motion.button>
 
                     <motion.button
-                        onClick={onViewAdmin}
+                        onClick={() => router.push('/admin')}
                         className="liquid-glass-card text-white font-medium py-4 px-3 rounded-xl ios-button min-h-[80px] bg-white/5"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}

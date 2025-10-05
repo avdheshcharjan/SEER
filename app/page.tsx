@@ -1,10 +1,5 @@
 "use client";
 
-// import {
-//   useMiniKit,
-//   useAddFrame,
-//   useOpenUrl,
-// } from "@coinbase/onchainkit/minikit";
 import {
   Address,
   Avatar,
@@ -18,88 +13,10 @@ import {
   WalletDropdown,
   WalletDropdownDisconnect,
 } from "@coinbase/onchainkit/wallet";
-import { useState } from "react";
 import { Toaster } from 'react-hot-toast';
-import AdminPage from "./admin/page";
-import { CreateMarketEnhanced } from "./components/CreateMarketEnhanced";
 import { Home } from "./components/Home";
-import { Leaderboard } from "./components/Leaderboard";
-import { PredictionMarket } from "./components/PredictionMarket";
-import { Profile } from "./components/Profile";
-
-// import { Plus, Check } from 'lucide-react';
-
-type ViewType = 'home' | 'predict' | 'profile' | 'leaderboard' | 'create' | 'admin';
 
 export default function App() {
-  // const { setFrameReady, isFrameReady, context } = useMiniKit();
-  // const [frameAdded, setFrameAdded] = useState(false);
-  const [currentView, setCurrentView] = useState<ViewType>("home");
-
-  // const addFrame = useAddFrame();
-  // const openUrl = useOpenUrl();
-
-  // useEffect(() => {
-  //   if (!isFrameReady) {
-  //     setFrameReady();
-  //   }
-  // }, [setFrameReady, isFrameReady]);
-
-  // const handleAddFrame = useCallback(async () => {
-  //   const frameAdded = await addFrame();
-  //   setFrameAdded(Boolean(frameAdded));
-  // }, [addFrame]);
-
-  // const saveFrameButton = useMemo(() => {
-  //   if (context && !context.client.added) {
-  //     return (
-  //       <button
-  //         onClick={handleAddFrame}
-  //         className="flex items-center space-x-1 text-sm font-medium text-base-500 hover:text-base-400 transition-colors p-2"
-  //       >
-  //         <Plus className="w-4 h-4" />
-  //         <span>Save Frame</span>
-  //       </button>
-  //     );
-  //   }
-
-  //   if (frameAdded) {
-  //     return (
-  //       <div className="flex items-center space-x-1 text-sm font-medium text-green-400 animate-fade-out">
-  //         <Check className="w-4 h-4" />
-  //         <span>Saved</span>
-  //       </div>
-  //     );
-  //   }
-
-  //   return null;
-  // }, [context, frameAdded, handleAddFrame]);
-
-  const renderCurrentView = () => {
-    switch (currentView) {
-      case 'predict':
-        return <PredictionMarket onBack={() => setCurrentView('home')} />;
-      case 'profile':
-        return <Profile onBack={() => setCurrentView('home')} onCreateMarket={() => setCurrentView('create')} />;
-      case 'leaderboard':
-        return <Leaderboard onBack={() => setCurrentView('home')} />;
-      case 'create':
-        return <CreateMarketEnhanced onBack={() => setCurrentView('home')} />;
-      case 'admin':
-        return <AdminPage />;
-      default:
-        return (
-          <Home
-            onStartPredicting={() => setCurrentView('predict')}
-            onViewProfile={() => setCurrentView('profile')}
-            onViewLeaderboard={() => setCurrentView('leaderboard')}
-            onCreateMarket={() => setCurrentView('create')}
-            onViewAdmin={() => setCurrentView('admin')}
-          />
-        );
-    }
-  };
-
   return (
     <div className="flex flex-col min-h-screen font-geist text-white relative">
       <Toaster position="top-center" />
@@ -127,11 +44,10 @@ export default function App() {
               </Wallet>
             </div>
           </div>
-          {/* <div>{saveFrameButton}</div> */}
         </header>
 
         <main className="flex-1 min-h-[calc(100vh-200px)]">
-          {renderCurrentView()}
+          <Home />
         </main>
 
         <footer className="mt-6 pt-4 flex justify-center">

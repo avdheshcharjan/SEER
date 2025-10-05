@@ -2,11 +2,13 @@
 
 import { useAppStore } from '@/lib/store';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { Address } from 'viem';
 import { baseSepolia } from 'viem/chains';
 import { useAccount } from 'wagmi';
+import { BackButton } from './BackButton';
 import { SwipeStack } from './SwipeStack';
 // Static markets removed - now using only Supabase data
 import {
@@ -33,11 +35,8 @@ import {
     TransactionStatusLabel
 } from '@coinbase/onchainkit/transaction';
 
-interface PredictionMarketProps {
-    onBack?: () => void;
-}
-
-export function PredictionMarket({ onBack }: PredictionMarketProps) {
+export function PredictionMarket() {
+    const router = useRouter();
     const { address } = useAccount();
     const [selectedCategory, setSelectedCategory] = useState<'all' | 'crypto' | 'tech' | 'celebrity' | 'sports' | 'politics'>('all');
     const [allMarkets, setAllMarkets] = useState<UnifiedMarket[]>([]);
@@ -629,7 +628,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                     Connect your wallet to start making predictions and earning rewards on the Base network.
                 </p>
                 <motion.button
-                    onClick={onBack}
+                    onClick={() => router.back()}
                     className="px-6 py-3 bg-base-500 hover:bg-base-600 text-white rounded-xl font-semibold transition-colors ios-button min-h-[48px]"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -641,22 +640,13 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
     }
 
     return (
-        <div className="w-full mobile-container overflow-touch overscroll-contain">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <motion.button
-                    onClick={onBack}
-                    className="p-2 hover:bg-slate-800 rounded-lg transition-colors ios-button min-h-[44px] min-w-[44px]"
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
-                >
-                    <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                </motion.button>
+        <div className="w-full min-h-screen flex flex-col items-center w-full overflow-touch overscroll-contain">
+            <div className='max-w-md w-full pt-4'>
+                {/* Header */}
+                <BackButton title="Seer" />
 
-                <div className="flex flex-col items-center">
-                    <h1 className="mobile-text-xl font-bold text-white">Seer</h1>
+                {/* Status indicators */}
+                <div className="flex flex-col items-center mb-4">
                     {isPaymasterConfigured() && (
                         <div className="text-xs text-green-400 mt-1">
                             ⚡ Gasless enabled
@@ -680,117 +670,108 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
                     )}
                 </div>
 
-                <div className="p-2">
-                    <div className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center">
-                        <div className="w-6 h-6 bg-slate-500 rounded-full flex items-center justify-center text-xs text-slate-300 font-medium">
-                            {isPaymasterConfigured() ? '⚡' : '?'}
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-
-            {/* Category Tab Row (scrollable without visible scrollbar) */}
-            <div className="flex items-center space-x-1 mb-6 p-0 overflow-x-auto no-scrollbar">
-                {['all', 'crypto', 'tech', 'celebrity', 'sports', 'politics'].map((category) => (
-                    <motion.button
-                        key={category}
-                        onClick={() => setSelectedCategory(category as typeof selectedCategory)}
-                        className={`
+                {/* Category Tab Row (scrollable without visible scrollbar) */}
+                <div className="flex items-center space-x-1 mb-6 p-0 overflow-x-auto no-scrollbar">
+                    {['all', 'crypto', 'tech', 'celebrity', 'sports', 'politics'].map((category) => (
+                        <motion.button
+                            key={category}
+                            onClick={() => setSelectedCategory(category as typeof selectedCategory)}
+                            className={`
                             px-3 py-2 rounded-lg text-xs font-medium transition-all duration-200 flex-shrink-0 text-center min-w-[72px]
                             ${selectedCategory === category
-                                ? 'bg-base-500 text-white shadow-lg shadow-base-500/30'
-                                : 'text-slate-300 hover:text-slate-100 hover:bg-slate-800/70'
-                            }
+                                    ? 'bg-base-500 text-white shadow-lg shadow-base-500/30'
+                                    : 'text-slate-300 hover:text-slate-100 hover:bg-slate-800/70'
+                                }
                         `}
-                        whileHover={{ scale: selectedCategory === category ? 1 : 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                    >
-                        {category.charAt(0).toUpperCase() + category.slice(1)}
-                    </motion.button>
-                ))}
-            </div>
-
-            {/* Swipe Stack */}
-            <SwipeStack
-                markets={currentMarkets}
-                onSwipe={handleSwipe}
-                className="mb-8"
-            />
-
-            {/* Enhanced Batch Indicator */}
-            {batchStatus.pendingSwipes > 0 && (
-                <div className="fixed safe-top-right z-50 liquid-glass text-white px-4 py-2 rounded-full bg-blue-500/80">
-                    <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                        <div className="flex flex-col">
-                            <span className="mobile-text-sm font-medium">{batchStatus.pendingSwipes} pending</span>
-                            {batchStatus.autoExecuteTriggers.timeRemaining && batchStatus.autoExecuteTriggers.timeRemaining > 0 && (
-                                <span className="text-xs opacity-80">
-                                    Auto: {Math.ceil(batchStatus.autoExecuteTriggers.timeRemaining / 1000)}s
-                                </span>
-                            )}
-                            {batchStatus.autoExecuteTriggers.swipeCountTrigger && (
-                                <span className="text-xs opacity-80">Auto-executing...</span>
-                            )}
-                        </div>
-                        {/* Manual Execute Button */}
-                        <button
-                            onClick={triggerManualBatchExecution}
-                            className="text-xs bg-white/20 hover:bg-white/30 px-2 py-1 rounded transition-colors"
-                            disabled={batchStatus.isProcessing}
+                            whileHover={{ scale: selectedCategory === category ? 1 : 1.05 }}
+                            whileTap={{ scale: 0.95 }}
                         >
-                            Execute Now
-                        </button>
-                    </div>
+                            {category.charAt(0).toUpperCase() + category.slice(1)}
+                        </motion.button>
+                    ))}
                 </div>
-            )}
 
-            {/* Enhanced OnchainKit Transaction component for smart batch gasless predictions */}
-            {currentPrediction && (
-                <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 liquid-glass-strong p-4 sm:p-6 rounded-xl min-w-[280px] sm:min-w-[300px] max-w-[90vw] bg-slate-800/90">
-                    <div className="text-center mb-4">
-                        <h3 className="text-white font-semibold mb-2 mobile-text-lg">
-                            {currentPrediction.totalBatches > 1 ?
-                                `Batch ${currentPrediction.batchNumber}/${currentPrediction.totalBatches}` :
-                                'Smart Batch Execution'
-                            }
-                        </h3>
-                        <p className="text-slate-400 mobile-text-sm mb-2">
-                            {currentPrediction.calls.length} calls • {GaslessOptimizationUtils.formatGasEstimation({
-                                estimatedGas: currentPrediction.estimatedGas,
-                                estimatedCost: BigInt(0),
-                                callCount: currentPrediction.calls.length,
-                                accuracy: 85,
-                                gasPerCall: currentPrediction.estimatedGas / BigInt(currentPrediction.calls.length)
-                            })}
-                        </p>
-                        <p className="text-green-400 mobile-text-xs">
-                            {currentPrediction.optimizationSummary.gasSavingsPercent}% call reduction via bulk approval
-                        </p>
-                    </div>
-                    <Transaction
-                        chainId={baseSepolia.id}
-                        calls={currentPrediction.calls}
-                        isSponsored={true}
-                        onStatus={handleEnhancedBatchStatus}
-                    >
-                        <TransactionButton
-                            text={currentPrediction.totalBatches > 1 ?
-                                `Execute Batch ${currentPrediction.batchNumber}/${currentPrediction.totalBatches}` :
-                                `Execute ${currentPrediction.calls.length} Predictions`
-                            }
-                            className="w-full mb-2 ios-button min-h-[48px]"
-                        />
-                        <TransactionSponsor />
-                        <div className="mt-4">
-                            <TransactionStatusLabel />
-                            <TransactionStatusAction />
+                {/* Swipe Stack */}
+                <SwipeStack
+                    markets={currentMarkets}
+                    onSwipe={handleSwipe}
+                    className="mb-8"
+                />
+
+                {/* Enhanced Batch Indicator */}
+                {batchStatus.pendingSwipes > 0 && (
+                    <div className="fixed safe-top-right z-50 liquid-glass text-white px-4 py-2 rounded-full bg-blue-500/80">
+                        <div className="flex items-center space-x-2">
+                            <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                            <div className="flex flex-col">
+                                <span className="mobile-text-sm font-medium">{batchStatus.pendingSwipes} pending</span>
+                                {batchStatus.autoExecuteTriggers.timeRemaining && batchStatus.autoExecuteTriggers.timeRemaining > 0 && (
+                                    <span className="text-xs opacity-80">
+                                        Auto: {Math.ceil(batchStatus.autoExecuteTriggers.timeRemaining / 1000)}s
+                                    </span>
+                                )}
+                                {batchStatus.autoExecuteTriggers.swipeCountTrigger && (
+                                    <span className="text-xs opacity-80">Auto-executing...</span>
+                                )}
+                            </div>
+                            {/* Manual Execute Button */}
+                            <button
+                                onClick={triggerManualBatchExecution}
+                                className="text-xs bg-white/20 hover:bg-white/30 px-2 py-1 rounded transition-colors"
+                                disabled={batchStatus.isProcessing}
+                            >
+                                Execute Now
+                            </button>
                         </div>
-                    </Transaction>
-                </div>
-            )}
+                    </div>
+                )}
 
+                {/* Enhanced OnchainKit Transaction component for smart batch gasless predictions */}
+                {currentPrediction && (
+                    <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 liquid-glass-strong p-4 sm:p-6 rounded-xl min-w-[280px] sm:min-w-[300px] max-w-[90vw] bg-slate-800/90">
+                        <div className="text-center mb-4">
+                            <h3 className="text-white font-semibold mb-2 mobile-text-lg">
+                                {currentPrediction.totalBatches > 1 ?
+                                    `Batch ${currentPrediction.batchNumber}/${currentPrediction.totalBatches}` :
+                                    'Smart Batch Execution'
+                                }
+                            </h3>
+                            <p className="text-slate-400 mobile-text-sm mb-2">
+                                {currentPrediction.calls.length} calls • {GaslessOptimizationUtils.formatGasEstimation({
+                                    estimatedGas: currentPrediction.estimatedGas,
+                                    estimatedCost: BigInt(0),
+                                    callCount: currentPrediction.calls.length,
+                                    accuracy: 85,
+                                    gasPerCall: currentPrediction.estimatedGas / BigInt(currentPrediction.calls.length)
+                                })}
+                            </p>
+                            <p className="text-green-400 mobile-text-xs">
+                                {currentPrediction.optimizationSummary.gasSavingsPercent}% call reduction via bulk approval
+                            </p>
+                        </div>
+                        <Transaction
+                            chainId={baseSepolia.id}
+                            calls={currentPrediction.calls}
+                            isSponsored={true}
+                            onStatus={handleEnhancedBatchStatus}
+                        >
+                            <TransactionButton
+                                text={currentPrediction.totalBatches > 1 ?
+                                    `Execute Batch ${currentPrediction.batchNumber}/${currentPrediction.totalBatches}` :
+                                    `Execute ${currentPrediction.calls.length} Predictions`
+                                }
+                                className="w-full mb-2 ios-button min-h-[48px]"
+                            />
+                            <TransactionSponsor />
+                            <div className="mt-4">
+                                <TransactionStatusLabel />
+                                <TransactionStatusAction />
+                            </div>
+                        </Transaction>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

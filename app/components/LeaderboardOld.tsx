@@ -5,7 +5,10 @@ import { truncateAddress } from '@/lib/utils';
 import { Name } from '@coinbase/onchainkit/identity';
 import { motion } from 'framer-motion';
 import { Award, DollarSign, Medal, Target, TrendingUp, Trophy } from 'lucide-react';
-import { BackButton } from './BackButton';
+
+interface LeaderboardProps {
+    onBack?: () => void;
+}
 
 // Component to render name with fallback to truncated address
 interface UserNameDisplayProps {
@@ -27,6 +30,15 @@ function UserNameDisplay({ address, username, className = "" }: UserNameDisplayP
         </Name>
     );
 }
+
+"use client";
+
+import { motion } from 'framer-motion';
+import { useLeaderboard } from '@/lib/store';
+import { Trophy, Medal, Award, TrendingUp, Target, DollarSign } from 'lucide-react';
+import { Name } from '@coinbase/onchainkit/identity';
+import { truncateAddress } from '@/lib/utils';
+import { BackButton } from './BackButton';
 
 export function Leaderboard() {
     const leaderboardData = useLeaderboard();
@@ -74,9 +86,24 @@ export function Leaderboard() {
     };
 
     return (
-        <div className="w-full max-w-md mx-auto px-4 pt-4">
+        <div className="w-full max-w-md mx-auto px-4">
             {/* Header */}
-            <BackButton title="Leaderboard" />
+            <div className="flex items-center justify-between mb-8">
+                <motion.button
+                    onClick={onBack}
+                    className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                >
+                    <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                </motion.button>
+
+                <h1 className="text-xl font-bold text-white">Leaderboard</h1>
+
+                <div className="w-8 h-8" />
+            </div>
 
             {/* Leaderboard Header */}
             <div className="liquid-glass rounded-2xl p-6 mb-6 bg-gradient-to-br from-base-500/20 to-base-600/20">

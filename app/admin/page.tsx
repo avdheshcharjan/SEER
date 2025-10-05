@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { ArrowLeft, Database, Settings } from 'lucide-react';
 import { useState } from 'react';
+import { BackButton } from '../components/BackButton';
 import { CreatedMarkets } from './components/CreatedMarkets';
 import { MarketCreator } from './components/MarketCreator';
 
@@ -83,7 +84,7 @@ export default function AdminPage() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="max-w-lg mx-auto"
+            className="max-w-lg mx-auto pt-4"
           >
             <div className=" backdrop-blur-sm rounded-2xl p-6 space-y-6 border border-slate-700/50">
               <div className="text-center">
@@ -134,23 +135,13 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen pt-4">
       <div className="container mx-auto mobile-container py-6 max-w-md">
         {/* Header */}
-        <div className="relative flex items-center justify-center mb-6 sm:mb-8">
-          <button
-            onClick={() => window.history.back()}
-            className="absolute left-4 top-2 flex items-center gap-2 text-white hover:text-slate-300 transition-colors ios-button"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            {/* <span className="hidden sm:inline">Back to App</span> */}
-          </button>
-          <h1 className="text-lg sm:text-xl font-bold text-white">
-            {currentView === 'create' ? 'Create Markets' :
-              currentView === 'success' ? 'Markets Created' : 'Admin'}
-          </h1>
-          {/* <div className="w-16 sm:w-20" /> */}
-        </div>
+        <BackButton
+          title="Admin"
+          showRefresh={false}
+        />
 
         {/* Main Content */}
         <main className="min-h-[calc(100vh-200px)]">
