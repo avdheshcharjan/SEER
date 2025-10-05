@@ -1,19 +1,18 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { ArrowLeft, TrendingUp, TrendingDown, Sparkles, Users, Trophy, Calendar, Tag } from 'lucide-react';
-import { useAppStore } from '@/lib/store';
-import { UnifiedMarket } from '@/lib/types';
-import { SupabaseService } from '@/lib/supabase';
-import { generateCreateMarketCalls } from '@/lib/market-factory-onchainkit';
-import { processMarketCreation, validateMarketCreation } from '@/lib/market-factory-onchainkit';
-import { Address } from 'viem';
-import toast from 'react-hot-toast';
-import { useAccount } from 'wagmi';
-import { Transaction, TransactionButton, TransactionSponsor, TransactionStatusLabel, TransactionStatusAction } from '@coinbase/onchainkit/transaction';
-import type { LifecycleStatus } from '@coinbase/onchainkit/transaction';
 import { getRandomMarketsFromCategory, type MarketTemplate } from '@/lib/expanded-markets';
+import { generateCreateMarketCalls, processMarketCreation, validateMarketCreation } from '@/lib/market-factory-onchainkit';
+import { useAppStore } from '@/lib/store';
+import { SupabaseService } from '@/lib/supabase';
+import { UnifiedMarket } from '@/lib/types';
+import type { LifecycleStatus } from '@coinbase/onchainkit/transaction';
+import { Transaction, TransactionButton, TransactionSponsor, TransactionStatusAction, TransactionStatusLabel } from '@coinbase/onchainkit/transaction';
+import { motion } from 'framer-motion';
+import { ArrowLeft, Calendar, Sparkles, Tag, TrendingDown, TrendingUp, Trophy, Users } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import toast from 'react-hot-toast';
+import { Address } from 'viem';
+import { useAccount } from 'wagmi';
 
 interface CreateMarketProps {
     onBack: () => void;
@@ -362,7 +361,7 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
     }
 
     return (
-        <div className="min-h-screen bg-slate-900">
+        <div className="min-h-screen">
             <div className="container mx-auto px-4 py-6">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8">
@@ -406,7 +405,7 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
                                     <motion.button
                                         key={category.value}
                                         onClick={() => handleCategorySelect(category.value)}
-                                        className="p-8 bg-slate-800/30 backdrop-blur-sm rounded-2xl border border-slate-700/50 hover:border-slate-600/50 transition-all duration-300 text-left group hover:scale-105"
+                                        className="p-8 liquid-glass-card rounded-2xl transition-all duration-300 text-left group hover:scale-105 bg-slate-800/20"
                                         whileHover={{ scale: 1.02 }}
                                         whileTap={{ scale: 0.98 }}
                                     >
@@ -507,7 +506,7 @@ export function CreateMarketEnhanced({ onBack }: CreateMarketProps) {
 
                                 {/* Token Info */}
                                 {tokenData && !loadingTokenData && (
-                                    <div className="bg-slate-700/30 rounded-xl p-4 space-y-2 border border-slate-600/50 mb-6">
+                                    <div className="liquid-glass-subtle rounded-xl p-4 space-y-2 mb-6 bg-slate-700/20">
                                         <div className="flex justify-between">
                                             <span className="text-slate-400">Current Price</span>
                                             <span className="text-white font-bold">${tokenData.currentPrice}</span>

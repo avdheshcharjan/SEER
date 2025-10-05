@@ -1,29 +1,30 @@
 "use client";
 
-import { useEffect, useState, useCallback } from 'react';
+import { useAppStore } from '@/lib/store';
 import { motion } from 'framer-motion';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import { useAccount } from 'wagmi';
 import { Address } from 'viem';
 import { baseSepolia } from 'viem/chains';
+import { useAccount } from 'wagmi';
 import { SwipeStack } from './SwipeStack';
-import { useAppStore } from '@/lib/store';
 // Static markets removed - now using only Supabase data
-import { UnifiedMarket, SchemaTransformer } from '@/lib/types';
-import { SupabaseService } from '@/lib/supabase';
-import { getMarketContractAddress, validateMarketContract, getMarketsWithContracts } from '@/lib/blockchain';
-import {
-    smartBatchingManager,
-    validatePaymasterConfig,
-    GaslessOptimizationUtils
-} from '@/lib/gasless-onchainkit';
 import {
     enhancedBatchOptimizer,
     EnhancedBatchUtils,
     type BatchCall,
 } from '@/lib/batch-optimizer';
+import { getMarketContractAddress, getMarketsWithContracts, validateMarketContract } from '@/lib/blockchain';
+import { debugSignatureValidation, logERC4337Debug, validateERC4337Config } from '@/lib/erc4337-debug';
+import {
+    GaslessOptimizationUtils,
+    smartBatchingManager,
+    validatePaymasterConfig
+} from '@/lib/gasless-onchainkit';
+import { SupabaseService } from '@/lib/supabase';
+import { SchemaTransformer, UnifiedMarket } from '@/lib/types';
 import { checkUSDCAllowance } from '@/lib/usdc-allowance';
-import { validateERC4337Config, debugSignatureValidation, logERC4337Debug } from '@/lib/erc4337-debug';
+import type { LifecycleStatus } from '@coinbase/onchainkit/transaction';
 import {
     Transaction,
     TransactionButton,
@@ -31,7 +32,6 @@ import {
     TransactionStatusAction,
     TransactionStatusLabel
 } from '@coinbase/onchainkit/transaction';
-import type { LifecycleStatus } from '@coinbase/onchainkit/transaction';
 
 interface PredictionMarketProps {
     onBack?: () => void;
@@ -720,7 +720,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
 
             {/* Enhanced Batch Indicator */}
             {batchStatus.pendingSwipes > 0 && (
-                <div className="fixed safe-top-right z-50 bg-blue-500/90 backdrop-blur-sm text-white px-4 py-2 rounded-full border border-blue-400/50">
+                <div className="fixed safe-top-right z-50 liquid-glass text-white px-4 py-2 rounded-full bg-blue-500/80">
                     <div className="flex items-center space-x-2">
                         <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
                         <div className="flex flex-col">
@@ -748,7 +748,7 @@ export function PredictionMarket({ onBack }: PredictionMarketProps) {
 
             {/* Enhanced OnchainKit Transaction component for smart batch gasless predictions */}
             {currentPrediction && (
-                <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 bg-slate-800/95 backdrop-blur-sm p-4 sm:p-6 rounded-xl border border-slate-600 min-w-[280px] sm:min-w-[300px] max-w-[90vw]">
+                <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 liquid-glass-strong p-4 sm:p-6 rounded-xl min-w-[280px] sm:min-w-[300px] max-w-[90vw] bg-slate-800/90">
                     <div className="text-center mb-4">
                         <h3 className="text-white font-semibold mb-2 mobile-text-lg">
                             {currentPrediction.totalBatches > 1 ?

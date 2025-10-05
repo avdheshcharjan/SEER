@@ -6,11 +6,11 @@
 //   useOpenUrl,
 // } from "@coinbase/onchainkit/minikit";
 import {
-  Name,
-  Identity,
   Address,
   Avatar,
   EthBalance,
+  Identity,
+  Name,
 } from "@coinbase/onchainkit/identity";
 import {
   ConnectWallet,
@@ -20,12 +20,12 @@ import {
 } from "@coinbase/onchainkit/wallet";
 import { useState } from "react";
 import { Toaster } from 'react-hot-toast';
+import AdminPage from "./admin/page";
+import { CreateMarketEnhanced } from "./components/CreateMarketEnhanced";
 import { Home } from "./components/Home";
+import { Leaderboard } from "./components/Leaderboard";
 import { PredictionMarket } from "./components/PredictionMarket";
 import { Profile } from "./components/Profile";
-import { Leaderboard } from "./components/Leaderboard";
-import { CreateMarketEnhanced } from "./components/CreateMarketEnhanced";
-import AdminPage from "./admin/page";
 
 // import { Plus, Check } from 'lucide-react';
 
@@ -101,18 +101,21 @@ export default function App() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen font-geist bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+    <div className="flex flex-col min-h-screen font-geist text-white relative">
       <Toaster position="top-center" />
 
-      <div className="w-full max-w-md mx-auto px-4 py-3">
-        <header className="flex justify-between items-center mb-6 h-11">
+      {/* Static Background */}
+      <div className="static-bg"></div>
+
+      <div className="w-full max-w-md mx-auto px-4 py-3 min-h-screen relative z-0">
+        <header className="flex justify-start items-center mb-6 h-11">
           <div>
             <div className="flex items-center space-x-2">
               <Wallet className="z-10">
                 <ConnectWallet>
                   <Name className="text-inherit" />
                 </ConnectWallet>
-                <WalletDropdown>
+                <WalletDropdown className="bg-[#d1d5db] overflow-hidden rounded-lg shadow-lg border border-slate-200 text-black">
                   <Identity className="px-4 pt-3 pb-2" hasCopyAddressOnClick>
                     <Avatar />
                     <Name />

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from 'framer-motion';
-import { TrendingUp, Users, Zap, Trophy, Plus, Settings } from 'lucide-react';
+import { Plus, Settings, TrendingUp, Trophy, Users, Zap } from 'lucide-react';
 
 interface HomeProps {
     onStartPredicting: () => void;
@@ -84,7 +84,7 @@ export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard, onCr
 
                     <motion.button
                         onClick={onCreateMarket}
-                        className="bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-bold py-4 px-4 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-purple-500/25 ios-button min-h-[56px]"
+                        className="bg-gradient-to-r from-slate-700 to-indigo-700 hover:from-slate-600 hover:to-indigo-600 text-white font-bold py-4 px-4 rounded-2xl transition-all duration-300 shadow-lg hover:shadow-indigo-500/25 ios-button min-h-[56px]"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         initial={{ opacity: 0, x: 20 }}
@@ -101,7 +101,7 @@ export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard, onCr
                 <div className="grid grid-cols-3 gap-3">
                     <motion.button
                         onClick={onViewProfile}
-                        className="bg-slate-800/50 hover:bg-slate-700/50 text-white font-medium py-4 px-3 rounded-xl transition-colors border border-slate-700/50 ios-button min-h-[80px]"
+                        className="liquid-glass-card text-white font-medium py-4 px-3 rounded-xl ios-button min-h-[80px] bg-white/5"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         initial={{ opacity: 0, x: -20 }}
@@ -116,7 +116,7 @@ export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard, onCr
 
                     <motion.button
                         onClick={onViewLeaderboard}
-                        className="bg-slate-800/50 hover:bg-slate-700/50 text-white font-medium py-4 px-3 rounded-xl transition-colors border border-slate-700/50 ios-button min-h-[80px]"
+                        className="liquid-glass-card text-white font-medium py-4 px-3 rounded-xl ios-button min-h-[80px] bg-white/5"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         initial={{ opacity: 0, y: 20 }}
@@ -131,7 +131,7 @@ export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard, onCr
 
                     <motion.button
                         onClick={onViewAdmin}
-                        className="bg-slate-800/50 hover:bg-slate-700/50 text-white font-medium py-4 px-3 rounded-xl transition-colors border border-slate-700/50 ios-button min-h-[80px]"
+                        className="liquid-glass-card text-white font-medium py-4 px-3 rounded-xl ios-button min-h-[80px] bg-white/5"
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         initial={{ opacity: 0, x: 20 }}
@@ -153,7 +153,7 @@ export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard, onCr
                 {features.map((feature, index) => (
                     <motion.div
                         key={feature.title}
-                        className="bg-slate-800/30 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50 mobile-card"
+                        className="liquid-glass-light rounded-xl p-4 mobile-card bg-white/5"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.5 + (index * 0.1), duration: 0.3 }}
@@ -174,7 +174,7 @@ export function Home({ onStartPredicting, onViewProfile, onViewLeaderboard, onCr
 
             {/* Stats Preview */}
             <motion.div
-                className="bg-gradient-to-br from-slate-800/40 to-slate-900/40 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50 mobile-card"
+                className="liquid-glass rounded-2xl p-6 mobile-card bg-gradient-to-br from-white/10 to-white/5"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.9, duration: 0.3 }}

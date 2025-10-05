@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Settings, Database } from 'lucide-react';
-import { MarketCreator } from './components/MarketCreator';
+import { ArrowLeft, Database, Settings } from 'lucide-react';
+import { useState } from 'react';
 import { CreatedMarkets } from './components/CreatedMarkets';
+import { MarketCreator } from './components/MarketCreator';
 
 type AdminViewType = 'main' | 'create' | 'success';
 
@@ -85,7 +85,7 @@ export default function AdminPage() {
             animate={{ opacity: 1, y: 0 }}
             className="max-w-lg mx-auto"
           >
-            <div className="bg-slate-800/30 backdrop-blur-sm rounded-2xl p-6 space-y-6 border border-slate-700/50">
+            <div className=" backdrop-blur-sm rounded-2xl p-6 space-y-6 border border-slate-700/50">
               <div className="text-center">
                 <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <Settings className="w-8 h-8 text-white" />
@@ -134,23 +134,22 @@ export default function AdminPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-900">
+    <div className="min-h-screen">
       <div className="container mx-auto mobile-container py-6 max-w-md">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6 sm:mb-8">
+        <div className="relative flex items-center justify-center mb-6 sm:mb-8">
           <button
             onClick={() => window.history.back()}
-            className="flex items-center gap-2 text-white hover:text-slate-300 transition-colors ios-button"
+            className="absolute left-4 top-2 flex items-center gap-2 text-white hover:text-slate-300 transition-colors ios-button"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span className="hidden sm:inline">Back to App</span>
-            <span className="sm:hidden">Back</span>
+            {/* <span className="hidden sm:inline">Back to App</span> */}
           </button>
           <h1 className="text-lg sm:text-xl font-bold text-white">
             {currentView === 'create' ? 'Create Markets' :
-             currentView === 'success' ? 'Markets Created' : 'Admin'}
+              currentView === 'success' ? 'Markets Created' : 'Admin'}
           </h1>
-          <div className="w-16 sm:w-20" />
+          {/* <div className="w-16 sm:w-20" /> */}
         </div>
 
         {/* Main Content */}

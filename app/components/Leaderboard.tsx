@@ -97,7 +97,7 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
             </div>
 
             {/* Leaderboard Header */}
-            <div className="bg-gradient-to-br from-base-500/20 to-base-600/20 backdrop-blur-sm rounded-2xl p-6 mb-6 border border-base-500/30">
+            <div className="liquid-glass rounded-2xl p-6 mb-6 bg-gradient-to-br from-base-500/20 to-base-600/20">
                 <div className="text-center">
                     <div className="text-4xl mb-2">🏆</div>
                     <h2 className="text-2xl font-bold text-white mb-2">Top Predictors</h2>
@@ -112,7 +112,7 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
                 {/* 2nd Place */}
                 <div className="flex flex-col items-center justify-end">
                     <motion.div
-                        className="bg-gradient-to-t from-slate-400/20 to-slate-300/20 rounded-t-xl p-3 w-full text-center border-t border-x border-slate-400/50"
+                        className="liquid-glass-light rounded-t-xl p-3 w-full text-center bg-gradient-to-t from-slate-400/20 to-slate-300/20"
                         style={{ height: '70%' }}
                         initial={{ height: 0 }}
                         animate={{ height: '70%' }}
@@ -131,7 +131,7 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
                 {/* 1st Place */}
                 <div className="flex flex-col items-center justify-end">
                     <motion.div
-                        className="bg-gradient-to-t from-yellow-500/20 to-amber-400/20 rounded-t-xl p-3 w-full text-center border-t border-x border-yellow-500/50"
+                        className="liquid-glass rounded-t-xl p-3 w-full text-center bg-gradient-to-t from-yellow-500/20 to-amber-400/20"
                         style={{ height: '100%' }}
                         initial={{ height: 0 }}
                         animate={{ height: '100%' }}
@@ -150,7 +150,7 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
                 {/* 3rd Place */}
                 <div className="flex flex-col items-center justify-end">
                     <motion.div
-                        className="bg-gradient-to-t from-amber-600/20 to-orange-600/20 rounded-t-xl p-3 w-full text-center border-t border-x border-amber-600/50"
+                        className="liquid-glass-light rounded-t-xl p-3 w-full text-center bg-gradient-to-t from-amber-600/20 to-orange-600/20"
                         style={{ height: '60%' }}
                         initial={{ height: 0 }}
                         animate={{ height: '60%' }}
@@ -175,7 +175,7 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
                     return (
                         <motion.div
                             key={user.id}
-                            className={`${rankStyle.bg} backdrop-blur-sm rounded-xl p-4 border ${rankStyle.border}`}
+                            className={`${rankStyle.bg} liquid-glass-card rounded-xl p-4`}
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: index * 0.1, duration: 0.3 }}
@@ -220,7 +220,7 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
             </div>
 
             {/* Stats Summary */}
-            <div className="mt-8 bg-slate-800/30 backdrop-blur-sm rounded-xl p-4 border border-slate-700/50">
+            <div className="mt-8 liquid-glass-light rounded-xl p-4 bg-slate-800/20">
                 <h3 className="text-sm font-semibold text-slate-300 mb-3">Global Stats</h3>
                 <div className="grid grid-cols-3 gap-4 text-center">
                     <div>
