@@ -1,11 +1,34 @@
 "use client";
 
-import { motion } from 'framer-motion';
 import { useLeaderboard } from '@/lib/store';
-import { Trophy, Medal, Award, TrendingUp, Target, DollarSign } from 'lucide-react';
+import { truncateAddress } from '@/lib/utils';
+import { Name } from '@coinbase/onchainkit/identity';
+import { motion } from 'framer-motion';
+import { Award, DollarSign, Medal, Target, TrendingUp, Trophy } from 'lucide-react';
 
 interface LeaderboardProps {
     onBack?: () => void;
+}
+
+// Component to render name with fallback to truncated address
+interface UserNameDisplayProps {
+    address: string;
+    username?: string;
+    className?: string;
+}
+
+function UserNameDisplay({ address, username, className = "" }: UserNameDisplayProps) {
+    return (
+        <Name
+            address={address as `0x${string}`}
+            className={className}
+        >
+            {/* Fallback to truncated address if name resolution fails */}
+            <span className={className}>
+                {username || truncateAddress(address)}
+            </span>
+        </Name>
+    );
 }
 
 export function Leaderboard({ onBack }: LeaderboardProps) {
@@ -96,7 +119,11 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
                         transition={{ delay: 0.2, duration: 0.6 }}
                     >
                         <Medal className="w-6 h-6 text-slate-300 mx-auto mb-1" />
-                        <div className="text-sm font-bold text-white">{leaderboardData[1]?.username}</div>
+                        <UserNameDisplay
+                            address={leaderboardData[1]?.address}
+                            username={leaderboardData[1]?.username}
+                            className="text-sm font-bold text-white"
+                        />
                         <div className="text-xs text-slate-300">{leaderboardData[1]?.winRate.toFixed(1)}%</div>
                     </motion.div>
                 </div>
@@ -111,7 +138,11 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
                         transition={{ delay: 0.1, duration: 0.6 }}
                     >
                         <Trophy className="w-8 h-8 text-yellow-400 mx-auto mb-1" />
-                        <div className="text-sm font-bold text-white">{leaderboardData[0]?.username}</div>
+                        <UserNameDisplay
+                            address={leaderboardData[0]?.address}
+                            username={leaderboardData[0]?.username}
+                            className="text-sm font-bold text-white"
+                        />
                         <div className="text-xs text-yellow-300">{leaderboardData[0]?.winRate.toFixed(1)}%</div>
                     </motion.div>
                 </div>
@@ -126,7 +157,11 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
                         transition={{ delay: 0.3, duration: 0.6 }}
                     >
                         <Award className="w-5 h-5 text-amber-600 mx-auto mb-1" />
-                        <div className="text-sm font-bold text-white">{leaderboardData[2]?.username}</div>
+                        <UserNameDisplay
+                            address={leaderboardData[2]?.address}
+                            username={leaderboardData[2]?.username}
+                            className="text-sm font-bold text-white"
+                        />
                         <div className="text-xs text-amber-500">{leaderboardData[2]?.winRate.toFixed(1)}%</div>
                     </motion.div>
                 </div>
@@ -152,7 +187,11 @@ export function Leaderboard({ onBack }: LeaderboardProps) {
                                         {getRankIcon(user.rank)}
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-white">{user.username}</h3>
+                                        <UserNameDisplay
+                                            address={user.address}
+                                            username={user.username}
+                                            className="font-bold text-white"
+                                        />
                                         <div className="flex items-center space-x-4 text-sm text-slate-400">
                                             <span className="flex items-center">
                                                 <Target className="w-3 h-3 mr-1" />

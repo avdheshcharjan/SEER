@@ -14,6 +14,17 @@ interface User {
     defaultBetAmount: number; // Default bet amount in USDC
 }
 
+export interface LeaderboardUser {
+    id: string;
+    username: string;
+    address: string;
+    correctPredictions: number;
+    totalPredictions: number;
+    totalSpent: number;
+    rank: number;
+    winRate: number;
+}
+
 interface AppState {
     // User session state
     user: User | null;
@@ -219,13 +230,14 @@ export const useUserStats = () => {
     };
 };
 
-export const useLeaderboard = () => {
+export const useLeaderboard = (): LeaderboardUser[] => {
     // In a real app, this would fetch from API
-    // For now, return mock leaderboard data
+    // For now, return mock leaderboard data with random Base addresses
     return [
         {
             id: '1',
             username: 'CryptoProphet',
+            address: '0x742E4C4B4c8c341b7F7A8E5E5C8e8e8e8e8e8e8e',
             correctPredictions: 89,
             totalPredictions: 112,
             totalSpent: 112,
@@ -235,6 +247,7 @@ export const useLeaderboard = () => {
         {
             id: '2',
             username: 'BasedTrader',
+            address: '0xA1b2C3d4E5f6789012345678901234567890abcd',
             correctPredictions: 76,
             totalPredictions: 98,
             totalSpent: 98,
@@ -244,6 +257,7 @@ export const useLeaderboard = () => {
         {
             id: '3',
             username: 'SwipeKing',
+            address: '0x9876543210123456789abcdef0123456789abcde',
             correctPredictions: 134,
             totalPredictions: 178,
             totalSpent: 178,
@@ -253,6 +267,7 @@ export const useLeaderboard = () => {
         {
             id: '4',
             username: 'PredictorMax',
+            address: '0xfedcba0987654321098765432109876543210987',
             correctPredictions: 92,
             totalPredictions: 125,
             totalSpent: 125,
@@ -262,6 +277,7 @@ export const useLeaderboard = () => {
         {
             id: '5',
             username: 'MarketMaven',
+            address: '0x123456789abcdef0123456789abcdef012345678',
             correctPredictions: 67,
             totalPredictions: 92,
             totalSpent: 92,
